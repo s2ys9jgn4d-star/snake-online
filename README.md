@@ -120,4 +120,4 @@ macOS · Windows · Linux · Android · iOS · HarmonyOS NEXT · 网页 · Scrat
 
 ## 许可证
 
-仅供学习交流使用。
+[MIT License](LICENSE) — 可自由使用、修改、分发，详见 LICENSE 文件。
