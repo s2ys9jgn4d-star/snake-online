@@ -23,24 +23,32 @@ function showPanel(name){
 //  HTTP API
 // ============================================================
 // API 地址推导：与 WebSocket 同源逻辑
+// - 同源（Mac 直接访问 / 局域网）：用 location.origin
+// - 本机 server：file:// 或非 https 页面探测 localhost:8180
+// - 其他（如 Cloudflare Pages）：用 Funnel 公网地址
 const FALLBACK_WS = 'wss://niesdemacbook-air.tail4f9990.ts.net';
-let API_BASE = /^https?:$/.test(location.protocol)
-  ? location.origin
-  : FALLBACK_WS.replace(/^ws/, 'http');
+const FALLBACK_HTTP = 'https://niesdemacbook-air.tail4f9990.ts.net';
+let API_BASE = FALLBACK_HTTP;
 let WS_BASE_OVERRIDE = null;
 
-// file:// 场景：异步探测本机 server，能连就切换到 localhost（低延迟）
+// 探测：同源是不是游戏服务器？本机有没有 server？都没有就保持 Funnel
 async function detectLocalServer(){
-  if (/^https?:$/.test(location.protocol)) return;
-  try {
-    const r = await fetch('http://localhost:8180/api/scores', {
-      signal: AbortSignal.timeout(800)
-    });
-    if (r.ok){
-      API_BASE = 'http://localhost:8180';
-      WS_BASE_OVERRIDE = 'ws://localhost:8180';
-    }
-  } catch {}
+  if (/^https?:$/.test(location.protocol)) {
+    try {
+      const r = await fetch(location.origin + '/api/scores', { signal: AbortSignal.timeout(800) });
+      if (r.ok){ API_BASE = location.origin; return; }
+    } catch {}
+  }
+  if (location.protocol !== 'https:') {
+    try {
+      const r = await fetch('http://localhost:8180/api/scores', { signal: AbortSignal.timeout(800) });
+      if (r.ok){
+        API_BASE = 'http://localhost:8180';
+        WS_BASE_OVERRIDE = 'ws://localhost:8180';
+        return;
+      }
+    } catch {}
+  }
 }
 let authToken = localStorage.getItem('snakeToken') || null;
 let authUser = localStorage.getItem('snakeUser') || null;
@@ -131,9 +139,11 @@ $('deleteAcctBtn').addEventListener('click', async () => {
 // ============================================================
 function defaultWsUrl(){
   if (WS_BASE_OVERRIDE) return WS_BASE_OVERRIDE;
-  if (!/^https?:$/.test(location.protocol)) return FALLBACK_WS;
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  return proto + '://' + location.host;
+  if (API_BASE === location.origin) {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return proto + '://' + location.host;
+  }
+  return FALLBACK_WS;
 }
 let ws = null;
 

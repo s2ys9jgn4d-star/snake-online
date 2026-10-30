@@ -23,27 +23,36 @@ function showPanel(name){
 //  HTTP API（注册/登录/排行榜）
 // ============================================================
 // API 地址推导：与 WebSocket 同源逻辑
-// - http/https 页面：同源（location.origin）
-// - file:// 或其他打包环境：先探测本机 server（localhost:8180），不通再用 Funnel
+// - 同源（Mac 直接访问 / 局域网）：用 location.origin
+// - 本机 server：file:// 或非 https 页面探测 localhost:8180
+// - 其他（如 Cloudflare Pages）：用 Funnel 公网地址
 const FALLBACK_WS = 'wss://niesdemacbook-air.tail4f9990.ts.net';
-let API_BASE = /^https?:$/.test(location.protocol)
-  ? location.origin
-  : FALLBACK_WS.replace(/^ws/, 'http');
-let WS_BASE_OVERRIDE = null;  // 探测到本机 server 后设置为 ws://localhost:8180
+const FALLBACK_HTTP = 'https://niesdemacbook-air.tail4f9990.ts.net';
+let API_BASE = FALLBACK_HTTP;  // 默认 Funnel，最稳
+let WS_BASE_OVERRIDE = null;   // 探测到本机/同源服务器后覆盖
 
-// file:// 场景：异步探测本机 server，能连就切换到 localhost（低延迟）
+// 探测：同源是不是游戏服务器？本机有没有 server？都没有就保持 Funnel
 async function detectLocalServer(){
-  if (/^https?:$/.test(location.protocol)) return;  // 只针对 file://
-  try {
-    const r = await fetch('http://localhost:8180/api/scores', {
-      signal: AbortSignal.timeout(800)
-    });
-    if (r.ok){
-      API_BASE = 'http://localhost:8180';
-      WS_BASE_OVERRIDE = 'ws://localhost:8180';
-      console.log('[snake] 检测到本机 server，切换到 localhost（低延迟模式）');
-    }
-  } catch {}
+  // 1. 同源探测（http/https 页面）
+  if (/^https?:$/.test(location.protocol)) {
+    try {
+      const r = await fetch(location.origin + '/api/scores', { signal: AbortSignal.timeout(800) });
+      if (r.ok){ API_BASE = location.origin; return; }
+    } catch {}
+  }
+  // 2. 本机 server（https 页面会被 mixed-content 拦截，跳过）
+  if (location.protocol !== 'https:') {
+    try {
+      const r = await fetch('http://localhost:8180/api/scores', { signal: AbortSignal.timeout(800) });
+      if (r.ok){
+        API_BASE = 'http://localhost:8180';
+        WS_BASE_OVERRIDE = 'ws://localhost:8180';
+        console.log('[snake] 检测到本机 server，切换到 localhost（低延迟模式）');
+        return;
+      }
+    } catch {}
+  }
+  // 3. 默认 Funnel
 }
 let authToken = localStorage.getItem('snakeToken') || null;
 let authUser = localStorage.getItem('snakeUser') || null;
@@ -144,9 +153,11 @@ $('deleteAcctBtn').addEventListener('click', async () => {
 // ============================================================
 function defaultWsUrl(){
   if (WS_BASE_OVERRIDE) return WS_BASE_OVERRIDE;
-  if (!/^https?:$/.test(location.protocol)) return FALLBACK_WS;
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  return proto + '://' + location.host;
+  if (API_BASE === location.origin) {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return proto + '://' + location.host;
+  }
+  return FALLBACK_WS;  // Pages / file:// 走 Funnel
 }
 let ws = null;
 let myRoom = null; // 当前加入的房间
