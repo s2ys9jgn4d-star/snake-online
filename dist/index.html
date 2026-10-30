@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>联机贪吃蛇 - 下载中心</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #0f1220 0%, #1a1f35 100%);
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 40px; }
+  h1 { font-size: 42px; margin-bottom: 12px; }
+  h1 .emoji { font-size: 48px; }
+  .subtitle { color: #94a3b8; font-size: 16px; }
+  .quick-play {
+    display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap;
+  }
+  .quick-play a {
+    padding: 14px 28px; border-radius: 12px; text-decoration: none;
+    font-weight: 600; font-size: 16px; transition: transform .15s, box-shadow .15s;
+  }
+  .quick-play a:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(91,140,255,.3); }
+  .btn-primary { background: #5b8cff; color: #fff; }
+  .btn-secondary { background: #1a1f35; color: #5b8cff; border: 1px solid #5b8cff; }
+  section { margin-bottom: 36px; }
+  h2 {
+    font-size: 22px; margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 2px solid #1a1f35;
+  }
+  h2 .emoji { margin-right: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card {
+    background: #1a1f35; border: 1px solid #2a3152; border-radius: 14px;
+    padding: 18px 20px; transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: #5b8cff; transform: translateY(-2px); }
+  .card .name { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .card .meta { font-size: 13px; color: #94a3b8; margin-bottom: 14px; line-height: 1.6; }
+  .card a {
+    display: inline-block; padding: 8px 18px; background: #5b8cff; color: #fff;
+    border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;
+  }
+  .card a:hover { background: #4a7aee; }
+  .card a.ghost { background: transparent; border: 1px solid #5b8cff; color: #5b8cff; margin-left: 8px; }
+  .note {
+    background: #1a1f35; border-left: 3px solid #fbbf24; border-radius: 8px;
+    padding: 14px 18px; font-size: 14px; color: #cbd5e1; line-height: 1.7;
+  }
+  .note b { color: #fbbf24; }
+  footer { text-align: center; color: #64748b; font-size: 13px; margin-top: 40px; }
+  @media (max-width: 600px) {
+    h1 { font-size: 30px; }
+    .quick-play a { padding: 12px 22px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1><span class="emoji">🐍</span>联机贪吃蛇</h1>
+    <p class="subtitle">多人联机 · 房间对战 · 排行榜 · 跨平台客户端</p>
+    <div class="quick-play">
+      <a href="play.html" class="btn-primary">🖥️ 网页版立即玩</a>
+      <a href="mobile.html" class="btn-secondary">📱 手机版立即玩</a>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="emoji">📦</span>桌面客户端</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="name">🍎 macOS</div>
+        <div class="meta">贪吃蛇.app · DMG 安装包<br>原生 WKWebView 窗口</div>
+        <a href="贪吃蛇.dmg">下载 DMG</a>
+      </div>
+      <div class="card">
+        <div class="name">🪟 Windows</div>
+        <div class="meta">Snake.exe · Win64 ZIP<br>需安装 WebView2 Runtime</div>
+        <a href="贪吃蛇-win64.zip">下载 ZIP</a>
+      </div>
+      <div class="card">
+        <div class="name">🐧 Linux</div>
+        <div class="meta">snake-game · DEB 包<br>Debian / Ubuntu / 深度</div>
+        <a href="贪吃蛇.deb">下载 DEB</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="emoji">📱</span>手机客户端</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="name">🤖 Android</div>
+        <div class="meta">com.snake.game · APK<br>Android 5.0+</div>
+        <a href="贪吃蛇.apk">下载 APK</a>
+      </div>
+      <div class="card">
+        <div class="name">🍎 iOS（未签名）</div>
+        <div class="meta">IPA · 需自行签名<br>用 Sideloadly / AltStore 安装</div>
+        <a href="贪吃蛇-unsigned.ipa">下载 IPA</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="emoji">🧩</span>Scratch / TurboWarp</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="name">🎮 Scratch 3 工程文件</div>
+        <div class="meta">.sb3 · 直接导入 TurboWarp / Scratch<br>含联机扩展积木</div>
+        <a href="联机贪吃蛇.sb3">下载 SB3</a>
+        <a href="snake-ext.js" class="ghost" target="_blank">查看扩展</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="note">
+      <b>💡 使用提示</b><br>
+      · 网页版无需下载，打开即玩，支持账号注册 / 登录 / 房间系统 / 聊天 / 排行榜<br>
+      · 全屏版客户端 = 内置 TurboWarp + 联机扩展，启动后按积木提示输入用户名和密码<br>
+      · 网页版客户端 = 内置完整网页，打开就是登录界面<br>
+      · Windows 10 首次运行需安装 <a href="https://developer.microsoft.com/microsoft-edge/webview2/" target="_blank" style="color:#5b8cff">WebView2 Runtime</a>（Windows 11 已自带）<br>
+      · iOS IPA 未签名，需要通过 Sideloadly / AltStore / Xcode 自签安装
+    </div>
+  </section>
+
+  <footer>🐍 联机贪吃蛇 · 多人实时对战 · 支持 50ms 超快模式</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>多人联机贪吃蛇</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ 面板 1：登录 / 注册 ============ -->
+  <div id="panel-auth" class="panel-wrap">
+    <div class="auth-card">
+      <h1>🐍 多人联机贪吃蛇</h1>
+      <p class="auth-sub">注册账号 → 进大厅 → 创建或加入房间开战</p>
+      <div class="auth-tabs">
+        <button class="tab active" data-tab="login">登录</button>
+        <button class="tab" data-tab="register">注册</button>
+      </div>
+      <div class="auth-body">
+        <input id="authUser" maxlength="16" placeholder="用户名（字母/数字/中文）" autocomplete="username">
+        <input id="authPass" type="password" maxlength="32" placeholder="密码（4-32 位）" autocomplete="current-password">
+        <button id="authBtn">登录</button>
+        <p id="authErr" class="error"></p>
+      </div>
+      <div class="auth-foot">
+        <p>⌨️ 电脑：方向键 / WASD 控制，死亡后空格重生</p>
+        <p>🍎 吃食物变长，撞墙 / 撞自己 / 撞别人 = 失败</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 面板 2：大厅（登录后） ============ -->
+  <div id="panel-lobby" class="panel-wrap hidden">
+    <div class="lobby-header">
+      <div class="lobby-brand">🐍 联机贪吃蛇</div>
+      <div class="lobby-user">
+        <span id="lobbyUserName">游客</span>
+        <span id="lobbyBest">最高分 0</span>
+        <button id="logoutBtn">退出</button>
+        <button id="deleteAcctBtn" style="color:#ef4444">注销账号</button>
+      </div>
+    </div>
+    <div class="lobby-body">
+      <!-- 左：房间列表 + 创建 -->
+      <div class="lobby-left">
+        <h3>🏠 房间列表</h3>
+        <button id="refreshRooms" class="ghost-btn">刷新</button>
+        <div id="roomList" class="room-list"></div>
+
+        <h3 style="margin-top:18px">➕ 创建房间</h3>
+        <div class="create-room">
+          <input id="newRoomName" maxlength="20" placeholder="房间名">
+          <input id="newRoomPass" maxlength="32" placeholder="密码（可选）">
+          <button id="createRoomBtn">创建并自动加入</button>
+        </div>
+
+        <!-- 大厅聊天 -->
+        <h3 style="margin-top:18px">💬 大厅聊天</h3>
+        <div class="chat-box" id="lobbyChat"></div>
+        <div class="chat-input">
+          <input id="lobbyChatInput" maxlength="200" placeholder="说点什么...">
+          <button id="lobbyChatSend">发送</button>
+        </div>
+      </div>
+
+      <!-- 右：排行榜 -->
+      <div class="lobby-right">
+        <h3>🏆 排行榜 Top 20</h3>
+        <ol id="rankList"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 面板 3：游戏（加入房间后） ============ -->
+  <div id="panel-game" class="panel-wrap hidden">
+    <div id="stage">
+      <div id="topbar">
+        <div class="brand">🐍 多人贪吃蛇 · <span id="curRoomName">房间</span></div>
+        <div id="hud">
+          <span id="myScore" class="hud-item">得分 0</span>
+          <span id="online" class="hud-item">在线 0 人</span>
+          <span id="ping" class="hud-item">延迟 -</span>
+        </div>
+      </div>
+      <div id="canvasWrap">
+        <canvas id="game" width="840" height="600"></canvas>
+
+        <!-- 加入房间菜单（选择速度 + 服务器） -->
+        <div id="menu" class="overlay">
+          <div class="panel">
+            <h2>进入：<span id="enterRoomName"></span></h2>
+            <div class="speed-row" id="speedRow">
+              <button type="button" class="speed-btn" data-ms="300">慢速</button>
+              <button type="button" class="speed-btn active" data-ms="200">标准</button>
+              <button type="button" class="speed-btn" data-ms="110">快速</button>
+              <button type="button" class="speed-btn" data-ms="50">超快</button>
+            </div>
+            <button id="enterBtn">进入房间</button>
+            <p id="menuError" class="error"></p>
+          </div>
+        </div>
+
+        <!-- 死亡提示 -->
+        <div id="dead" class="overlay hidden">
+          <div class="panel small">
+            <h2>你挂了 💀</h2>
+            <p id="deadReason" class="sub"></p>
+            <p>本局得分：<b id="deadScore">0</b></p>
+            <button id="respawnBtn">马上重生（空格）</button>
+          </div>
+        </div>
+
+        <!-- 断线提示 -->
+        <div id="toast" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- 右侧：房间成员 + 房间聊天 + 设置 -->
+    <aside id="sidebar">
+      <div class="sidebar-head">
+        <h3>👥 房间成员</h3>
+        <button id="leaveBtn" class="ghost-btn">离开房间</button>
+      </div>
+      <ul id="memberList" class="member-list"></ul>
+
+      <h3 style="margin-top:14px">💬 房间聊天</h3>
+      <div class="chat-box" id="roomChat"></div>
+      <div class="chat-input">
+        <input id="roomChatInput" maxlength="200" placeholder="聊天（按 Enter 发送）">
+      </div>
+
+      <h3 style="margin-top:14px">⚙️ 设置</h3>
+      <div class="speed-row" id="speedRow2">
+        <button type="button" class="speed-btn" data-ms="300">慢</button>
+        <button type="button" class="speed-btn active" data-ms="200">标</button>
+        <button type="button" class="speed-btn" data-ms="110">快</button>
+        <button type="button" class="speed-btn" data-ms="50">超</button>
+      </div>
+      <p class="muted" id="serverAddr"></p>
+    </aside>
+  </div>
+
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

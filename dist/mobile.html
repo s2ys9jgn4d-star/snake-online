@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>贪吃蛇 手机版</title>
+<link rel="stylesheet" href="mobile.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ 面板 1：登录 / 注册 ============ -->
+  <div id="panel-auth" class="panel-wrap">
+    <div class="auth-card">
+      <h1>🐍 联机贪吃蛇</h1>
+      <p class="auth-sub">注册账号 → 进大厅 → 创建或加入房间</p>
+      <div class="auth-tabs">
+        <button class="tab active" data-tab="login">登录</button>
+        <button class="tab" data-tab="register">注册</button>
+      </div>
+      <div class="auth-body">
+        <input id="authUser" maxlength="16" placeholder="用户名" autocomplete="username">
+        <input id="authPass" type="password" maxlength="32" placeholder="密码（4-32 位）" autocomplete="current-password">
+        <button id="authBtn">登录</button>
+        <p id="authErr" class="error"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 面板 2：大厅 ============ -->
+  <div id="panel-lobby" class="panel-wrap hidden">
+    <div class="lobby-header">
+      <span class="lobby-user" id="lobbyUserName"></span>
+      <span class="lobby-best" id="lobbyBest"></span>
+      <button id="logoutBtn" class="ghost-btn">退出</button>
+      <button id="deleteAcctBtn" class="ghost-btn" style="color:#ef4444;border-color:#ef4444">注销账号</button>
+    </div>
+    <div class="lobby-body">
+      <div class="lobby-section">
+        <h3>🏠 房间列表</h3>
+        <button id="refreshRooms" class="ghost-btn">刷新</button>
+        <div id="roomList" class="room-list"></div>
+      </div>
+      <div class="lobby-section">
+        <h3>➕ 创建房间</h3>
+        <input id="newRoomName" maxlength="20" placeholder="房间名">
+        <input id="newRoomPass" maxlength="32" placeholder="密码（可选）">
+        <button id="createRoomBtn" class="primary-btn">创建并加入</button>
+      </div>
+      <div class="lobby-section">
+        <h3>🏆 排行榜</h3>
+        <ol id="rankList" class="rank-list"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 面板 3：游戏 ============ -->
+  <div id="panel-game" class="panel-wrap hidden">
+    <div id="topbar">
+      <span id="curRoomName" class="room-title"></span>
+      <span id="myScore" class="hud-item">得分 0</span>
+      <span id="online" class="hud-item">在线 0</span>
+      <span id="ping" class="hud-item">延迟 -</span>
+      <button id="fsBtn" class="hud-item fs-btn">⛶</button>
+    </div>
+
+    <div id="stage">
+      <canvas id="game" width="840" height="600"></canvas>
+
+      <!-- 加入房间菜单（选速度） -->
+      <div id="menu" class="overlay">
+        <div class="panel">
+          <h2>进入：<span id="enterRoomName"></span></h2>
+          <div class="speed-row" id="speedRow">
+            <button type="button" class="speed-btn" data-ms="300">慢速</button>
+            <button type="button" class="speed-btn active" data-ms="200">标准</button>
+            <button type="button" class="speed-btn" data-ms="110">快速</button>
+            <button type="button" class="speed-btn" data-ms="50">超快</button>
+          </div>
+          <button id="enterBtn">进入房间</button>
+          <p id="menuError" class="error"></p>
+        </div>
+      </div>
+
+      <!-- 死亡 -->
+      <div id="dead" class="overlay hidden">
+        <div class="panel">
+          <h2>你挂了 💀</h2>
+          <p id="deadReason" class="sub"></p>
+          <p>得分：<b id="deadScore">0</b></p>
+          <button id="respawnBtn">马上重生</button>
+        </div>
+      </div>
+
+      <div id="toast" class="hidden"></div>
+    </div>
+
+    <!-- 虚拟方向键 -->
+    <div id="vpad">
+      <button class="vbtn up" data-dir="up">▲</button>
+      <button class="vbtn left" data-dir="left">◀</button>
+      <button class="vbtn down" data-dir="down">▼</button>
+      <button class="vbtn right" data-dir="right">▶</button>
+    </div>
+  </div>
+
+</div>
+<script src="mobile.js"></script>
+</body>
+</html>
