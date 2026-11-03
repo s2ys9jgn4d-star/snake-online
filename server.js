@@ -56,8 +56,79 @@ function atomicWrite(file, data){
   fs.writeFileSync(tmp, JSON.stringify(data));
   fs.renameSync(tmp, file);
 }
-function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt}))); }
-function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); }
+
+// ============================================================
+//  GitHub 加密云备份（存到仓库 save-data 分支，AES 加密，重启不丢账号；
+//  需要环境变量 GH_TOKEN + BACKUP_KEY，本地不设则不启用）
+// ============================================================
+const GH_TOKEN = process.env.GH_TOKEN || '';
+const BACKUP_KEY = process.env.BACKUP_KEY || '';
+const GH_REPO = process.env.GH_REPO || 's2ys9jgn4d-star/snake-online';
+const BACKUP_BRANCH = 'save-data';
+const BACKUP_FILE = 'save-data.enc.json';
+
+function encryptBackup(plain){
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const key = crypto.scryptSync(BACKUP_KEY, salt, 32, { cost: 16384, blockSize: 8, parallelization: 1 });
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([salt, iv, tag, enc]).toString('base64');
+}
+function decryptBackup(b64){
+  const raw = Buffer.from(b64, 'base64');
+  const salt = raw.subarray(0, 16), iv = raw.subarray(16, 28), tag = raw.subarray(28, 44);
+  const key = crypto.scryptSync(BACKUP_KEY, salt, 32, { cost: 16384, blockSize: 8, parallelization: 1 });
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(raw.subarray(44)), decipher.final()]).toString('utf8');
+}
+function ghHeaders(){
+  return { 'Authorization': 'Bearer ' + GH_TOKEN, 'Accept': 'application/vnd.github+json', 'User-Agent': 'snake-online' };
+}
+
+// 启动时从 save-data 分支恢复（仅本地数据为空时才覆盖）
+async function cloudRestore(){
+  if (!GH_TOKEN || !BACKUP_KEY) return;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${BACKUP_FILE}?ref=${BACKUP_BRANCH}`, { headers: ghHeaders() });
+    if (!res.ok) { console.log('云备份恢复：暂无备份（HTTP ' + res.status + '）'); return; }
+    const j = await res.json();
+    const payload = JSON.parse(Buffer.from(j.content, 'base64').toString('utf8'));
+    const plain = JSON.parse(decryptBackup(payload.data));
+    if (plain.users && accounts.size === 0){ fs.writeFileSync(USERS_FILE, plain.users); loadUsers(); }
+    if (plain.scores && leaderboard.length === 0){ fs.writeFileSync(SCORES_FILE, plain.scores); loadScores(); }
+    console.log('云备份恢复完成：' + accounts.size + ' 个账号，' + leaderboard.length + ' 条分数');
+  } catch (e) { console.log('云备份恢复出错：' + e.message); }
+}
+
+// 每次保存后 5 秒防抖，加密推送到 save-data 分支
+let backupTimer = null;
+function cloudBackup(){
+  if (!GH_TOKEN || !BACKUP_KEY) return;
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(async () => {
+    try {
+      const plain = JSON.stringify({
+        users: fs.existsSync(USERS_FILE) ? fs.readFileSync(USERS_FILE, 'utf8') : '[]',
+        scores: fs.existsSync(SCORES_FILE) ? fs.readFileSync(SCORES_FILE, 'utf8') : '[]'
+      });
+      const content = Buffer.from(JSON.stringify({ v: 1, data: encryptBackup(plain) })).toString('base64');
+      const api = `https://api.github.com/repos/${GH_REPO}/contents/${BACKUP_FILE}`;
+      let sha;
+      const cur = await fetch(api + '?ref=' + BACKUP_BRANCH, { headers: ghHeaders() });
+      if (cur.ok) sha = (await cur.json()).sha;
+      const body = { message: 'backup ' + new Date().toISOString(), content, branch: BACKUP_BRANCH };
+      if (sha) body.sha = sha;
+      const put = await fetch(api, { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+      if (!put.ok) console.log('云备份推送失败：HTTP ' + put.status);
+    } catch {}
+  }, 5000);
+}
+
+function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt}))); cloudBackup(); }
+function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); cloudBackup(); }
 
 // scrypt 密码哈希（零依赖）
 function hashPass(pass){
@@ -639,11 +710,14 @@ function lanIPs(){
   return result;
 }
 
-server.listen(PORT, () => {
-  console.log('');
-  console.log('  🐍 多人联机贪吃蛇（完整版：账号+房间+排行榜+聊天）');
-  console.log('  本机：  http://localhost:'+PORT);
-  for (const ip of lanIPs()) console.log('  同 Wi-Fi：http://'+ip+':'+PORT);
-  console.log('  Ctrl+C 停止');
-  console.log('');
+// 先从云备份恢复账号数据，再开始监听
+cloudRestore().finally(() => {
+  server.listen(PORT, () => {
+    console.log('');
+    console.log('  🐍 多人联机贪吃蛇（完整版：账号+房间+排行榜+聊天）');
+    console.log('  本机：  http://localhost:'+PORT);
+    for (const ip of lanIPs()) console.log('  同 Wi-Fi：http://'+ip+':'+PORT);
+    console.log('  Ctrl+C 停止');
+    console.log('');
+  });
 });

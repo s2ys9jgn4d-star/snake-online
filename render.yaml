@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: snake-online
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: GH_TOKEN
+        sync: false
+      - key: BACKUP_KEY
+        sync: false
