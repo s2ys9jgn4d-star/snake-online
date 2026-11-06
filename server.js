@@ -88,7 +88,7 @@ function ghHeaders(){
   return { 'Authorization': 'Bearer ' + GH_TOKEN, 'Accept': 'application/vnd.github+json', 'User-Agent': 'snake-online' };
 }
 
-// 启动时从 save-data 分支恢复（仅本地数据为空时才覆盖）
+// 启动时从 save-data 分支恢复（仅本地数据为空时才覆盖；设 FORCE_RESTORE=1 则强制覆盖）
 async function cloudRestore(){
   if (!GH_TOKEN || !BACKUP_KEY) return;
   try {
@@ -97,9 +97,10 @@ async function cloudRestore(){
     const j = await res.json();
     const payload = JSON.parse(Buffer.from(j.content, 'base64').toString('utf8'));
     const plain = JSON.parse(decryptBackup(payload.data));
-    if (plain.users && accounts.size === 0){ fs.writeFileSync(USERS_FILE, plain.users); loadUsers(); }
-    if (plain.scores && leaderboard.length === 0){ fs.writeFileSync(SCORES_FILE, plain.scores); loadScores(); }
-    console.log('云备份恢复完成：' + accounts.size + ' 个账号，' + leaderboard.length + ' 条分数');
+    const force = !!process.env.FORCE_RESTORE;
+    if (plain.users && (accounts.size === 0 || force)){ fs.writeFileSync(USERS_FILE, plain.users); loadUsers(); }
+    if (plain.scores && (leaderboard.length === 0 || force)){ fs.writeFileSync(SCORES_FILE, plain.scores); loadScores(); }
+    console.log('云备份恢复完成：' + accounts.size + ' 个账号，' + leaderboard.length + ' 条分数' + (force ? '（强制恢复）' : ''));
   } catch (e) { console.log('云备份恢复出错：' + e.message); }
 }
 
