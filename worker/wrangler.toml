@@ -1,0 +1,13 @@
+name = "snake-online"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# 单个 Durable Object 承载全部游戏世界（房间都在内存里，和 Node 版一致）
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+# 免费计划只能使用 SQLite 版 Durable Object
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]

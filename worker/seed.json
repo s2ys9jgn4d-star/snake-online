@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "u": "小明",
+      "h": "wcpI7QmgFbWzpbr52o3kjSZU3iLGjiDrqvCSKn+G0UQ=",
+      "s": "x75ff0Z/s6lZLgivmhHJMw=="
+    },
+    {
+      "u": "t1",
+      "h": "wP52oSNq9aMQbz4STZlAUydDIjjXk9JNy7T2WkUfAVg=",
+      "s": "kvYIOgm+KSxiWCptH5htow=="
+    },
+    {
+      "u": "手机测试",
+      "h": "ruyzO3jp8m5ccf+VkbsD5cbFtT/mPh6hfBj2L8PaDi4=",
+      "s": "WXN/71HGwtSaKz8jR6ymzA=="
+    },
+    {
+      "u": "pynqz",
+      "h": "WXnWJfxhV2z6GqGa4kKqctq0VE1K96cBZ3xXVkT/lbk=",
+      "s": "YGYqzW211RGiNXRJ3GdN4w=="
+    },
+    {
+      "u": "公共账号",
+      "h": "6oep3zVqE09leh4pzpgKBH15G+MAiflHkOe9yO1C6Yc=",
+      "s": "l5QTMSuAE3XYZ4epH87STA=="
+    },
+    {
+      "u": "手机",
+      "h": "o5KXabTbNM+sbUa7Bn24D5jZBMtuCB+VR07H6XY8sjg=",
+      "s": "KzIH3PiB9VND7nnex9cb3A=="
+    }
+  ],
+  "scores": [
+    {
+      "u": "公共账号",
+      "s": 23
+    },
+    {
+      "u": "pynqz",
+      "s": 3
+    },
+    {
+      "u": "手机",
+      "s": 2
+    }
+  ]
+}
