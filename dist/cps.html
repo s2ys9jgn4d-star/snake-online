@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>CPS Tester Anti Auto-Restart</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#18181b;color:#f4f4f5;gap:18px;padding:20px}
+#info{font-size:22px;white-space:pre;text-align:center}
+#box{width:340px;height:200px;background:#2563eb;border-radius:18px;display:grid;place-items:center;font-size:30px;cursor:pointer;user-select:none;transition:0.15s}
+#box:active{background:#1d4ed8;transform:scale(0.97)}
+#chart{background:#0f0f11;border-radius:16px;cursor:crosshair}
+#tip{position:fixed;pointer-events:none;background:rgba(30,30,34,0.92);color:#e4e4e7;padding:8px 12px;border-radius:8px;font-size:14px;white-space:nowrap;display:none;z-index:999}
+.btn-row{display:flex;gap:14px}
+button{padding:11px 26px;font-size:17px;border:none;border-radius:10px;background:#27272a;color:#fff;cursor:pointer;transition:.15s}
+button:hover{background:#3f3f46}
+#exportBtn{background:#1e40af}
+#exportBtn:hover{background:#1e3a8a}
+</style>
+</head>
+<body>
+<div id="info">准备就绪
+点击蓝色方块开始
+计时后，点蓝色方块/空白处都计数</div>
+<div id="box">开始</div>
+<canvas id="chart" width="540" height="240"></canvas>
+<div class="btn-row">
+<button id="reset">重新测试</button>
+<button id="exportBtn">导出曲线图 PNG</button>
+</div>
+<div id="tip"></div>
+
+<script>
+const info = document.getElementById('info')
+const box = document.getElementById('box')
+const resetBtn = document.getElementById('reset')
+const exportBtn = document.getElementById('exportBtn')
+const canvas = document.getElementById('chart')
+const ctx = canvas.getContext('2d')
+const tip = document.getElementById('tip')
+const pad = {top:24,right:24,bottom:36,left:54}
+
+let running = false
+let finished = false // 新增：一局结束锁定标记
+let timer = null
+let startTs = 0
+const totalTime = 10
+const win = 0.4
+let clickTimes = []
+let mouseX = 0
+let mouseY = 0
+let lock = false
+
+function getInstantCPS(t){
+    let sum = 0
+    for(const ct of clickTimes){
+        if(ct >= t-win && ct <= t) sum++
+    }
+    return sum/win
+}
+
+function getSamples(nowT){
+    const sampleCnt = 200
+    const arr = []
+    for(let i=0;i<=sampleCnt;i++){
+        const t = (i/sampleCnt)*nowT
+        arr.push({t,cps:getInstantCPS(t)})
+    }
+    return arr
+}
+
+function draw(){
+    const w = canvas.width
+    const h = canvas.height
+    ctx.clearRect(0,0,w,h)
+    ctx.fillStyle = '#0f0f11'
+    ctx.fillRect(0,0,w,h)
+    const innerW = w - pad.left - pad.right
+    const innerH = h - pad.top - pad.bottom
+
+    const nowT = running ? (Date.now()-startTs)/1000 : totalTime
+    const samples = getSamples(nowT)
+    const maxCps = Math.max(...samples.map(s=>s.cps),1)
+
+    ctx.strokeStyle = '#27272a'
+    ctx.lineWidth = 1
+    for(let i=0;i<=5;i++){
+        const y = pad.top + innerH*i/5
+        ctx.beginPath()
+        ctx.moveTo(pad.left,y)
+        ctx.lineTo(w-pad.right,y)
+        ctx.stroke()
+    }
+    for(let i=0;i<=totalTime;i++){
+        const x = pad.left + innerW*i/totalTime
+        ctx.beginPath()
+        ctx.moveTo(x,pad.top)
+        ctx.lineTo(x,h-pad.bottom)
+        ctx.stroke()
+    }
+
+    ctx.fillStyle = '#a1a1aa'
+    ctx.font = '13px system-ui'
+    ctx.textAlign = 'center'
+    for(let i=0;i<=totalTime;i++){
+        const x = pad.left + innerW*i/totalTime
+        ctx.fillText(i+'.000s',x,h-10)
+    }
+    ctx.textAlign = 'right'
+    for(let i=0;i<=5;i++){
+        const val = (maxCps*(5-i)/5).toFixed(1)
+        const y = pad.top + innerH*i/5 + 4
+        ctx.fillText(val,pad.left-8,y)
+    }
+
+    const pt = s=>{
+        const x = pad.left + innerW*(s.t/totalTime)
+        const y = pad.top + innerH*(1 - s.cps/maxCps)
+        return {x,y}
+    }
+
+    const grad = ctx.createLinearGradient(0,pad.top,0,h-pad.bottom)
+    grad.addColorStop(0,'rgba(56,189,248,0.32)')
+    grad.addColorStop(1,'rgba(56,189,248,0)')
+    ctx.beginPath()
+    if(samples.length>0){
+        ctx.moveTo(pt(samples[0]).x, h-pad.bottom)
+        ctx.lineTo(pt(samples[0]).x, pt(samples[0]).y)
+        for(let i=1;i<samples.length;i++){
+            const p0 = samples[i-1]
+            const p1 = samples[i]
+            const cpX = (pt(p0).x + pt(p1).x)/2
+            ctx.bezierCurveTo(cpX, pt(p0).y, cpX, pt(p1).y, pt(p1).x, pt(p1).y)
+        }
+        ctx.lineTo(pt(samples.at(-1)).x, h-pad.bottom)
+    }
+    ctx.closePath()
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    ctx.beginPath()
+    ctx.strokeStyle = '#38bdf8'
+    ctx.lineWidth = 2.6
+    if(samples.length>0){
+        ctx.moveTo(pt(samples[0]).x, pt(samples[0]).y)
+        for(let i=1;i<samples.length;i++){
+            const p0 = samples[i-1]
+            const p1 = samples[i]
+            const cpX = (pt(p0).x + pt(p1).x)/2
+            ctx.bezierCurveTo(cpX, pt(p0).y, cpX, pt(p1).y, pt(p1).x, pt(p1).y)
+        }
+    }
+    ctx.stroke()
+
+    ctx.fillStyle = '#7dd3fc'
+    for(const ct of clickTimes){
+        if(ct>nowT) continue
+        const p = pt({t:ct, cps:getInstantCPS(ct)})
+        ctx.beginPath()
+        ctx.arc(p.x,p.y,3.2,0,Math.PI*2)
+        ctx.fill()
+    }
+
+    const rect = canvas.getBoundingClientRect()
+    const mx = mouseX - rect.left
+    const my = mouseY - rect.top
+    if(mx >= pad.left && mx <= w-pad.right && my >= pad.top && my <= h-pad.bottom){
+        const ratio = (mx-pad.left)/innerW
+        const hoverT = ratio * totalTime
+        const hoverCps = getInstantCPS(hoverT)
+        tip.style.display = 'block'
+        tip.style.left = (mouseX+14)+'px'
+        tip.style.top = (mouseY+14)+'px'
+        tip.innerText = `时间: ${hoverT.toFixed(3)} s，瞬时 CPS: ${hoverCps.toFixed(3)}`
+    }else{
+        tip.style.display = 'none'
+    }
+}
+
+function addClick(){
+    if(lock) return
+    lock = true
+    setTimeout(()=>lock=false,10)
+    if(!running) return
+    const t = (Date.now() - startTs)/1000
+    if(t >= 0 && t <= totalTime){
+        clickTimes.push(t)
+        console.log('[+] click', t, 'total:', clickTimes.length)
+        info.innerText = `剩余 ${(totalTime-t).toFixed(3)} s\n点击：${clickTimes.length}`
+        draw()
+    }
+}
+
+function exportPNG(){
+    const a = document.createElement('a')
+    a.download = `cps-chart-${new Date().toISOString().slice(0,19)}.png`
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+}
+
+function resetAll(){
+    clearInterval(timer)
+    running = false
+    finished = false
+    clickTimes = []
+    info.innerText = '准备就绪\n点击蓝色方块开始\n计时后，点蓝色方块/空白处都计数'
+    box.innerText = '开始'
+    draw()
+}
+
+box.addEventListener('mousedown', e=>{
+    // 如果已经结束，直接返回，不再开启新局！
+    if(finished) return
+    if(!running){
+        e.stopPropagation()
+        running = true
+        clickTimes = []
+        startTs = Date.now()
+        info.innerText = `剩余 ${totalTime}.000 s\n点击：0`
+        box.innerText = '狂点！'
+        timer = setInterval(()=>{
+            const elapsed = (Date.now()-startTs)/1000
+            const left = (totalTime - elapsed).toFixed(3)
+            if(elapsed >= totalTime){
+                clearInterval(timer)
+                running = false
+                finished = true // 打上结束锁
+                const total = clickTimes.length
+                const avg = (total / totalTime).toFixed(3)
+                info.innerText = `测试结束\n总点击：${total}\n平均每秒：${avg}`
+                box.innerText = '结束（点重新测试开局）'
+                return
+            }
+            info.innerText = `剩余 ${left} s\n点击：${clickTimes.length}`
+            draw()
+        }, 32)
+        draw()
+    }
+})
+
+document.addEventListener('mousedown', e=>{
+    if(e.button !== 0) return
+    if(e.target === resetBtn || e.target === exportBtn) return
+    addClick()
+})
+
+document.addEventListener('pointerdown', e=>{
+    if(e.button !== 0) return
+    if(e.target === resetBtn || e.target === exportBtn) return
+    addClick()
+})
+
+canvas.onmousemove = e=>{
+    mouseX = e.clientX
+    mouseY = e.clientY
+    draw()
+}
+canvas.onmouseleave = ()=> tip.style.display = 'none'
+
+resetBtn.onclick = resetAll
+exportBtn.onclick = exportPNG
+draw()
+</script>
+</body>
+</html>
