@@ -2,7 +2,7 @@
  * 联机贪吃蛇 —— TurboWarp / Scratch 自定义扩展（单积木版 · 完整账号版）
  *
  * 用法：TurboWarp → 添加扩展 → 自定义扩展 → 输入
- *   http://localhost:8180/snake-ext.js
+ *   https://snake-downloads.pages.dev/snake-ext.js
  *   ★ 必须勾选「在沙盒外运行」
  *
  * 积木参数：用户名 + 密码 + 服务器地址
@@ -11,7 +11,7 @@
 (function (Scratch) {
   'use strict';
 
-  const DEFAULT_URL = 'ws://localhost:8180';
+  const DEFAULT_URL = 'wss://snake-online-production-2de5.up.railway.app';
   // API_BASE 由 WS URL 推导：ws→http, wss→https
   let API_BASE = DEFAULT_URL.replace(/^ws/, 'http');
 
