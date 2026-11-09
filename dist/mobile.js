@@ -35,8 +35,12 @@ let WS_BASE_OVERRIDE = null;
 async function detectLocalServer(){
   if (/^https?:$/.test(location.protocol)) {
     try {
-      const r = await fetch(location.origin + '/api/scores', { signal: AbortSignal.timeout(800) });
-      if (r.ok){ API_BASE = location.origin; return; }
+      const r = await fetch(location.origin + '/api/scores', { signal: AbortSignal.timeout(1500) });
+      // 必须真的是游戏服务器回的 JSON 才算数：静态托管对未知路径可能回 200 + 首页 HTML
+      if (r.ok && (r.headers.get('content-type') || '').includes('json')){
+        const d = await r.json();
+        if (d && d.ok === true){ API_BASE = location.origin; return; }
+      }
     } catch {}
   }
   if (location.protocol !== 'https:') {
