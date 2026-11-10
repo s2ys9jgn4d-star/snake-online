@@ -282,7 +282,8 @@ function renderLeaderboard(items){
 function esc(s){ return String(s).replace(/[<>]/g, c => ({'<':'<','>':'>'}[c])); }
 
 function onChat(msg){
-  // 手机版只显示 toast（避免遮挡游戏画面）
+  // 手机版只显示 toast（避免遮挡游戏画面）；历史记录不弹，否则一进来就刷屏
+  if (msg.history) return;
   showToast(msg.from + ': ' + msg.text);
 }
 

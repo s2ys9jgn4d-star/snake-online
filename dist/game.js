@@ -205,6 +205,7 @@ function handleWs(msg){
 function onAuthOk(user){
   authUser = user;
   $('lobbyUserName').textContent = user;
+  $('lobbyChat').innerHTML = '';   // 每次进入大厅先清空，避免补发历史时重复
   refreshMe(); refreshScores();
   showPanel('lobby');
   refreshRooms();

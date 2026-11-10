@@ -380,6 +380,10 @@ function broadcastRooms(){
 // —— 已登录连接索引（不区分在哪个房间） ——
 const loggedInSockets = new Set(); // WSSocket
 
+// 大厅聊天记录（只留最近 50 条，新进来的人也能看到刚才在聊什么）
+const LOBBY_HISTORY_MAX = 50;
+const lobbyHistory = [];
+
 // ============================================================
 //  HTTP API（注册/登录/排行榜）
 // ============================================================
@@ -696,6 +700,8 @@ function handleWsMessage(ws, text){
         ws.user = user;
         loggedInSockets.add(ws);
         ws.sendText(JSON.stringify({t:'auth_ok', user}));
+        // 刚进大厅：把最近的大厅聊天补发给它，接着再给房间列表
+        for (const h of lobbyHistory) ws.sendText(JSON.stringify({t:'chat', from:h.from, text:h.text, history:true}));
         ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].map(r => ({
           id:r.id, name:r.name, owner:r.owner, count:r.count, max:MAX_PLAYERS_PER_ROOM, hasPwd:r.hasPassword()
         }))}));
@@ -748,6 +754,9 @@ function handleWsMessage(ws, text){
       // 大厅聊天：发给所有已登录但不在房间的用户
       const m = JSON.stringify({t:'chat', from:ws.user, text});
       for (const s of loggedInSockets) if (!s.room) s.sendText(m);
+      // 存起来，之后进大厅的人能看到
+      lobbyHistory.push({ from:ws.user, text });
+      if (lobbyHistory.length > LOBBY_HISTORY_MAX) lobbyHistory.shift();
       return;
     }
     ws.sendText(JSON.stringify({t:'need_room', msg:'请先创建或加入房间'}));
