@@ -41,7 +41,7 @@ let leaderboard = []; // [{u, s}]
 function loadUsers(){
   try {
     const raw = JSON.parse(fs.readFileSync(USERS_FILE,'utf8'));
-    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s }]));
+    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0 }]));
   } catch { accounts = new Map(); }
 }
 function loadScores(){
@@ -128,7 +128,7 @@ function cloudBackup(){
   }, 5000);
 }
 
-function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt}))); cloudBackup(); }
+function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0}))); cloudBackup(); }
 function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); cloudBackup(); }
 
 // scrypt 密码哈希（零依赖）
@@ -442,13 +442,71 @@ function hasBannedWord(text){
   return BANNED_CJK_RE.test(s) || BANNED_EN_RE.test(s);
 }
 
-// 把命中的部分打成星号
-function maskBannedWord(text){
-  let s = String(text || '');
-  const star = m => '*'.repeat(Math.min([...m].length, 6));
-  s = s.replace(BANNED_CJK_RE, star);
-  s = s.replace(BANNED_EN_RE, star);
-  return s;
+// ============================================================
+//  违禁词处罚：第 1 次禁言 24 小时 → 第 2 次禁言 7 天 → 第 3 次直接注销
+//  记过次数和禁言到期时间存在 accounts 里，跟着 users.json 一起备份，重启不丢
+// ============================================================
+const DAY_MS = 24 * 3600 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+
+function fmtLeft(ms){
+  const hours = Math.ceil(ms / 3600000);
+  return hours <= 24 ? hours + ' 小时' : Math.ceil(hours / 24) + ' 天';
+}
+
+// 还要被禁言多久（0 = 没在禁言）
+function muteLeftOf(user){
+  const a = accounts.get(user);
+  if (!a || !a.muteUntil) return 0;
+  const left = a.muteUntil - Date.now();
+  return left > 0 ? left : 0;
+}
+
+// 把某个用户的所有连接踢下线
+function kickUser(user, text){
+  for (const s of loggedInSockets){
+    if (s.user === user){
+      s.sendText(JSON.stringify({t:'sys', msg:text}));
+      s.close();
+    }
+  }
+}
+
+// 记一次过并处罚，返回给当事人看的提示；账号不存在返回 null
+function punishBannedWord(user){
+  const a = accounts.get(user);
+  if (!a) return null;
+  a.strikes = (a.strikes || 0) + 1;
+
+  if (a.strikes >= 3){
+    accounts.delete(user);
+    saveUsers();
+    leaderboard = leaderboard.filter(x => x.u !== user);
+    saveScores();
+    for (const [t, u2] of [...tokens.entries()]) if (u2 === user) tokens.delete(t);
+    kickUser(user, '你已 3 次发送违禁词，账号已被注销');
+    return '你已 3 次发送违禁词，账号已被注销';
+  }
+
+  const dur = a.strikes === 1 ? DAY_MS : WEEK_MS;
+  a.muteUntil = Date.now() + dur;
+  saveUsers();
+  return '你发送了违禁词，已被禁言 ' + fmtLeft(dur) + '（第 ' + a.strikes + ' 次，第 3 次将注销账号）';
+}
+
+// 发聊天前的检查：禁言中拦下；含违禁词则处罚。返回 true 表示这条不该广播
+function blockChatIfNeeded(ws, text){
+  const left = muteLeftOf(ws.user);
+  if (left > 0){
+    ws.sendText(JSON.stringify({t:'sys', msg:'你正在禁言中，还需等待 ' + fmtLeft(left)}));
+    return true;
+  }
+  if (hasBannedWord(text)){
+    const msg = punishBannedWord(ws.user);
+    if (msg) ws.sendText(JSON.stringify({t:'sys', msg}));
+    return true;
+  }
+  return false;
 }
 
 // ============================================================
@@ -493,7 +551,7 @@ async function handleApi(req, res, urlPath){
     const a = accounts.get(u);
     if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'用户名或密码不对'});
     const token = newToken(u);
-    return sendJSON(res, 200, {ok:true, token, user:u});
+    return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)});
   }
   if (req.method === 'POST' && urlPath === '/api/logout'){
     const user = authFromReq(req);
@@ -520,7 +578,7 @@ async function handleApi(req, res, urlPath){
     const u = authFromReq(req);
     if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
     const score = leaderboard.find(x=>x.u===u);
-    return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0});
+    return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u)});
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20)});
@@ -684,8 +742,9 @@ function handleWsMessage(ws, text){
       return;
     }
     if (msg.t === 'chat'){
-      const text = maskBannedWord(String(msg.text||'').trim().slice(0, 200));
+      const text = String(msg.text||'').trim().slice(0, 200);
       if (!text) return;
+      if (blockChatIfNeeded(ws, text)) return;
       // 大厅聊天：发给所有已登录但不在房间的用户
       const m = JSON.stringify({t:'chat', from:ws.user, text});
       for (const s of loggedInSockets) if (!s.room) s.sendText(m);
@@ -712,8 +771,9 @@ function handleWsMessage(ws, text){
     return;
   }
   if (msg.t === 'chat'){
-    const text = maskBannedWord(String(msg.text||'').trim().slice(0, 200));
+    const text = String(msg.text||'').trim().slice(0, 200);
     if (!text) return;
+    if (blockChatIfNeeded(ws, text)) return;
     room.broadcast(JSON.stringify({t:'chat', from:ws.user, text}));
     return;
   }
