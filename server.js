@@ -409,11 +409,64 @@ function authFromReq(req){
   return tokens.get(h.slice(7)) || null;
 }
 
+// ============================================================
+//  违禁词过滤
+//  中英文词表分开：中文按包含匹配，英文要求前后不是字母数字（避免 abs 里的 sb 被误伤）
+//  词与词之间允许插空格、标点、零宽字符，防止用「傻 逼」「傻.逼」绕过
+// ============================================================
+const BANNED_CJK = [
+  '傻逼','煞笔','沙比','傻b','草泥马','操你妈','草你妈','你妈死了','你妈的','妈的',
+  '他妈','去死','滚蛋','废物','智障','脑残','狗东西','杂种','贱人','死全家','垃圾东西'
+];
+const BANNED_EN = [
+  'fuck','fucking','shit','bitch','asshole','dick','pussy','nmsl','cnm','tmd','mdzz','sb'
+];
+const BANNED_SEP = '[\\s\\p{P}\\p{S}\\u200b-\\u200f\\ufeff]*';
+
+function escapeRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// 把每个词拆成单字，中间允许夹填空隙，再拼成一条正则
+function buildBannedRegExp(words, ascii){
+  const body = words.map(w => [...w].map(escapeRe).join(BANNED_SEP)).join('|');
+  return ascii
+    ? new RegExp('(?<![A-Za-z0-9])(?:' + body + ')(?![A-Za-z0-9])', 'giu')
+    : new RegExp('(?:' + body + ')', 'gu');
+}
+const BANNED_CJK_RE = buildBannedRegExp(BANNED_CJK, false);
+const BANNED_EN_RE  = buildBannedRegExp(BANNED_EN, true);
+
+// 有没有违禁词
+function hasBannedWord(text){
+  const s = String(text || '');
+  BANNED_CJK_RE.lastIndex = 0; BANNED_EN_RE.lastIndex = 0;
+  return BANNED_CJK_RE.test(s) || BANNED_EN_RE.test(s);
+}
+
+// 把命中的部分打成星号
+function maskBannedWord(text){
+  let s = String(text || '');
+  const star = m => '*'.repeat(Math.min([...m].length, 6));
+  s = s.replace(BANNED_CJK_RE, star);
+  s = s.replace(BANNED_EN_RE, star);
+  return s;
+}
+
+// ============================================================
+//  管理员（密码解锁，可注销账号）
+// ============================================================
+const ADMIN_PASS = process.env.ADMIN_PASS || '0326';
+const adminSessions = new Set();   // 登录成功后发的临时令牌
+
+function isAdmin(req){
+  const t = String(req.headers['x-admin-token'] || '').trim();
+  return !!t && adminSessions.has(t);
+}
+
 async function handleApi(req, res, urlPath){
   if (req.method === 'OPTIONS'){
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
     });
     return res.end();
@@ -425,6 +478,7 @@ async function handleApi(req, res, urlPath){
     const p = String(body.p||'');
     if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
     if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
+    if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
     if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
     const { hash, salt } = hashPass(p);
     accounts.set(u, { hash, salt });
@@ -470,6 +524,36 @@ async function handleApi(req, res, urlPath){
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20)});
+  }
+  // —— 管理员接口 ——
+  if (req.method === 'POST' && urlPath === '/api/admin/login'){
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    if (String(body.p||'') !== ADMIN_PASS) return sendJSON(res,401,{ok:false,msg:'密码不对'});
+    const t = crypto.randomBytes(16).toString('hex');
+    adminSessions.add(t);
+    return sendJSON(res, 200, {ok:true, token:t});
+  }
+  if (req.method === 'GET' && urlPath === '/api/admin/accounts'){
+    if (!isAdmin(req)) return sendJSON(res, 401, {ok:false,msg:'未授权'});
+    const items = [...accounts.keys()].map(u => {
+      const s = leaderboard.find(x=>x.u===u);
+      return { u, best: s ? s.s : 0 };
+    }).sort((a,b)=>a.u.localeCompare(b.u,'zh'));
+    return sendJSON(res, 200, {ok:true, items, total:items.length});
+  }
+  if (req.method === 'POST' && urlPath === '/api/admin/delete'){
+    if (!isAdmin(req)) return sendJSON(res, 401, {ok:false,msg:'未授权'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const u = String(body.u||'').trim();
+    if (!accounts.has(u)) return sendJSON(res, 404, {ok:false,msg:'账号不存在'});
+    accounts.delete(u);
+    saveUsers();
+    leaderboard = leaderboard.filter(x=>x.u!==u);
+    saveScores();
+    for (const [t, user] of [...tokens.entries()]) if (user===u) tokens.delete(t);
+    return sendJSON(res, 200, {ok:true});
   }
   sendJSON(res, 404, {ok:false,msg:'未找到'});
 }
@@ -577,6 +661,7 @@ function handleWsMessage(ws, text){
     if (msg.t === 'create_room'){
       const name = String(msg.name||'').trim().slice(0, 20);
       if (!name) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名不能为空'}));
+      if (hasBannedWord(name)) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名含有不允许的字词'}));
       if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限'}));
       const id = roomId();
       const pass = msg.pass ? String(msg.pass).slice(0,32) : null;
@@ -599,7 +684,7 @@ function handleWsMessage(ws, text){
       return;
     }
     if (msg.t === 'chat'){
-      const text = String(msg.text||'').trim().slice(0, 200);
+      const text = maskBannedWord(String(msg.text||'').trim().slice(0, 200));
       if (!text) return;
       // 大厅聊天：发给所有已登录但不在房间的用户
       const m = JSON.stringify({t:'chat', from:ws.user, text});
@@ -627,7 +712,7 @@ function handleWsMessage(ws, text){
     return;
   }
   if (msg.t === 'chat'){
-    const text = String(msg.text||'').trim().slice(0, 200);
+    const text = maskBannedWord(String(msg.text||'').trim().slice(0, 200));
     if (!text) return;
     room.broadcast(JSON.stringify({t:'chat', from:ws.user, text}));
     return;

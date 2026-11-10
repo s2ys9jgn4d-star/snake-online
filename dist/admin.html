@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员控制台 - 联机贪吃蛇</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.png" type="image/png">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:linear-gradient(135deg,#0f1220 0%,#1a1f35 100%);
+  color:#e2e8f0; min-height:100vh; padding:40px 20px;
+}
+.container { max-width:760px; margin:0 auto; }
+h1 { font-size:26px; margin-bottom:8px; }
+.sub { color:#94a3b8; font-size:14px; margin-bottom:26px; }
+.panel { background:#1a1f35; border:1px solid #2a3152; border-radius:14px; padding:22px; }
+.row { display:flex; gap:10px; }
+input {
+  flex:1; padding:12px 14px; border-radius:10px; border:1px solid #2a3152;
+  background:#0f1220; color:#e2e8f0; font-size:15px; outline:none;
+}
+input:focus { border-color:#5b8cff; }
+button {
+  padding:12px 22px; border:none; border-radius:10px; background:#5b8cff; color:#fff;
+  font-size:15px; font-weight:600; cursor:pointer; transition:.15s;
+}
+button:hover { background:#4a7aee; }
+button:disabled { opacity:.5; cursor:not-allowed; }
+.ghost { background:transparent; border:1px solid #2a3152; color:#94a3b8; }
+.ghost:hover { background:#232a45; color:#e2e8f0; }
+.msg { margin-top:12px; font-size:14px; min-height:20px; }
+.err { color:#f87171; }
+.ok { color:#4ade80; }
+.hidden { display:none; }
+.bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap; }
+.count { color:#94a3b8; font-size:14px; }
+ul { list-style:none; }
+li {
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  border-bottom:1px solid #232a45;
+}
+li:last-child { border-bottom:none; }
+.name { flex:1; font-size:15px; word-break:break-all; }
+.best { color:#94a3b8; font-size:13px; white-space:nowrap; }
+.del { background:#7f1d1d; padding:8px 16px; font-size:14px; }
+.del:hover { background:#991b1b; }
+.empty { color:#64748b; text-align:center; padding:30px 0; font-size:14px; }
+footer { text-align:center; color:#64748b; font-size:12px; margin-top:28px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🛠️ 管理员控制台</h1>
+  <p class="sub">联机贪吃蛇 · 账号管理</p>
+
+  <!-- 解锁 -->
+  <div id="lockPanel" class="panel">
+    <div class="row">
+      <input id="pwd" type="password" placeholder="输入管理员密码" autocomplete="off">
+      <button id="unlockBtn">解锁</button>
+    </div>
+    <div id="lockMsg" class="msg"></div>
+  </div>
+
+  <!-- 管理 -->
+  <div id="adPanel" class="panel hidden">
+    <div class="bar">
+      <span class="count" id="countText">加载中…</span>
+      <div class="row">
+        <input id="search" placeholder="搜索用户名" style="padding:9px 12px;font-size:14px;width:200px">
+        <button class="ghost" id="refreshBtn">刷新</button>
+        <button class="ghost" id="logoutBtn">退出</button>
+      </div>
+    </div>
+    <ul id="list"></ul>
+    <div id="adMsg" class="msg"></div>
+  </div>
+
+  <footer>© 2026 Snake Online, Inc.</footer>
+</div>
+
+<script>
+// 页面可能挂在 Cloudflare（静态）也可能挂在 Railway（带后端），统一指向后端
+const RAILWAY = 'https://snake-online-production-2de5.up.railway.app';
+const API = location.hostname.endsWith('railway.app') ? '' : RAILWAY;
+
+const $ = id => document.getElementById(id);
+let adminToken = sessionStorage.getItem('adminToken') || '';
+let allAccounts = [];
+
+function say(el, text, isErr){
+  el.textContent = text;
+  el.className = 'msg ' + (isErr ? 'err' : 'ok');
+}
+
+async function unlock(){
+  const p = $('pwd').value.trim();
+  if (!p) return say($('lockMsg'), '请输入密码', true);
+  $('unlockBtn').disabled = true;
+  try {
+    const r = await fetch(API + '/api/admin/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ p })
+    });
+    const d = await r.json();
+    if (!d.ok) return say($('lockMsg'), d.msg || '解锁失败', true);
+    adminToken = d.token;
+    sessionStorage.setItem('adminToken', adminToken);
+    enterPanel();
+  } catch (e){
+    say($('lockMsg'), '连不上服务器，检查网络', true);
+  } finally {
+    $('unlockBtn').disabled = false;
+  }
+}
+
+function enterPanel(){
+  $('lockPanel').classList.add('hidden');
+  $('adPanel').classList.remove('hidden');
+  loadAccounts();
+}
+
+function logout(){
+  sessionStorage.removeItem('adminToken');
+  adminToken = '';
+  $('adPanel').classList.add('hidden');
+  $('lockPanel').classList.remove('hidden');
+  $('pwd').value = '';
+  $('lockMsg').textContent = '';
+}
+
+async function loadAccounts(){
+  try {
+    const r = await fetch(API + '/api/admin/accounts', { headers:{'X-Admin-Token': adminToken} });
+    const d = await r.json();
+    if (r.status === 401) return logout();
+    if (!d.ok) return say($('adMsg'), d.msg || '加载失败', true);
+    allAccounts = d.items;
+    render();
+  } catch (e){
+    say($('adMsg'), '连不上服务器，检查网络', true);
+  }
+}
+
+function render(){
+  const kw = $('search').value.trim().toLowerCase();
+  const items = kw ? allAccounts.filter(a => a.u.toLowerCase().includes(kw)) : allAccounts;
+  $('countText').textContent = '共 ' + allAccounts.length + ' 个账号' + (kw ? '（匹配 ' + items.length + '）' : '');
+  const list = $('list');
+  list.innerHTML = '';
+  if (!items.length){
+    list.innerHTML = '<div class="empty">' + (allAccounts.length ? '没有匹配的账号' : '还没有任何账号') + '</div>';
+    return;
+  }
+  for (const a of items){
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = a.u;
+    const best = document.createElement('span');
+    best.className = 'best';
+    best.textContent = a.best ? '最高分 ' + a.best : '无记录';
+    const btn = document.createElement('button');
+    btn.className = 'del';
+    btn.textContent = '注销';
+    btn.onclick = () => deleteAccount(a.u);
+    li.append(name, best, btn);
+    list.appendChild(li);
+  }
+}
+
+async function deleteAccount(u){
+  if (!confirm('确定注销账号「' + u + '」吗？\n账号和排行榜记录都会被删除，无法恢复。')) return;
+  try {
+    const r = await fetch(API + '/api/admin/delete', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Token': adminToken},
+      body: JSON.stringify({ u })
+    });
+    const d = await r.json();
+    if (r.status === 401) return logout();
+    if (!d.ok) return say($('adMsg'), d.msg || '注销失败', true);
+    say($('adMsg'), '已注销「' + u + '」', false);
+    loadAccounts();
+  } catch (e){
+    say($('adMsg'), '连不上服务器，检查网络', true);
+  }
+}
+
+$('unlockBtn').onclick = unlock;
+$('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+$('refreshBtn').onclick = loadAccounts;
+$('logoutBtn').onclick = logout;
+$('search').addEventListener('input', render);
+
+// 已登录过（同一标签页）就直接进
+if (adminToken) enterPanel();
+</script>
+</body>
+</html>
