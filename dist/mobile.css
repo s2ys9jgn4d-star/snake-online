@@ -107,7 +107,7 @@ html,body {
 }
 .fs-btn { padding:4px 8px; font-size:14px; cursor:pointer; background:var(--panel2); border:1px solid var(--line); border-radius:999px; color:var(--text); }
 
-#stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+#stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; touch-action:none; }
 #game { display:block; background:#11152a; touch-action:none; }
 
 .overlay {

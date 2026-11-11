@@ -337,22 +337,29 @@ document.querySelectorAll('.vbtn').forEach(btn => {
 });
 
 // —— 输入：屏幕滑动 ——
+// 绑在整个游戏区（#stage）而不是只绑 canvas：手指落在画布外的留白上也能滑
 let touchStart = null;
 const canvasEl = $('game');
-canvasEl.addEventListener('touchstart', e => {
+const swipeArea = $('stage');
+swipeArea.addEventListener('touchstart', e => {
+  if (e.target.closest('button')) { touchStart = null; return; }
   const t = e.touches[0];
   touchStart = { x: t.clientX, y: t.clientY };
 }, { passive: true });
 
-canvasEl.addEventListener('touchmove', e => {
+swipeArea.addEventListener('touchmove', e => {
   if (!touchStart) return;
   const t = e.touches[0];
   const dx = t.clientX - touchStart.x;
   const dy = t.clientY - touchStart.y;
-  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+  if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
   sendDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
   touchStart = { x: t.clientX, y: t.clientY };
 }, { passive: true });
+
+// 手指抬起后重置起点，否则下一滑会从上次的落点开始算，方向会错
+swipeArea.addEventListener('touchend', () => { touchStart = null; }, { passive: true });
+swipeArea.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
 
 // 死亡层点击重生
 $('dead').addEventListener('touchstart', () => {
