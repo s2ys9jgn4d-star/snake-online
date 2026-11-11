@@ -375,7 +375,7 @@ class Room {
     const p = {
       id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length],
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
-      isBot: true, botThinkAt: 0
+      isBot: true
     };
     this.resetPlayer(p);
     this.players.set(id, p);
