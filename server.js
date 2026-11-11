@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
+const ai = require('./ai');   // 单人模式的豆包 AI
 
 const PORT = Number(process.env.PORT) || 8180;
 const PUBLIC_DIR = path.join(__dirname, 'dist');
@@ -175,6 +176,7 @@ class Room {
     this.pass = pass || null;
     this.players = new Map(); // id -> player
     this.foods = [];
+    this.isSolo = false;      // 单人房：不显示在房间列表里，别人也进不来
     this.tickMs = 200;
     this.tick = 0;
     this.nextPlayerId = 1;
@@ -233,6 +235,23 @@ class Room {
   // —— 主循环（和旧版 step 完全一致，只是移到实例方法） ——
   step(){
     this.tick++;
+    // 豆包 AI：单人模式的电脑对手
+    for (const p of this.players.values()){
+      if (!p.isBot) continue;
+      if (!p.alive){
+        // 撞死了就等 2 秒复活，否则单人房会变成空房
+        const now = Date.now();
+        if (!p.botRespawnAt) p.botRespawnAt = now + 2000;
+        else if (now >= p.botRespawnAt){
+          p.botRespawnAt = 0;
+          this.resetPlayer(p);
+          this.broadcast(JSON.stringify({t:'chat', from:'系统', text:'豆包 复活了'}));
+        }
+        continue;
+      }
+      const d = ai.decide(this, p, COLS, ROWS);
+      if (d) p.dir = d;
+    }
     for (const p of this.players.values()){
       if (!p.alive) continue;
       while (p.queue.length){
@@ -282,7 +301,7 @@ class Room {
       if (dead.has(p.id)){
         p.alive = false;
         p.deathReason = dead.get(p.id);
-        updateScore(p.name, p.score); // 死亡时持久化分数
+        if (!p.isBot) updateScore(p.name, p.score); // 死亡时持久化分数（机器人不上榜）
         this.dropFoodFromBody(p); // 死亡掉落食物
       } else {
         p.body.unshift(p.newHead);
@@ -296,13 +315,18 @@ class Room {
     this.broadcastState();
   }
 
-  setSpeed(ms){
+  // 只有房主能改，且 5 秒内只能改一次：防止有人（脚本/扩展/连点）反复抢着调速度
+  setSpeed(ms, by){
     const v = Math.round(Number(ms));
-    if (!Number.isFinite(v)) return false;
+    if (!Number.isFinite(v)) return { ok:false, msg:'速度值无效' };
+    if (by !== this.owner) return { ok:false, msg:'只有房主能调速度，你可以自己开一个房间' };
+    const now = Date.now();
+    if (now - (this.lastSpeedAt || 0) < 5000) return { ok:false, msg:'调得太频繁了，等几秒再试' };
+    this.lastSpeedAt = now;
     this.tickMs = Math.min(500, Math.max(50, v));
     clearInterval(this.timer);
     this.timer = setInterval(() => this.step(), this.tickMs);
-    return true;
+    return { ok:true };
   }
 
   // —— 协议 ——
@@ -344,10 +368,31 @@ class Room {
     this.broadcast(JSON.stringify({t:'chat', from:'系统', text:username+' 加入了房间'}));
     return p;
   }
+  // 单人模式的电脑对手：没有真 socket，用一个空壳占位
+  addBot(username){
+    const id = this.nextPlayerId++;
+    const stub = { sendText(){}, ping(){}, close(){}, lastSeen: Infinity, playerId: id, room: this };
+    const p = {
+      id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length],
+      body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
+      isBot: true, botThinkAt: 0
+    };
+    this.resetPlayer(p);
+    this.players.set(id, p);
+    this.broadcast(JSON.stringify({t:'chat', from:'系统', text:username+' 加入了房间'}));
+    return p;
+  }
+
   removePlayer(player){
     this.players.delete(player.id);
     this.broadcast(JSON.stringify({t:'chat', from:'系统', text:player.name+' 离开了房间'}));
     this.broadcastState();
+    // 单人房：真人走了就整间销毁，别留一个空房间给豆包自己玩
+    if (this.isSolo && ![...this.players.values()].some(p => !p.isBot)){
+      this.destroy();
+      rooms.delete(this.id);
+      broadcastRooms();
+    }
   }
   destroy(){
     clearInterval(this.timer); clearInterval(this.hbTimer);
@@ -366,7 +411,7 @@ function roomId(){
   return 'r'+crypto.randomBytes(6).toString('hex');
 }
 function broadcastRooms(){
-  const list = [...rooms.values()].map(r => ({
+  const list = [...rooms.values()].filter(r => !r.isSolo).map(r => ({
     id: r.id, name: r.name, owner: r.owner,
     count: r.count, max: MAX_PLAYERS_PER_ROOM, hasPwd: r.hasPassword()
   }));
@@ -702,7 +747,7 @@ function handleWsMessage(ws, text){
         ws.sendText(JSON.stringify({t:'auth_ok', user}));
         // 刚进大厅：把最近的大厅聊天补发给它，接着再给房间列表
         for (const h of lobbyHistory) ws.sendText(JSON.stringify({t:'chat', from:h.from, text:h.text, history:true}));
-        ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].map(r => ({
+        ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].filter(r => !r.isSolo).map(r => ({
           id:r.id, name:r.name, owner:r.owner, count:r.count, max:MAX_PLAYERS_PER_ROOM, hasPwd:r.hasPassword()
         }))}));
       } else {
@@ -717,7 +762,7 @@ function handleWsMessage(ws, text){
   // —— 大厅（未加入房间）：房间管理 + 聊天到全局大厅 ——
   if (!ws.room){
     if (msg.t === 'list_rooms'){
-      ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].map(r => ({
+      ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].filter(r => !r.isSolo).map(r => ({
         id:r.id, name:r.name, owner:r.owner, count:r.count, max:MAX_PLAYERS_PER_ROOM, hasPwd:r.hasPassword()
       }))}));
       return;
@@ -737,10 +782,28 @@ function handleWsMessage(ws, text){
       broadcastRooms();
       return;
     }
+    // 单人模式：开一间私密房，塞一个豆包进去陪打
+    if (msg.t === 'solo'){
+      if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限'}));
+      const id = roomId();
+      const name = (ws.user + ' 的单人房').slice(0, 20);
+      const r = new Room(id, name, ws.user, null);
+      r.isSolo = true;
+      r.tickMs = 150;
+      clearInterval(r.timer);
+      r.timer = setInterval(() => r.step(), r.tickMs);
+      rooms.set(id, r);
+      ws.sendText(JSON.stringify({t:'room_created', id, name, owner:ws.user}));
+      r.addPlayer(ws, ws.user);
+      r.addBot('豆包');
+      broadcastRooms();
+      return;
+    }
     if (msg.t === 'join_room'){
       const id = String(msg.id||'').trim();
       const r = rooms.get(id);
       if (!r) return ws.sendText(JSON.stringify({t:'sys',msg:'房间不存在'}));
+      if (r.isSolo) return ws.sendText(JSON.stringify({t:'sys',msg:'这是别人的单人房'}));
       if (r.hasPassword() && String(msg.pass||'') !== r.pass) return ws.sendText(JSON.stringify({t:'sys',msg:'密码不对'}));
       if (r.count >= MAX_PLAYERS_PER_ROOM) return ws.sendText(JSON.stringify({t:'sys',msg:'房间已满'}));
       r.addPlayer(ws, ws.user);
@@ -774,7 +837,7 @@ function handleWsMessage(ws, text){
     // 房间没人就销毁
     if (room.count === 0){ room.destroy(); rooms.delete(room.id); broadcastRooms(); }
     ws.sendText(JSON.stringify({t:'left_room'}));
-    ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].map(r => ({
+    ws.sendText(JSON.stringify({t:'rooms', items:[...rooms.values()].filter(r => !r.isSolo).map(r => ({
       id:r.id, name:r.name, owner:r.owner, count:r.count, max:MAX_PLAYERS_PER_ROOM, hasPwd:r.hasPassword()
     }))}));
     return;
@@ -804,8 +867,11 @@ function handleWsMessage(ws, text){
     return;
   }
   if (msg.t === 'speed'){
-    if (room.setSpeed(msg.ms)){
+    const r = room.setSpeed(msg.ms, ws.user);
+    if (r.ok){
       room.broadcast(JSON.stringify({t:'sys', msg: ws.user+' 把速度调成了 '+room.tickMs+'ms/步'}));
+    } else {
+      ws.sendText(JSON.stringify({t:'sys', msg: r.msg}));
     }
     return;
   }

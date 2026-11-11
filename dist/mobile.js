@@ -241,6 +241,10 @@ function joinRoom(room){
   }
 }
 
+// 单人模式：服务器会开一间私密房并塞进一个豆包
+const soloBtnEl = $('soloBtn');
+if (soloBtnEl) soloBtnEl.addEventListener('click', () => sendWS({ t:'solo' }));
+
 $('createRoomBtn').addEventListener('click', () => {
   const name = $('newRoomName').value.trim();
   const pass = $('newRoomPass').value.trim();
@@ -296,6 +300,7 @@ let wsPlayerId = null;
 let players = new Map();
 let foods = [];
 let curAt = 0;
+let stateGap = 0;   // state 帧间隔滑动平均：帧抖时不再让蛇抽搐
 let halfRtt = 0;
 let inputSeq = 0, pendingTurns = [];
 let deadShown = false;
@@ -403,7 +408,9 @@ window.addEventListener('resize', () => { if (currentPanel==='game') resizeCanva
 
 function onState(msg){
   if (msg.tickMs) TICK_MS = msg.tickMs;
-  curAt = performance.now();
+  const _an = performance.now();
+if (curAt) { const _dt = _an - curAt; if (_dt > 30 && _dt < 1200) stateGap = stateGap ? stateGap*0.82 + _dt*0.18 : _dt; }
+curAt = _an;
   players.clear();
   for (const p of msg.players){
     players.set(p.id, { ...p });
@@ -447,7 +454,8 @@ function render(){
   ctx.fillStyle = '#ffd34d';
   for (const [x,y] of foods){ ctx.beginPath(); ctx.arc(x*cw+cw/2, y*ch+ch/2, cw*0.35, 0, Math.PI*2); ctx.fill(); }
   const now = performance.now();
-  const frac = Math.min(1, Math.max(0, (now - curAt - Math.min(40, TICK_MS*0.25)) / TICK_MS));
+  const _T = stateGap || TICK_MS;
+const frac = Math.min(1.05, Math.max(0, (now - curAt - Math.min(40, _T*0.25)) / _T));
   const cell = Math.min(cw, ch);
   for (const p of players.values()){
     const color = p.alive ? p.color : 'rgba(107,114,128,.45)';
