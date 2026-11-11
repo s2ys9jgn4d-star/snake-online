@@ -313,6 +313,19 @@ document.querySelectorAll('#speedRow .speed-btn').forEach(b => {
 
 $('respawnBtn').addEventListener('click', () => { sendWS({t:'respawn'}); $('dead').classList.add('hidden'); });
 
+// —— 发送转向 ——
+// 注意：手机版之前漏了这个函数，方向键一点就抛 ReferenceError，看起来像"按键没反应"
+const OPPOSITE_DIR = { up:'down', down:'up', left:'right', right:'left' };
+function sendDir(dir){
+  const me = players.get(wsPlayerId);
+  if (!me || !me.alive) return;
+  const last = pendingTurns.length ? pendingTurns[pendingTurns.length-1].dir : me.dir;
+  if (dir === last || dir === OPPOSITE_DIR[last]) return;
+  pendingTurns.push({ seq: ++inputSeq, dir });
+  if (pendingTurns.length > 2) pendingTurns.shift();
+  sendWS({ t:'dir', dir, seq: inputSeq });
+}
+
 // —— 输入：虚拟十字键 ——
 document.querySelectorAll('.vbtn').forEach(btn => {
   const fire = e => {
