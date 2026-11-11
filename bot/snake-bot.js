@@ -54,59 +54,72 @@ function sendDir(dir) {
 const NB = [[0, -1], [0, 1], [-1, 0], [1, 0]];
 const keyOf = (x, y) => y * COLS + x;
 
-// 所有蛇身都算障碍，但每条蛇的尾巴下一步会让开，所以不算
+// 障碍格：蛇身。只有“自己的尾巴”一定会让开，别人的尾巴可能因为吃到食物而不动，
+// 所以别人的尾巴照样当墙，宁可绕一下也别赌。
 function buildBlocked() {
   const blocked = new Set();
   for (const p of players) {
     if (!p.alive || !p.body) continue;
-    for (let i = 0; i < p.body.length - 1; i++) blocked.add(keyOf(p.body[i][0], p.body[i][1]));
+    const isMe = p.id === myId;
+    for (let i = 0; i < p.body.length; i++) {
+      if (isMe && i === p.body.length - 1) continue;
+      blocked.add(keyOf(p.body[i][0], p.body[i][1]));
+    }
   }
   return blocked;
 }
 
 // 从某格出发的 BFS，返回步数数组（-1 = 走不到）
-function bfsFrom(sx, sy, blocked) {
-  const dist = new Int16Array(COLS * ROWS).fill(-1);
+// 预分配缓冲区：每步都 new 数组会触发 GC，50ms 步速下偶发的 GC 停顿就是致命的
+const NCELL = COLS * ROWS;
+const BUF_FOOD = new Int16Array(NCELL);
+const BUF_TAIL = new Int16Array(NCELL);
+const BUF_Q = new Int32Array(NCELL);
+
+function bfsFrom(sx, sy, blocked, dist) {
+  dist.fill(-1);
   const s = keyOf(sx, sy);
   if (blocked.has(s)) return dist;
   dist[s] = 0;
-  const q = [s];
-  for (let qi = 0; qi < q.length; qi++) {
-    const k = q[qi], x = k % COLS, y = (k / COLS) | 0;
+  let qs = 0, qe = 0;
+  BUF_Q[qe++] = s;
+  while (qs < qe) {
+    const k = BUF_Q[qs++], x = k % COLS, y = (k / COLS) | 0;
     for (const [dx, dy] of NB) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
       const nk = ny * COLS + nx;
       if (dist[nk] !== -1 || blocked.has(nk)) continue;
-      dist[nk] = dist[k] + 1; q.push(nk);
+      dist[nk] = dist[k] + 1; BUF_Q[qe++] = nk;
     }
   }
   return dist;
 }
 
 // 多源 BFS：算出每个格子到最近食物要走几步（-1 表示走不到）
-function foodField(blocked) {
-  const dist = new Int16Array(COLS * ROWS).fill(-1);
-  const q = [];
+function foodField(blocked, dist) {
+  dist.fill(-1);
+  let qs = 0, qe = 0;
   for (const [fx, fy] of foods) {
     const k = keyOf(fx, fy);
     if (blocked.has(k) || dist[k] === 0) continue;
-    dist[k] = 0; q.push(k);
+    dist[k] = 0; BUF_Q[qe++] = k;
   }
-  for (let qi = 0; qi < q.length; qi++) {
-    const k = q[qi], x = k % COLS, y = (k / COLS) | 0;
+  while (qs < qe) {
+    const k = BUF_Q[qs++], x = k % COLS, y = (k / COLS) | 0;
     for (const [dx, dy] of NB) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
       const nk = ny * COLS + nx;
       if (dist[nk] !== -1 || blocked.has(nk)) continue;
-      dist[nk] = dist[k] + 1; q.push(nk);
+      dist[nk] = dist[k] + 1; BUF_Q[qe++] = nk;
     }
   }
   return dist;
 }
 
 const stat = { n: 0, sum: 0, max: 0 };
+let lastHead = '', lastEnemyHeads = [];
 function think() {
   const t0 = performance.now();
   decide();
@@ -122,6 +135,9 @@ function decide() {
     if (m.score > bestScore) bestScore = m.score;
     if (wasAlive) {
       wasAlive = false; deaths++;
+      if (process.env.BOT_DEBUG) {
+        console.log(`[死亡] ${USER} 上一步头=(${lastHead}) 敌人头=${lastEnemyHeads.join(' ') || '无'}`);
+      }
       setTimeout(() => { send({ t: 'respawn' }); rounds++; }, 600);
     }
     return;
@@ -131,18 +147,26 @@ function decide() {
   if (!m.body || !m.body.length) return;
 
   const head = m.body[0], len = m.body.length;
+  lastHead = head.join(',');
+  lastEnemyHeads = players
+    .filter(p => p.alive && p.id !== myId && p.body && p.body.length)
+    .map(p => '(' + p.body[0].join(',') + ')');
   const tail = m.body[m.body.length - 1];
   const blocked = buildBlocked();
-  const fdist = foodField(blocked);
+  const fdist = foodField(blocked, BUF_FOOD);
   // 核心安全线：走完这一步，还能不能摸到自己的尾巴？
   // 能摸到 = 身体和尾巴之间还有通路，不会被自己围死（尾巴每步都会让开）
-  const tdist = bfsFrom(tail[0], tail[1], blocked);
+  const tdist = bfsFrom(tail[0], tail[1], blocked, BUF_TAIL);
 
-  // 别的蛇头所在格：同时往这走会头对头，尽量避开
-  const enemyHeads = new Set();
+  // 危险格：别人蛇头所在格 + 它四周一圈（它下一步也可能转进来 → 头对头）
+  const danger = new Set();
   for (const p of players) {
-    if (p.alive && p.id !== myId && p.body && p.body.length) {
-      enemyHeads.add(keyOf(p.body[0][0], p.body[0][1]));
+    if (!p.alive || p.id === myId || !p.body || !p.body.length) continue;
+    const [ex, ey] = p.body[0];
+    danger.add(keyOf(ex, ey));
+    for (const [dx, dy] of NB) {
+      const nx = ex + dx, ny = ey + dy;
+      if (inside(nx, ny)) danger.add(keyOf(nx, ny));
     }
   }
 
@@ -156,7 +180,7 @@ function decide() {
     const slack = tdist[k];                             // 到尾巴的距离，-1 = 摸不到
     const safe = slack >= 0;
     const fd = fdist[k] >= 0 ? fdist[k] : 999;          // 该格到最近食物的步数
-    cands.push({ d, safe, headRisk: enemyHeads.has(k) ? 1 : 0, food: fd, slack });
+    cands.push({ d, safe, headRisk: danger.has(k) ? 1 : 0, food: fd, slack });
   }
   if (!cands.length) return;
 
