@@ -3,6 +3,10 @@ const BASE = process.env.BOT_BASE || 'http://localhost:8180';
 const WS_URL = BASE.replace(/^http/, 'ws');
 const USER = process.env.BOT_USER || '豆包';   // 多开时用不同账号，否则会互相顶下线
 const PASS = process.env.BOT_PASS || 'doubao2026';
+const ROOM_NAME = process.env.BOT_ROOM_NAME || '豆包代打';
+// 进房策略：bot = 只进豆包自己的房间（默认，不去打扰真人）；any = 进人最多的房间；never = 永远自己建房
+const JOIN_MODE = process.env.BOT_JOIN || 'bot';
+const isBotRoom = name => name === ROOM_NAME || name.startsWith('豆包');
 const COLS = 42, ROWS = 30;
 const SAFETY = 1; // 额外安全余量（格）
 
@@ -240,9 +244,13 @@ async function main() {
       roomLocked = true;
       const list = msg.items || [];
       console.log('房间:', list.map(r => `${r.name}(${r.count}/${r.max})`).join(' | ') || '无');
-      const pick = list.filter(r => !r.hasPwd).sort((a, b) => b.count - a.count)[0];
+      const open = list.filter(r => !r.hasPwd);
+      // 默认只进豆包自己的房间：别跑去把真人的房间屠了
+      const pick = JOIN_MODE === 'never' ? null
+        : JOIN_MODE === 'any' ? open.sort((a, b) => b.count - a.count)[0]
+        : open.filter(r => isBotRoom(r.name)).sort((a, b) => b.count - a.count)[0];
       if (pick) { console.log('加入', pick.name); send({ t: 'join_room', id: pick.id }); }
-      else send({ t: 'create_room', name: '豆包代打' });
+      else { console.log('自己建房', ROOM_NAME); send({ t: 'create_room', name: ROOM_NAME }); }
       return;
     }
     if (msg.t === 'joined_room') {
