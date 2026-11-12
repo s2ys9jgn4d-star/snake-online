@@ -148,10 +148,13 @@ function normalizeEmail(s){ return String(s || '').trim().toLowerCase(); }
 // 发信刚失败过就先认为邮箱不可用（10 分钟后自动重试），期间注册不强制验证码
 let mailBrokenUntil = 0;
 const MAIL_BROKEN_MS = 10 * 60 * 1000;
-// 邮箱验证码默认关闭：只有 REQUIRE_EMAIL_CODE=1 且发信服务正常时才要求验证码
-const REQUIRE_EMAIL_CODE = process.env.REQUIRE_EMAIL_CODE === '1';
+// 邮箱验证码：REQUIRE_EMAIL_CODE=0 强制关；配了 HTTPS 发信接口自动开；只有 SMTP 时要 =1 才开
+const REQUIRE_EMAIL_CODE = process.env.REQUIRE_EMAIL_CODE;
 function mailUsable(){
-  return REQUIRE_EMAIL_CODE && mail.isConfigured() && Date.now() > mailBrokenUntil;
+  if (REQUIRE_EMAIL_CODE === '0') return false;
+  if (Date.now() < mailBrokenUntil) return false;
+  if (mail.apiConfig()) return true;
+  return REQUIRE_EMAIL_CODE === '1' && mail.isConfigured();
 }
 
 // ============================================================
@@ -682,8 +685,11 @@ async function handleApi(req, res, urlPath){
     if (!EMAIL_RE.test(email)) return sendJSON(res, 400, {ok:false,msg:'邮箱格式不对'});
     if (u && accounts.has(u)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res, 409, {ok:false,msg:'这个邮箱已经注册过账号了'});
-    if (!REQUIRE_EMAIL_CODE || !mail.isConfigured()) return sendJSON(res, 503, {ok:false,msg:'现在注册不需要邮箱验证码，直接填用户名和密码就行'});
-    if (Date.now() < mailBrokenUntil) return sendJSON(res, 503, {ok:false,msg:'邮箱服务刚出故障，暂时发不了验证码；不填邮箱也能直接注册'});
+    if (!mailUsable()){
+      return sendJSON(res, 503, {ok:false, msg: Date.now() < mailBrokenUntil
+        ? '邮箱服务刚出故障，暂时发不了验证码；不填邮箱也能直接注册'
+        : '现在注册不需要邮箱验证码，直接填用户名和密码就行'});
+    }
     const last = codeCooldown.get(email) || 0;
     if (Date.now() - last < CODE_GAP){
       return sendJSON(res, 429, {ok:false,msg:'发太频繁了，' + Math.ceil((CODE_GAP - (Date.now() - last)) / 1000) + ' 秒后再试'});

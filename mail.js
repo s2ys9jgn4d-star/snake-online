@@ -10,7 +10,7 @@
  * 也可以手动指定：MAIL_HOST / MAIL_PORT / MAIL_SECURE / MAIL_FROM
  *
  * 注意：Railway 免费/试用套餐封了出站 SMTP（25/465/587），所以线上请用 HTTPS 接口：
- *   MAIL_API     = brevo | resend   （走 443 端口，不会被封）
+ *   MAIL_API     = smtp2go | brevo | resend   （走 443 端口，不会被封）
  *   MAIL_API_KEY = 对应平台给你的 API Key
  *   MAIL_FROM    = 已验证的发件邮箱
  *
@@ -71,8 +71,9 @@ function isConfigured(){
 
 // —— HTTPS 发信接口（Railway 这类封 SMTP 的环境用）——
 const API_ENDPOINTS = {
-  brevo:  'https://api.brevo.com/v3/smtp/email',
-  resend: 'https://api.resend.com/emails'
+  brevo:    'https://api.brevo.com/v3/smtp/email',
+  resend:   'https://api.resend.com/emails',
+  smtp2go:  'https://api.smtp2go.com/v3/email/send'
 };
 
 function apiConfig(){
@@ -84,21 +85,30 @@ function apiConfig(){
 }
 
 async function sendViaApi(c, { to, subject, text }){
-  const isBrevo = c.api === 'brevo';
-  const body = isBrevo
-    ? { sender: { email: c.from, name: '联机贪吃蛇' }, to: [{ email: to }], subject, textContent: text }
-    : { from: '联机贪吃蛇 <' + c.from + '>', to: [to], subject, text };
-  const headers = isBrevo
-    ? { 'api-key': c.key, 'content-type': 'application/json', accept: 'application/json' }
-    : { authorization: 'Bearer ' + c.key, 'content-type': 'application/json' };
+  const from = '联机贪吃蛇 <' + c.from + '>';
+  let body, headers;
+  if (c.api === 'brevo'){
+    body = { sender: { email: c.from, name: '联机贪吃蛇' }, to: [{ email: to }], subject, textContent: text };
+    headers = { 'api-key': c.key, 'content-type': 'application/json', accept: 'application/json' };
+  } else if (c.api === 'resend'){
+    body = { from, to: [to], subject, text };
+    headers = { authorization: 'Bearer ' + c.key, 'content-type': 'application/json' };
+  } else {  // smtp2go
+    body = { api_key: c.key, sender: from, to: [to], subject, text_body: text };
+    headers = { 'content-type': 'application/json' };
+  }
   const r = await fetch(c.url, {
     method: 'POST', headers, body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000)
   });
-  if (!r.ok){
-    let detail = '';
-    try { detail = (await r.text()).slice(0, 200); } catch {}
-    throw new Error('HTTP ' + r.status + ' ' + detail);
+  const raw = await r.text().catch(() => '');
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + raw.slice(0, 200));
+  // SMTP2GO 出错时也返回 200，要看 data.failed / data.succeeded
+  if (c.api === 'smtp2go'){
+    let d = null;
+    try { d = JSON.parse(raw); } catch {}
+    const data = (d && d.data) || {};
+    if (!(data.succeeded > 0)) throw new Error('接口没发出去：' + raw.slice(0, 200));
   }
 }
 
