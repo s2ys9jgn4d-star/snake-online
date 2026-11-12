@@ -756,6 +756,21 @@ async function handleApi(req, res, urlPath){
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20)});
   }
+  // 邮箱发信自检：只报「有没有」不报值，方便排查线上配置
+  if (req.method === 'GET' && urlPath === '/api/mail-status'){
+    return sendJSON(res, 200, {
+      ok: true,
+      configured: mail.isConfigured(),
+      accounts: mail.accounts().length,
+      env: {
+        provider: !!process.env.MAIL_PROVIDER,
+        user: !!process.env.MAIL_USER,
+        pass: !!process.env.MAIL_PASS,
+        from: !!process.env.MAIL_FROM
+      },
+      startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString()
+    });
+  }
 
   // —— 好友 API ——
   // 所有玩家（带在线状态和我和他的关系）
