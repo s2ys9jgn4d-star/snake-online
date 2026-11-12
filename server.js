@@ -763,6 +763,8 @@ async function handleApi(req, res, urlPath){
       configured: mail.isConfigured(),
       accounts: mail.accounts().length,
       env: {
+        api: !!process.env.MAIL_API,
+        apiKey: !!process.env.MAIL_API_KEY,
         provider: !!process.env.MAIL_PROVIDER,
         user: !!process.env.MAIL_USER,
         pass: !!process.env.MAIL_PASS,

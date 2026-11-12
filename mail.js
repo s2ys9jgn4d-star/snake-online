@@ -9,9 +9,14 @@
  *   MAIL_PASS     = 邮箱的「SMTP 授权码 / 应用专用密码」（不是登录密码！）
  * 也可以手动指定：MAIL_HOST / MAIL_PORT / MAIL_SECURE / MAIL_FROM
  *
+ * 注意：Railway 免费/试用套餐封了出站 SMTP（25/465/587），所以线上请用 HTTPS 接口：
+ *   MAIL_API     = brevo | resend   （走 443 端口，不会被封）
+ *   MAIL_API_KEY = 对应平台给你的 API Key
+ *   MAIL_FROM    = 已验证的发件邮箱
+ *
  * 想配第二个备用邮箱？把上面 4 个变量改成 MAIL1_ 开头就行：
  *   MAIL1_PROVIDER / MAIL1_USER / MAIL1_PASS / MAIL1_FROM
- * 发送顺序：MAIL_* → MAIL1_* → MAIL2_*，前一个失败自动换下一个（失败原因写进日志）
+ * 发送顺序：HTTPS 接口 → MAIL_* → MAIL1_* → MAIL2_*，前一个失败自动换下一个（失败原因写进日志）
  *
  * 126 / 163 / QQ 用 465 端口（一连接就加密）
  * Hotmail / Outlook 用 587 端口（先明文连接，再 STARTTLS 升级加密）
@@ -61,7 +66,40 @@ function accounts(){
 }
 
 function isConfigured(){
-  return accounts().length > 0;
+  return !!apiConfig() || accounts().length > 0;
+}
+
+// —— HTTPS 发信接口（Railway 这类封 SMTP 的环境用）——
+const API_ENDPOINTS = {
+  brevo:  'https://api.brevo.com/v3/smtp/email',
+  resend: 'https://api.resend.com/emails'
+};
+
+function apiConfig(){
+  const api = String(process.env.MAIL_API || '').toLowerCase();
+  const key = process.env.MAIL_API_KEY || '';
+  const from = process.env.MAIL_FROM || process.env.MAIL_USER || '';
+  if (!API_ENDPOINTS[api] || !key || !from) return null;
+  return { api, key, from, url: process.env.MAIL_API_URL || API_ENDPOINTS[api] };
+}
+
+async function sendViaApi(c, { to, subject, text }){
+  const isBrevo = c.api === 'brevo';
+  const body = isBrevo
+    ? { sender: { email: c.from, name: '联机贪吃蛇' }, to: [{ email: to }], subject, textContent: text }
+    : { from: '联机贪吃蛇 <' + c.from + '>', to: [to], subject, text };
+  const headers = isBrevo
+    ? { 'api-key': c.key, 'content-type': 'application/json', accept: 'application/json' }
+    : { authorization: 'Bearer ' + c.key, 'content-type': 'application/json' };
+  const r = await fetch(c.url, {
+    method: 'POST', headers, body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!r.ok){
+    let detail = '';
+    try { detail = (await r.text()).slice(0, 200); } catch {}
+    throw new Error('HTTP ' + r.status + ' ' + detail);
+  }
 }
 
 // 把 socket 包成「能按行收发」的小工具
@@ -175,22 +213,26 @@ async function sendOne(c, { to, subject, text }){
   }
 }
 
-// 按顺序试每个邮箱，前一个失败就换下一个
+// 按顺序试每个发信方式，前一个失败就换下一个
 async function sendMail(opts){
-  const list = accounts();
-  if (!list.length) throw new Error('服务器还没配置邮箱服务');
+  const tryList = [];
+  const api = apiConfig();
+  if (api) tryList.push({ name: '接口(' + api.api + ')', run: () => sendViaApi(api, opts) });
+  for (const c of accounts()) tryList.push({ name: c.user, run: () => sendOne(c, opts) });
+  if (!tryList.length) throw new Error('服务器还没配置邮箱服务');
+
   const errs = [];
-  for (let i = 0; i < list.length; i++){
+  for (let i = 0; i < tryList.length; i++){
     try {
-      await sendOne(list[i], opts);
+      await tryList[i].run();
       return;
     } catch (e){
-      errs.push(list[i].user + '：' + e.message);
-      const more = i + 1 < list.length;
-      console.log('[mail] ' + list[i].user + ' 发送失败' + (more ? '，换下一个邮箱重试' : '，没有备用邮箱了') + ' → ' + e.message);
+      errs.push(tryList[i].name + '：' + e.message);
+      const more = i + 1 < tryList.length;
+      console.log('[mail] ' + tryList[i].name + ' 发送失败' + (more ? '，换下一个方式重试' : '，没有备用方式了') + ' → ' + e.message);
     }
   }
   throw new Error(errs.join('；'));
 }
 
-module.exports = { sendMail, isConfigured, accounts };
+module.exports = { sendMail, isConfigured, accounts, apiConfig };
