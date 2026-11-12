@@ -9,6 +9,10 @@
  *   MAIL_PASS     = 邮箱的「SMTP 授权码 / 应用专用密码」（不是登录密码！）
  * 也可以手动指定：MAIL_HOST / MAIL_PORT / MAIL_SECURE / MAIL_FROM
  *
+ * 想配第二个备用邮箱？把上面 4 个变量改成 MAIL1_ 开头就行：
+ *   MAIL1_PROVIDER / MAIL1_USER / MAIL1_PASS / MAIL1_FROM
+ * 发送顺序：MAIL_* → MAIL1_* → MAIL2_*，前一个失败自动换下一个（失败原因写进日志）
+ *
  * 126 / 163 / QQ 用 465 端口（一连接就加密）
  * Hotmail / Outlook 用 587 端口（先明文连接，再 STARTTLS 升级加密）
  */
@@ -24,22 +28,40 @@ const PROVIDERS = {
   gmail:   { host:'smtp.gmail.com',        port:465, secure:true  }
 };
 
-function config(){
-  const preset = PROVIDERS[String(process.env.MAIL_PROVIDER || '').toLowerCase()] || null;
-  const user = process.env.MAIL_USER || '';
+// 一组变量前缀 = 一个发件邮箱，按顺序尝试
+const ACCOUNT_PREFIXES = ['MAIL', 'MAIL1', 'MAIL2'];
+
+function readConfig(prefix){
+  const get = k => process.env[prefix + '_' + k] || '';
+  const preset = PROVIDERS[String(get('PROVIDER')).toLowerCase()] || null;
+  const user = get('USER');
   return {
-    host: process.env.MAIL_HOST || (preset ? preset.host : ''),
-    port: Number(process.env.MAIL_PORT || (preset ? preset.port : 465)),
-    secure: process.env.MAIL_SECURE ? process.env.MAIL_SECURE !== '0' : (preset ? preset.secure : true),
+    host: get('HOST') || (preset ? preset.host : ''),
+    port: Number(get('PORT') || (preset ? preset.port : 465)),
+    secure: get('SECURE') ? get('SECURE') !== '0' : (preset ? preset.secure : true),
     user,
-    pass: process.env.MAIL_PASS || '',
-    from: process.env.MAIL_FROM || user
+    pass: get('PASS'),
+    from: get('FROM') || user
   };
 }
 
+// 取出所有填齐了 host / user / pass 的邮箱（重复的邮箱只留第一个）
+function accounts(){
+  const seen = new Set();
+  const list = [];
+  for (const p of ACCOUNT_PREFIXES){
+    const c = readConfig(p);
+    if (!c.host || !c.user || !c.pass) continue;
+    const key = c.user.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push(c);
+  }
+  return list;
+}
+
 function isConfigured(){
-  const c = config();
-  return !!(c.host && c.user && c.pass);
+  return accounts().length > 0;
 }
 
 // 把 socket 包成「能按行收发」的小工具
@@ -108,10 +130,8 @@ function buildMessage(c, { to, subject, text }){
   ].join('\r\n');
 }
 
-async function sendMail({ to, subject, text }){
-  const c = config();
-  if (!isConfigured()) throw new Error('服务器还没配置邮箱服务');
-
+// 用指定的一个邮箱发一封
+async function sendOne(c, { to, subject, text }){
   const tlsOpts = { host: c.host, port: c.port };
   if (!net.isIP(c.host)) tlsOpts.servername = c.host;   // 直接写 IP 时不能带 servername
   let sock = c.secure ? tls.connect(tlsOpts) : net.connect(c.port, c.host);
@@ -155,4 +175,22 @@ async function sendMail({ to, subject, text }){
   }
 }
 
-module.exports = { sendMail, isConfigured, config };
+// 按顺序试每个邮箱，前一个失败就换下一个
+async function sendMail(opts){
+  const list = accounts();
+  if (!list.length) throw new Error('服务器还没配置邮箱服务');
+  const errs = [];
+  for (let i = 0; i < list.length; i++){
+    try {
+      await sendOne(list[i], opts);
+      return;
+    } catch (e){
+      errs.push(list[i].user + '：' + e.message);
+      const more = i + 1 < list.length;
+      console.log('[mail] ' + list[i].user + ' 发送失败' + (more ? '，换下一个邮箱重试' : '，没有备用邮箱了') + ' → ' + e.message);
+    }
+  }
+  throw new Error(errs.join('；'));
+}
+
+module.exports = { sendMail, isConfigured, accounts };
