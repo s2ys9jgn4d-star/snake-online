@@ -73,10 +73,25 @@ document.querySelectorAll('.auth-tabs .tab').forEach(b => {
     document.querySelectorAll('.auth-tabs .tab').forEach(x => x.classList.toggle('active', x===b));
     $('authBtn').textContent = authTab === 'login' ? '登录' : '注册';
     $('authErr').textContent = '';
-    $('regExtra').classList.toggle('hidden', authTab !== 'register');
+    applyRegExtra();
     $('authPass').autocomplete = authTab === 'login' ? 'current-password' : 'new-password';
+    if (authTab === 'register') refreshMailReady();
   });
 });
+
+// 邮箱发信是否可用：不可用时注册就不要求验证码（配置好了会自动恢复）
+let mailReady = null;
+function applyRegExtra(){
+  $('regExtra').classList.toggle('hidden', !(authTab === 'register' && mailReady !== false));
+  $('noMailTip').classList.toggle('hidden', !(authTab === 'register' && mailReady === false));
+}
+async function refreshMailReady(){
+  try {
+    const r = await api('/api/mail-status');
+    mailReady = !!(r && r.ok && r.configured);
+  } catch (e) { mailReady = null; }
+  applyRegExtra();
+}
 
 // —— 注册：发送邮箱验证码（60 秒内不能重发）——
 let codeLeft = 0, codeTimer = null;
@@ -119,7 +134,7 @@ async function doAuth(){
   const email = $('authEmail').value.trim();
   const code = $('authCode').value.trim();
   $('authErr').textContent = '';
-  if (authTab === 'register'){
+  if (authTab === 'register' && mailReady !== false){
     if (!email) { $('authErr').textContent = '注册要填邮箱'; return; }
     if (!code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
   }
@@ -172,6 +187,7 @@ $('deleteAcctBtn').addEventListener('click', async () => {
 
 (async function init(){
   await detectLocalServer();  // file:// 时先探测本机 server
+  refreshMailReady();
   if (authToken){
     const r = await api('/api/me');
     if (r.ok && r.user === authUser){ enterLobby(); return; }

@@ -703,15 +703,20 @@ async function handleApi(req, res, urlPath){
     const code = String(body.code||'').trim();
     if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
     if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
-    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
+    // 邮箱服务可用时必须走验证码；发信服务挂了就不拦人，允许直接注册
+    const needEmail = mail.isConfigured();
+    if (needEmail && !EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
+    if (!needEmail && email && !EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
     if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
     if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
-    for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
-    const rec = emailCodes.get(email);
-    if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次'});
+    if (email) for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
+    if (needEmail){
+      const rec = emailCodes.get(email);
+      if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次'});
+      emailCodes.delete(email);
+    }
     const { hash, salt } = hashPass(p);
     accounts.set(u, { hash, salt, email });
-    emailCodes.delete(email);
     saveUsers();
     return sendJSON(res, 200, {ok:true});
   }
