@@ -115,6 +115,7 @@ $('sendCodeBtn').addEventListener('click', async () => {
     if (!r.ok){
       $('authErr').textContent = r.msg || '发送失败';
       btn.disabled = false; btn.textContent = '发送验证码';
+      refreshMailReady();   // 发不出去就切到「免验证码注册」
       return;
     }
     $('codeTip').textContent = '验证码已发到 ' + email + '（收不到就看看垃圾箱）';

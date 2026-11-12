@@ -173,7 +173,7 @@ async function sendOne(c, { to, subject, text }){
   const tlsOpts = { host: c.host, port: c.port };
   if (!net.isIP(c.host)) tlsOpts.servername = c.host;   // 直接写 IP 时不能带 servername
   let sock = c.secure ? tls.connect(tlsOpts) : net.connect(c.port, c.host);
-  sock.setTimeout(20000, () => sock.destroy(new Error('SMTP 超时（20 秒）')));
+  sock.setTimeout(12000, () => sock.destroy(new Error('SMTP 超时（12 秒）')));
 
   await new Promise((resolve, reject) => {
     sock.once(c.secure ? 'secureConnect' : 'connect', resolve);

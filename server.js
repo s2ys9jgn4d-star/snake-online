@@ -145,6 +145,13 @@ const CODE_GAP = 60 * 1000;
 const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/;
 function normalizeEmail(s){ return String(s || '').trim().toLowerCase(); }
 
+// 发信刚失败过就先认为邮箱不可用（10 分钟后自动重试），期间注册不强制验证码
+let mailBrokenUntil = 0;
+const MAIL_BROKEN_MS = 10 * 60 * 1000;
+function mailUsable(){
+  return mail.isConfigured() && Date.now() > mailBrokenUntil;
+}
+
 // ============================================================
 //  好友：关系 / 申请 / 私聊记录（存 data/friends.json，重启不丢）
 //  friends[我] = [好友名...]
@@ -674,6 +681,7 @@ async function handleApi(req, res, urlPath){
     if (u && accounts.has(u)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res, 409, {ok:false,msg:'这个邮箱已经注册过账号了'});
     if (!mail.isConfigured()) return sendJSON(res, 503, {ok:false,msg:'服务器还没配置邮箱服务，暂时不能发验证码'});
+    if (Date.now() < mailBrokenUntil) return sendJSON(res, 503, {ok:false,msg:'邮箱服务刚出故障，暂时发不了验证码；不填邮箱也能直接注册'});
     const last = codeCooldown.get(email) || 0;
     if (Date.now() - last < CODE_GAP){
       return sendJSON(res, 429, {ok:false,msg:'发太频繁了，' + Math.ceil((CODE_GAP - (Date.now() - last)) / 1000) + ' 秒后再试'});
@@ -689,9 +697,11 @@ async function handleApi(req, res, urlPath){
       });
     } catch (e){
       emailCodes.delete(email);
+      mailBrokenUntil = Date.now() + MAIL_BROKEN_MS;   // 10 分钟内不再强求验证码
       console.log('发验证码失败：' + e.message);
-      return sendJSON(res, 500, {ok:false,msg:'邮件发送失败：' + e.message});
+      return sendJSON(res, 500, {ok:false,msg:'邮件发送失败：' + e.message + '（现在不填邮箱也能注册）'});
     }
+    mailBrokenUntil = 0;
     return sendJSON(res, 200, {ok:true, msg:'验证码已发到邮箱，10 分钟内有效'});
   }
   if (req.method === 'POST' && urlPath === '/api/register'){
@@ -704,7 +714,7 @@ async function handleApi(req, res, urlPath){
     if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
     if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
     // 邮箱服务可用时必须走验证码；发信服务挂了就不拦人，允许直接注册
-    const needEmail = mail.isConfigured();
+    const needEmail = mailUsable();
     if (needEmail && !EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
     if (!needEmail && email && !EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
     if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
@@ -765,7 +775,7 @@ async function handleApi(req, res, urlPath){
   if (req.method === 'GET' && urlPath === '/api/mail-status'){
     return sendJSON(res, 200, {
       ok: true,
-      configured: mail.isConfigured(),
+      configured: mailUsable(),
       accounts: mail.accounts().length,
       env: {
         api: !!process.env.MAIL_API,
