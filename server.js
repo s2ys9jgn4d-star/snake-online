@@ -1241,7 +1241,11 @@ const server = http.createServer(async (req, res) => {
   if (!filePath.startsWith(PUBLIC_DIR + path.sep)){ res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(filePath, (err, data) => {
     if (err){ res.writeHead(404, {'Content-Type':'text/plain; charset=utf-8'}); return res.end('404'); }
-    res.writeHead(200, {'Content-Type': MIME[path.extname(filePath)] || 'application/octet-stream'});
+    const ext = path.extname(filePath);
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+    // 页面/脚本/样式不缓存，避免玩家一直跑旧代码
+    if (ext === '.html' || ext === '.js' || ext === '.css') headers['Cache-Control'] = 'no-cache, must-revalidate';
+    res.writeHead(200, headers);
     res.end(data);
   });
 });
