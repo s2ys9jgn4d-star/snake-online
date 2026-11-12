@@ -222,3 +222,5 @@ html,body {
   flex:none; padding:0 16px; border-radius:10px; border:none;
   background:var(--accent); color:#fff; font-size:15px; font-weight:600;
 }
+
+.captcha-img{display:block;width:120px;height:40px;margin:8px 0 4px;border-radius:8px;cursor:pointer;background:#eef2f7}

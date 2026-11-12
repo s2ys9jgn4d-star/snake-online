@@ -157,6 +157,40 @@ function mailUsable(){
   return REQUIRE_EMAIL_CODE === '1' && mail.isConfigured();
 }
 
+// —— 图片验证码：不依赖任何外部服务，4 个字符，10 分钟有效 ——
+const captchas = new Map();
+const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function captchaSvg(code){
+  const w = 120, h = 40;
+  let noise = '';
+  for (let i = 0; i < 5; i++){
+    const x1 = (Math.random()*w)|0, y1 = (Math.random()*h)|0;
+    const x2 = (Math.random()*w)|0, y2 = (Math.random()*h)|0;
+    noise += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#9aa6b2" stroke-width="1" opacity=".55"/>';
+  }
+  let chars = '';
+  code.split('').forEach((ch, i) => {
+    const x = 16 + i * 25, y = 28, rot = (Math.random()*24 - 12).toFixed(0);
+    chars += '<text x="' + x + '" y="' + y + '" font-size="24" font-family="monospace" font-weight="bold" fill="#1f2937" transform="rotate(' + rot + ' ' + x + ' ' + y + ')">' + ch + '</text>';
+  });
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><rect width="100%" height="100%" fill="#eef2f7"/>' + noise + chars + '</svg>';
+}
+function newCaptcha(){
+  for (const [k, v] of captchas) if (v.exp < Date.now()) captchas.delete(k);
+  let code = '';
+  for (let i = 0; i < 4; i++) code += CAPTCHA_CHARS[crypto.randomInt(CAPTCHA_CHARS.length)];
+  const id = crypto.randomBytes(8).toString('hex');
+  captchas.set(id, { code, exp: Date.now() + 10 * 60 * 1000 });
+  return { id, svg: captchaSvg(code) };
+}
+function checkCaptcha(id, text){
+  const rec = captchas.get(id);
+  if (!rec) return false;
+  captchas.delete(id);
+  if (rec.exp < Date.now()) return false;
+  return String(text || '').trim().toUpperCase() === rec.code;
+}
+
 // ============================================================
 //  好友：关系 / 申请 / 私聊记录（存 data/friends.json，重启不丢）
 //  friends[我] = [好友名...]
@@ -676,6 +710,11 @@ async function handleApi(req, res, urlPath){
     });
     return res.end();
   }
+  // 图片验证码：返回 {id, svg}，注册时把 id 和填的字一起提交
+  if (req.method === 'GET' && urlPath === '/api/captcha'){
+    const c = newCaptcha();
+    return sendJSON(res, 200, { ok: true, id: c.id, svg: c.svg });
+  }
   // 发送注册验证码：邮箱 → 6 位数字，10 分钟有效
   if (req.method === 'POST' && urlPath === '/api/send-code'){
     const body = await readBody(req);
@@ -732,6 +771,9 @@ async function handleApi(req, res, urlPath){
       const rec = emailCodes.get(email);
       if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次'});
       emailCodes.delete(email);
+    } else {
+      // 没开邮箱验证时，用图片验证码兜底，防止机器人乱注册
+      if (!checkCaptcha(String(body.cid||''), body.captcha)) return sendJSON(res,400,{ok:false,msg:'验证码不对，点「换一张」再试'});
     }
     const { hash, salt } = hashPass(p);
     accounts.set(u, { hash, salt, email });

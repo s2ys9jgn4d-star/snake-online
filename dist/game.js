@@ -85,11 +85,14 @@ document.querySelectorAll('.auth-tabs .tab').forEach(b => {
   });
 });
 
-// 邮箱发信是否可用：不可用时注册就不要求验证码（配置好了会自动恢复）
+// 邮箱发信是否可用：不可用时注册就改成图片验证码
 let mailReady = null;
+let captchaId = '';
 function applyRegExtra(){
-  $('regExtra').classList.toggle('hidden', !(authTab === 'register' && mailReady !== false));
-  $('noMailTip').classList.toggle('hidden', !(authTab === 'register' && mailReady === false));
+  const reg = authTab === 'register';
+  $('regExtra').classList.toggle('hidden', !(reg && mailReady !== false));
+  $('captchaBox').classList.toggle('hidden', !(reg && mailReady === false));
+  $('noMailTip').classList.toggle('hidden', !(reg && mailReady === false));
 }
 async function refreshMailReady(){
   try {
@@ -97,7 +100,19 @@ async function refreshMailReady(){
     mailReady = !!(r && r.ok && r.configured);
   } catch (e) { mailReady = null; }
   applyRegExtra();
+  if (mailReady === false) refreshCaptcha();
 }
+async function refreshCaptcha(){
+  try {
+    const r = await api('/api/captcha');
+    if (!r || !r.ok) return;
+    captchaId = r.id;
+    $('captchaImg').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(r.svg);
+    $('captchaInput').value = '';
+  } catch (e) {}
+}
+$('captchaRefresh').addEventListener('click', refreshCaptcha);
+$('captchaImg').addEventListener('click', refreshCaptcha);
 
 // —— 注册：发送邮箱验证码（60 秒内不能重发）——
 let codeLeft = 0, codeTimer = null;
@@ -140,16 +155,24 @@ async function doAuthAction(){
   const p = $('authPass').value;
   const email = $('authEmail') ? $('authEmail').value.trim() : '';
   const code = $('authCode') ? $('authCode').value.trim() : '';
+  const captcha = $('captchaInput').value.trim();
   $('authErr').textContent = '';
   if (authTab === 'register' && mailReady !== false){
     if (!email) { $('authErr').textContent = '注册要填邮箱'; return; }
     if (!code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
   }
+  if (authTab === 'register' && mailReady === false && !captcha){
+    $('authErr').textContent = '照图片填一下 4 个字符'; return;
+  }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
-      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code})
+      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code, cid: captchaId, captcha})
     });
-    if (!r.ok) { $('authErr').textContent = r.msg || '操作失败'; return; }
+    if (!r.ok){
+      $('authErr').textContent = r.msg || '操作失败';
+      if (authTab === 'register' && mailReady === false) refreshCaptcha();
+      return;
+    }
     if (authTab === 'login') {
       authToken = r.token; authUser = r.user;
       localStorage.setItem('snakeToken', authToken);

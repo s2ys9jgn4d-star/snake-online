@@ -31,7 +31,14 @@
           </div>
           <p id="codeTip" class="muted"></p>
         </div>
-        <p id="noMailTip" class="muted hidden">注册只要填用户名和密码，不需要邮箱</p>
+        <p id="noMailTip" class="muted hidden">照图片里的 4 个字符填写就能注册</p>
+        <div id="captchaBox" class="hidden">
+          <img id="captchaImg" class="captcha-img" alt="图片验证码">
+          <div class="code-row">
+            <input id="captchaInput" maxlength="4" placeholder="图片里的 4 个字符" autocomplete="off">
+            <button id="captchaRefresh" type="button">换一张</button>
+          </div>
+        </div>
         <button id="authBtn">登录</button>
         <p id="authErr" class="error"></p>
       </div>
