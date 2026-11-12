@@ -25,6 +25,14 @@
       <div class="auth-body">
         <input id="authUser" maxlength="16" placeholder="用户名" autocomplete="username">
         <input id="authPass" type="password" maxlength="32" placeholder="密码（4-32 位）" autocomplete="current-password">
+        <div id="regExtra" class="hidden">
+          <input id="authEmail" type="email" maxlength="100" placeholder="邮箱（收验证码用）" autocomplete="email">
+          <div class="code-row">
+            <input id="authCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
+            <button id="sendCodeBtn" type="button">发送验证码</button>
+          </div>
+          <p id="codeTip" class="muted"></p>
+        </div>
         <button id="authBtn">登录</button>
         <p id="authErr" class="error"></p>
       </div>
@@ -56,6 +64,29 @@
         <h3>🏆 排行榜</h3>
         <ol id="rankList" class="rank-list"></ol>
       </div>
+      <div class="lobby-section">
+        <h3>👥 好友</h3>
+        <div id="friendReqBox"></div>
+        <div id="friendList" class="people-list"></div>
+      </div>
+      <div class="lobby-section">
+        <h3>🌐 所有玩家</h3>
+        <input id="playerSearch" maxlength="16" placeholder="搜索玩家名...">
+        <div id="playerList" class="people-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 私聊（手机上是底部抽屉） ============ -->
+  <div id="dmBox" class="dm-box hidden">
+    <div class="dm-head">
+      <span id="dmTitle">私聊</span>
+      <button id="dmClose" class="ghost-btn">关闭</button>
+    </div>
+    <div id="dmMsgs" class="chat-box dm-msgs"></div>
+    <div class="chat-input">
+      <input id="dmInput" maxlength="200" placeholder="发消息（Enter 发送）">
+      <button id="dmSend">发送</button>
     </div>
   </div>
 

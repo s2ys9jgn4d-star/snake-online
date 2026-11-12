@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 const ai = require('./ai');   // 单人模式的豆包 AI
+const mail = require('./mail'); // 注册验证码邮件
 
 const PORT = Number(process.env.PORT) || 8180;
 const PUBLIC_DIR = path.join(__dirname, 'dist');
@@ -42,7 +43,7 @@ let leaderboard = []; // [{u, s}]
 function loadUsers(){
   try {
     const raw = JSON.parse(fs.readFileSync(USERS_FILE,'utf8'));
-    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0 }]));
+    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0, email:a.e||'' }]));
   } catch { accounts = new Map(); }
 }
 function loadScores(){
@@ -101,6 +102,7 @@ async function cloudRestore(){
     const force = !!process.env.FORCE_RESTORE;
     if (plain.users && (accounts.size === 0 || force)){ fs.writeFileSync(USERS_FILE, plain.users); loadUsers(); }
     if (plain.scores && (leaderboard.length === 0 || force)){ fs.writeFileSync(SCORES_FILE, plain.scores); loadScores(); }
+    if (plain.friends && (!fs.existsSync(FRIENDS_FILE) || force)){ fs.writeFileSync(FRIENDS_FILE, plain.friends); loadSocial(); }
     console.log('云备份恢复完成：' + accounts.size + ' 个账号，' + leaderboard.length + ' 条分数' + (force ? '（强制恢复）' : ''));
   } catch (e) { console.log('云备份恢复出错：' + e.message); }
 }
@@ -114,7 +116,8 @@ function cloudBackup(){
     try {
       const plain = JSON.stringify({
         users: fs.existsSync(USERS_FILE) ? fs.readFileSync(USERS_FILE, 'utf8') : '[]',
-        scores: fs.existsSync(SCORES_FILE) ? fs.readFileSync(SCORES_FILE, 'utf8') : '[]'
+        scores: fs.existsSync(SCORES_FILE) ? fs.readFileSync(SCORES_FILE, 'utf8') : '[]',
+        friends: fs.existsSync(FRIENDS_FILE) ? fs.readFileSync(FRIENDS_FILE, 'utf8') : null
       });
       const content = Buffer.from(JSON.stringify({ v: 1, data: encryptBackup(plain) })).toString('base64');
       const api = `https://api.github.com/repos/${GH_REPO}/contents/${BACKUP_FILE}`;
@@ -129,8 +132,90 @@ function cloudBackup(){
   }, 5000);
 }
 
-function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0}))); cloudBackup(); }
+function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0, e:a.email||''}))); cloudBackup(); }
 function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); cloudBackup(); }
+
+// ============================================================
+//  注册验证码（只存在内存里，10 分钟过期，服务器重启就失效）
+// ============================================================
+const emailCodes = new Map();     // email -> { code, exp }
+const codeCooldown = new Map();   // email -> 上次发送时间
+const CODE_TTL = 10 * 60 * 1000;
+const CODE_GAP = 60 * 1000;
+const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/;
+function normalizeEmail(s){ return String(s || '').trim().toLowerCase(); }
+
+// ============================================================
+//  好友：关系 / 申请 / 私聊记录（存 data/friends.json，重启不丢）
+//  friends[我] = [好友名...]
+//  reqs[我]    = [{from, ts}]        —— 别人发给我、还没处理的申请
+//  msgs['a|b'] = [{from, text, ts}]  —— 两个人的私聊记录（最多 100 条）
+// ============================================================
+const FRIENDS_FILE = path.join(DATA_DIR, 'friends.json');
+let social = { friends:{}, reqs:{}, msgs:{} };
+function loadSocial(){
+  try {
+    const raw = JSON.parse(fs.readFileSync(FRIENDS_FILE, 'utf8'));
+    social = { friends: raw.friends || {}, reqs: raw.reqs || {}, msgs: raw.msgs || {} };
+  } catch { social = { friends:{}, reqs:{}, msgs:{} }; }
+}
+loadSocial();
+function saveSocial(){ atomicWrite(FRIENDS_FILE, social); }
+function pairKey(a, b){ return [a, b].sort().join('|'); }
+function friendListOf(u){ return social.friends[u] || []; }
+function areFriends(a, b){ return friendListOf(a).includes(b); }
+function addFriendPair(a, b){
+  social.friends[a] = social.friends[a] || [];
+  social.friends[b] = social.friends[b] || [];
+  if (!social.friends[a].includes(b)) social.friends[a].push(b);
+  if (!social.friends[b].includes(a)) social.friends[b].push(a);
+}
+// 账号注销时，把它从别人的好友/申请/聊天里摘干净
+function cleanupSocial(u){
+  for (const k of Object.keys(social.friends)){
+    social.friends[k] = social.friends[k].filter(x => x !== u);
+    if (!social.friends[k].length) delete social.friends[k];
+  }
+  for (const k of Object.keys(social.reqs)){
+    social.reqs[k] = social.reqs[k].filter(r => r.from !== u);
+    if (!social.reqs[k].length) delete social.reqs[k];
+  }
+  for (const k of Object.keys(social.msgs)) if (k.split('|').includes(u)) delete social.msgs[k];
+  saveSocial();
+}
+// 我和某人的关系：friend 好友 / outgoing 我已申请 / incoming 他申请了我 / '' 陌生人
+function relationOf(me, other){
+  if (areFriends(me, other)) return 'friend';
+  if ((social.reqs[me] || []).some(r => r.from === other)) return 'incoming';
+  if ((social.reqs[other] || []).some(r => r.from === me)) return 'outgoing';
+  return '';
+}
+function bestOf(u){ const s = leaderboard.find(x => x.u === u); return s ? s.s : 0; }
+
+// 在线连接：同一个账号可能电脑和手机同时开着
+const socketsByUser = new Map();
+function isOnline(u){ return socketsByUser.has(u); }
+function addSocket(ws){
+  let set = socketsByUser.get(ws.user);
+  if (!set){ set = new Set(); socketsByUser.set(ws.user, set); }
+  set.add(ws);
+  if (set.size === 1) notifyFriendsPresence(ws.user, true);
+}
+function removeSocket(ws){
+  const set = socketsByUser.get(ws.user);
+  if (!set) return;
+  set.delete(ws);
+  if (!set.size){ socketsByUser.delete(ws.user); notifyFriendsPresence(ws.user, false); }
+}
+function pushToUser(u, obj){
+  const set = socketsByUser.get(u);
+  if (!set) return;
+  const s = JSON.stringify(obj);
+  for (const ws of set) ws.sendText(s);
+}
+function notifyFriendsPresence(u, online){
+  for (const f of friendListOf(u)) pushToUser(f, { t:'presence', user:u, online });
+}
 
 // scrypt 密码哈希（零依赖）
 function hashPass(pass){
@@ -530,6 +615,7 @@ function punishBannedWord(user){
   if (a.strikes >= 3){
     accounts.delete(user);
     saveUsers();
+    cleanupSocial(user);
     leaderboard = leaderboard.filter(x => x.u !== user);
     saveScores();
     for (const [t, u2] of [...tokens.entries()]) if (u2 === user) tokens.delete(t);
@@ -578,17 +664,54 @@ async function handleApi(req, res, urlPath){
     });
     return res.end();
   }
+  // 发送注册验证码：邮箱 → 6 位数字，10 分钟有效
+  if (req.method === 'POST' && urlPath === '/api/send-code'){
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const email = normalizeEmail(body.email);
+    const u = String(body.u||'').trim();
+    if (!EMAIL_RE.test(email)) return sendJSON(res, 400, {ok:false,msg:'邮箱格式不对'});
+    if (u && accounts.has(u)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
+    for (const a of accounts.values()) if (a.email === email) return sendJSON(res, 409, {ok:false,msg:'这个邮箱已经注册过账号了'});
+    if (!mail.isConfigured()) return sendJSON(res, 503, {ok:false,msg:'服务器还没配置邮箱服务，暂时不能发验证码'});
+    const last = codeCooldown.get(email) || 0;
+    if (Date.now() - last < CODE_GAP){
+      return sendJSON(res, 429, {ok:false,msg:'发太频繁了，' + Math.ceil((CODE_GAP - (Date.now() - last)) / 1000) + ' 秒后再试'});
+    }
+    const code = String(100000 + randInt(900000));
+    emailCodes.set(email, { code, exp: Date.now() + CODE_TTL });
+    codeCooldown.set(email, Date.now());
+    try {
+      await mail.sendMail({
+        to: email,
+        subject: '联机贪吃蛇 · 注册验证码',
+        text: '你的验证码是：' + code + '\n\n10 分钟内有效。\n如果不是你本人在注册，忽略这封邮件就好。'
+      });
+    } catch (e){
+      emailCodes.delete(email);
+      console.log('发验证码失败：' + e.message);
+      return sendJSON(res, 500, {ok:false,msg:'邮件发送失败：' + e.message});
+    }
+    return sendJSON(res, 200, {ok:true, msg:'验证码已发到邮箱，10 分钟内有效'});
+  }
   if (req.method === 'POST' && urlPath === '/api/register'){
     const body = await readBody(req);
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const u = String(body.u||'').trim();
     const p = String(body.p||'');
+    const email = normalizeEmail(body.email);
+    const code = String(body.code||'').trim();
     if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
     if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
+    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
     if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
     if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
+    for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
+    const rec = emailCodes.get(email);
+    if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次'});
     const { hash, salt } = hashPass(p);
-    accounts.set(u, { hash, salt });
+    accounts.set(u, { hash, salt, email });
+    emailCodes.delete(email);
     saveUsers();
     return sendJSON(res, 200, {ok:true});
   }
@@ -618,6 +741,7 @@ async function handleApi(req, res, urlPath){
     if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'密码不对，注销失败'});
     accounts.delete(u);
     saveUsers();
+    cleanupSocial(u);
     leaderboard = leaderboard.filter(x=>x.u!==u);
     saveScores();
     for (const [t, user] of [...tokens.entries()]) if (user===u) tokens.delete(t);
@@ -631,6 +755,131 @@ async function handleApi(req, res, urlPath){
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20)});
+  }
+
+  // —— 好友 API ——
+  // 所有玩家（带在线状态和我和他的关系）
+  if (req.method === 'GET' && urlPath === '/api/players'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const items = [...accounts.keys()].filter(u => u !== me).map(u => ({
+      u, best: bestOf(u), online: isOnline(u), relation: relationOf(me, u)
+    })).sort((a,b) => (b.online - a.online) || a.u.localeCompare(b.u, 'zh'));
+    return sendJSON(res, 200, {ok:true, items});
+  }
+  // 我的好友 + 待处理的好友申请
+  if (req.method === 'GET' && urlPath === '/api/friends'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const friends = friendListOf(me).map(u => ({ u, online:isOnline(u), best:bestOf(u) }));
+    const requests = (social.reqs[me] || []).map(r => ({ from:r.from, ts:r.ts }));
+    return sendJSON(res, 200, {ok:true, friends, requests});
+  }
+  // 发好友申请（如果对方已经申请过我，就直接成为好友）
+  if (req.method === 'POST' && urlPath === '/api/friend/request'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const to = String(body.to||'').trim();
+    if (to === me) return sendJSON(res, 400, {ok:false,msg:'不能加自己'});
+    if (!accounts.has(to)) return sendJSON(res, 404, {ok:false,msg:'没有这个玩家'});
+    if (areFriends(me, to)) return sendJSON(res, 200, {ok:true, msg:'你们已经是好友了'});
+    if ((social.reqs[me] || []).some(r => r.from === to)){
+      social.reqs[me] = social.reqs[me].filter(r => r.from !== to);
+      if (!social.reqs[me].length) delete social.reqs[me];
+      addFriendPair(me, to);
+      saveSocial();
+      pushToUser(to, { t:'friend_accept', by: me });
+      pushToUser(me, { t:'friend_accept', by: to });
+      return sendJSON(res, 200, {ok:true, msg:'你们已经是好友了'});
+    }
+    if ((social.reqs[to] || []).some(r => r.from === me)) return sendJSON(res, 200, {ok:true, msg:'已经申请过了，等对方同意'});
+    social.reqs[to] = social.reqs[to] || [];
+    social.reqs[to].push({ from: me, ts: Date.now() });
+    saveSocial();
+    pushToUser(to, { t:'friend_request', from: me, ts: Date.now() });
+    return sendJSON(res, 200, {ok:true, msg:'申请已发送'});
+  }
+  // 同意好友申请
+  if (req.method === 'POST' && urlPath === '/api/friend/accept'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const from = String(body.from||'').trim();
+    if (!(social.reqs[me] || []).some(r => r.from === from)) return sendJSON(res, 404, {ok:false,msg:'没有这条申请'});
+    social.reqs[me] = social.reqs[me].filter(r => r.from !== from);
+    if (!social.reqs[me].length) delete social.reqs[me];
+    if (!accounts.has(from)){ saveSocial(); return sendJSON(res, 404, {ok:false,msg:'对方账号已经不在了'}); }
+    addFriendPair(me, from);
+    saveSocial();
+    pushToUser(from, { t:'friend_accept', by: me });
+    pushToUser(me, { t:'friend_accept', by: from });
+    return sendJSON(res, 200, {ok:true, msg:'已加为好友'});
+  }
+  // 拒绝好友申请
+  if (req.method === 'POST' && urlPath === '/api/friend/reject'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const from = String(body.from||'').trim();
+    social.reqs[me] = (social.reqs[me] || []).filter(r => r.from !== from);
+    if (!social.reqs[me].length) delete social.reqs[me];
+    saveSocial();
+    return sendJSON(res, 200, {ok:true, msg:'已拒绝'});
+  }
+  // 删除好友
+  if (req.method === 'POST' && urlPath === '/api/friend/remove'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const u = String(body.u||'').trim();
+    social.friends[me] = friendListOf(me).filter(x => x !== u);
+    if (!social.friends[me].length) delete social.friends[me];
+    social.friends[u] = friendListOf(u).filter(x => x !== me);
+    if (!social.friends[u].length) delete social.friends[u];
+    delete social.msgs[pairKey(me, u)];
+    saveSocial();
+    return sendJSON(res, 200, {ok:true, msg:'已删除好友'});
+  }
+  // 好友私聊记录（最近 100 条）
+  if (req.method === 'POST' && urlPath === '/api/friend/history'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const withWho = String(body.with||'').trim();
+    if (!areFriends(me, withWho)) return sendJSON(res, 403, {ok:false,msg:'你们还不是好友'});
+    return sendJSON(res, 200, {ok:true, items: (social.msgs[pairKey(me, withWho)] || []).slice(-100)});
+  }
+  // 发私聊消息
+  if (req.method === 'POST' && urlPath === '/api/friend/chat'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const to = String(body.to||'').trim();
+    const text = String(body.text||'').trim().slice(0, 200);
+    if (!text) return sendJSON(res, 400, {ok:false,msg:'不能发空消息'});
+    if (!areFriends(me, to)) return sendJSON(res, 403, {ok:false,msg:'你们还不是好友'});
+    const left = muteLeftOf(me);
+    if (left > 0) return sendJSON(res, 403, {ok:false,msg:'你正在禁言中，还需等待 ' + fmtLeft(left)});
+    if (hasBannedWord(text)){
+      const m = punishBannedWord(me);
+      if (m) pushToUser(me, {t:'sys', msg:m});
+      return sendJSON(res, 400, {ok:false,msg: m || '消息含有不允许的字词'});
+    }
+    const k = pairKey(me, to);
+    const arr = social.msgs[k] = social.msgs[k] || [];
+    const item = { from: me, text, ts: Date.now() };
+    arr.push(item);
+    if (arr.length > 100) arr.splice(0, arr.length - 100);
+    saveSocial();
+    pushToUser(to, { t:'friend_msg', from: me, text, ts: item.ts });
+    return sendJSON(res, 200, {ok:true, ts:item.ts});
   }
   // —— 管理员接口 ——
   if (req.method === 'POST' && urlPath === '/api/admin/login'){
@@ -657,6 +906,7 @@ async function handleApi(req, res, urlPath){
     if (!accounts.has(u)) return sendJSON(res, 404, {ok:false,msg:'账号不存在'});
     accounts.delete(u);
     saveUsers();
+    cleanupSocial(u);
     leaderboard = leaderboard.filter(x=>x.u!==u);
     saveScores();
     for (const [t, user] of [...tokens.entries()]) if (user===u) tokens.delete(t);
@@ -695,6 +945,7 @@ class WSSocket {
     if (this.closed) return; this.closed = true;
     try { this.raw.end(); } catch {}
     if (this.user) loggedInSockets.delete(this);
+    if (this.user) removeSocket(this);
     if (this.room && this.playerId !== undefined){
       const player = this.room.players.get(this.playerId);
       if (player) this.room.removePlayer(player);
@@ -744,6 +995,7 @@ function handleWsMessage(ws, text){
       if (user){
         ws.user = user;
         loggedInSockets.add(ws);
+        addSocket(ws);           // 好友在线状态 / 实时消息靠它找到人
         ws.sendText(JSON.stringify({t:'auth_ok', user}));
         // 刚进大厅：把最近的大厅聊天补发给它，接着再给房间列表
         for (const h of lobbyHistory) ws.sendText(JSON.stringify({t:'chat', from:h.from, text:h.text, history:true}));

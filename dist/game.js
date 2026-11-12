@@ -79,16 +79,59 @@ document.querySelectorAll('.auth-tabs .tab').forEach(b => {
     document.querySelectorAll('.auth-tabs .tab').forEach(x => x.classList.toggle('active', x===b));
     $('authBtn').textContent = authTab === 'login' ? '登录' : '注册';
     $('authErr').textContent = '';
+    $('regExtra').classList.toggle('hidden', authTab !== 'register');
+    $('authPass').autocomplete = authTab === 'login' ? 'current-password' : 'new-password';
   });
+});
+
+// —— 注册：发送邮箱验证码（60 秒内不能重发）——
+let codeLeft = 0, codeTimer = null;
+$('sendCodeBtn').addEventListener('click', async () => {
+  if (codeLeft > 0) return;
+  const email = $('authEmail').value.trim();
+  const u = $('authUser').value.trim();
+  const btn = $('sendCodeBtn');
+  if (!email) { $('authErr').textContent = '先填邮箱'; return; }
+  $('authErr').textContent = '';
+  $('codeTip').textContent = '';
+  btn.disabled = true; btn.textContent = '发送中…';
+  try {
+    const r = await api('/api/send-code', { method:'POST', body: JSON.stringify({ email, u }) });
+    if (!r.ok){
+      $('authErr').textContent = r.msg || '发送失败';
+      btn.disabled = false; btn.textContent = '发送验证码';
+      return;
+    }
+    $('codeTip').textContent = '验证码已发到 ' + email + '（收不到就看看垃圾箱）';
+    codeLeft = 60;
+    btn.textContent = codeLeft + ' 秒';
+    clearInterval(codeTimer);
+    codeTimer = setInterval(() => {
+      codeLeft--;
+      if (codeLeft <= 0){
+        clearInterval(codeTimer);
+        btn.disabled = false; btn.textContent = '重新发送';
+      } else btn.textContent = codeLeft + ' 秒';
+    }, 1000);
+  } catch (e){
+    $('authErr').textContent = '网络错误，验证码没发出去';
+    btn.disabled = false; btn.textContent = '发送验证码';
+  }
 });
 
 async function doAuthAction(){
   const u = $('authUser').value.trim();
   const p = $('authPass').value;
+  const email = $('authEmail') ? $('authEmail').value.trim() : '';
+  const code = $('authCode') ? $('authCode').value.trim() : '';
   $('authErr').textContent = '';
+  if (authTab === 'register'){
+    if (!email) { $('authErr').textContent = '注册要填邮箱'; return; }
+    if (!code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
+  }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
-      method:'POST', body: JSON.stringify({u, p})
+      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code})
     });
     if (!r.ok) { $('authErr').textContent = r.msg || '操作失败'; return; }
     if (authTab === 'login') {
@@ -194,6 +237,14 @@ function handleWs(msg){
     case 'left_room': showPanel('lobby'); break;
     case 'chat': onChat(msg); break;
     case 'sys': showToast(msg.msg); break;
+    // —— 好友实时事件 ——
+    case 'friend_request': showToast('🙋 ' + msg.from + ' 想加你为好友'); refreshFriends(); refreshPlayers(); break;
+    case 'friend_accept': showToast('🤝 你和 ' + msg.by + ' 成为好友了'); refreshFriends(); refreshPlayers(); break;
+    case 'friend_msg':
+      if (dmWith === msg.from && !$('dmBox').classList.contains('hidden')) appendDm(msg);
+      else showToast('💬 ' + msg.from + '：' + msg.text);
+      break;
+    case 'presence': onPresence(msg.user, msg.online); break;
     // —— 游戏协议（加入房间后才处理）——
     case 'state': onState(msg); break;
     case 'pong': onPong(msg); break;
@@ -207,6 +258,7 @@ function onAuthOk(user){
   $('lobbyUserName').textContent = user;
   $('lobbyChat').innerHTML = '';   // 每次进入大厅先清空，避免补发历史时重复
   refreshMe(); refreshScores();
+  refreshFriends(); refreshPlayers();
   showPanel('lobby');
   refreshRooms();
 }
@@ -224,6 +276,157 @@ async function refreshScores(){
   const r = await api('/api/scores');
   if (r.ok) renderLeaderboard(r.items);
 }
+
+// ============================================================
+//  好友：申请 / 列表 / 私聊
+// ============================================================
+let friendCache = { friends: [], requests: [] };
+let playerCache = [];
+let dmWith = null;
+
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function refreshFriends(){
+  const r = await api('/api/friends');
+  if (!r.ok) return;
+  friendCache = { friends: r.friends || [], requests: r.requests || [] };
+  renderFriends();
+}
+async function refreshPlayers(){
+  const r = await api('/api/players');
+  if (!r.ok) return;
+  playerCache = r.items || [];
+  renderPlayers();
+}
+
+function renderFriends(){
+  // 待处理的好友申请
+  const reqBox = $('friendReqBox');
+  reqBox.innerHTML = '';
+  for (const q of friendCache.requests){
+    const row = document.createElement('div');
+    row.className = 'req-row';
+    row.innerHTML = `<span>🙋 <b>${escHtml(q.from)}</b> 想加你为好友</span>`;
+    const okBtn = document.createElement('button');
+    okBtn.className = 'mini-btn'; okBtn.textContent = '同意';
+    okBtn.onclick = async () => {
+      await api('/api/friend/accept', { method:'POST', body: JSON.stringify({ from:q.from }) });
+      refreshFriends(); refreshPlayers();
+    };
+    const noBtn = document.createElement('button');
+    noBtn.className = 'mini-btn ghost'; noBtn.textContent = '拒绝';
+    noBtn.onclick = async () => {
+      await api('/api/friend/reject', { method:'POST', body: JSON.stringify({ from:q.from }) });
+      refreshFriends();
+    };
+    row.appendChild(okBtn); row.appendChild(noBtn);
+    reqBox.appendChild(row);
+  }
+  // 我的好友
+  const list = $('friendList');
+  list.innerHTML = '';
+  if (!friendCache.friends.length){
+    list.innerHTML = '<div class="empty-tip">还没有好友，去下面「所有玩家」里加一个吧</div>';
+    return;
+  }
+  for (const f of friendCache.friends){
+    const row = document.createElement('div');
+    row.className = 'people-row';
+    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${escHtml(f.u)}</span><span class="pb">最高 ${f.best || 0}</span>`;
+    const chatBtn = document.createElement('button');
+    chatBtn.className = 'mini-btn'; chatBtn.textContent = '聊天';
+    chatBtn.onclick = () => openDm(f.u);
+    row.appendChild(chatBtn);
+    list.appendChild(row);
+  }
+}
+
+function renderPlayers(){
+  const q = ($('playerSearch').value || '').trim().toLowerCase();
+  const list = $('playerList');
+  list.innerHTML = '';
+  const items = playerCache.filter(p => !q || p.u.toLowerCase().includes(q));
+  if (!items.length){
+    list.innerHTML = '<div class="empty-tip">' + (playerCache.length ? '没搜到这个名字' : '除了你还没有别的玩家') + '</div>';
+    return;
+  }
+  for (const p of items.slice(0, 100)){
+    const row = document.createElement('div');
+    row.className = 'people-row';
+    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${escHtml(p.u)}</span><span class="pb">最高 ${p.best || 0}</span>`;
+    const btn = document.createElement('button');
+    btn.className = 'mini-btn';
+    if (p.relation === 'friend'){
+      btn.textContent = '聊天'; btn.onclick = () => openDm(p.u);
+    } else if (p.relation === 'outgoing'){
+      btn.textContent = '已申请'; btn.disabled = true;
+    } else if (p.relation === 'incoming'){
+      btn.textContent = '同意';
+      btn.onclick = async () => {
+        await api('/api/friend/accept', { method:'POST', body: JSON.stringify({ from:p.u }) });
+        refreshFriends(); refreshPlayers();
+      };
+    } else {
+      btn.textContent = '加好友';
+      btn.onclick = async () => {
+        const r = await api('/api/friend/request', { method:'POST', body: JSON.stringify({ to:p.u }) });
+        showToast(r.msg || (r.ok ? '申请已发送' : '申请失败'));
+        refreshPlayers(); refreshFriends();
+      };
+    }
+    row.appendChild(btn);
+    list.appendChild(row);
+  }
+}
+
+// 在线状态变了：只改内存里的标记，然后重画
+function onPresence(user, online){
+  let changed = false;
+  for (const f of friendCache.friends) if (f.u === user){ f.online = online; changed = true; }
+  for (const p of playerCache) if (p.u === user){ p.online = online; changed = true; }
+  if (changed){ renderFriends(); renderPlayers(); }
+}
+
+// —— 私聊小窗口 ——
+function openDm(user){
+  dmWith = user;
+  $('dmTitle').textContent = '💬 ' + user;
+  $('dmMsgs').innerHTML = '<div class="empty-tip">加载中…</div>';
+  $('dmBox').classList.remove('hidden');
+  $('dmInput').value = '';
+  setTimeout(() => $('dmInput').focus(), 50);
+  api('/api/friend/history', { method:'POST', body: JSON.stringify({ with:user }) }).then(r => {
+    if (dmWith !== user) return;
+    $('dmMsgs').innerHTML = '';
+    if (!r.ok){ $('dmMsgs').innerHTML = '<div class="empty-tip">' + escHtml(r.msg || '加载失败') + '</div>'; return; }
+    if (!r.items.length) $('dmMsgs').innerHTML = '<div class="empty-tip">还没聊过，打个招呼吧</div>';
+    else for (const m of r.items) appendDm(m);
+  });
+}
+function appendDm(m){
+  const box = $('dmMsgs');
+  if (box.querySelector('.empty-tip')) box.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'msg dm' + (m.from === authUser ? ' mine' : '');
+  div.innerHTML = `<span class="from">${escHtml(m.from === authUser ? '我' : m.from)}:</span>${escHtml(m.text)}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+async function sendDm(){
+  const input = $('dmInput');
+  const text = input.value.trim();
+  if (!text || !dmWith) return;
+  input.value = '';
+  const r = await api('/api/friend/chat', { method:'POST', body: JSON.stringify({ to: dmWith, text }) });
+  if (!r.ok){ showToast(r.msg || '发送失败'); input.value = text; return; }
+  appendDm({ from: authUser, text });
+}
+$('dmSend').addEventListener('click', sendDm);
+$('dmInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendDm(); });
+$('dmClose').addEventListener('click', () => { $('dmBox').classList.add('hidden'); dmWith = null; });
+$('playerSearch').addEventListener('input', renderPlayers);
 
 function enterLobby(){ connectWs(); }
 
