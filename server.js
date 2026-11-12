@@ -148,8 +148,10 @@ function normalizeEmail(s){ return String(s || '').trim().toLowerCase(); }
 // 发信刚失败过就先认为邮箱不可用（10 分钟后自动重试），期间注册不强制验证码
 let mailBrokenUntil = 0;
 const MAIL_BROKEN_MS = 10 * 60 * 1000;
+// 邮箱验证码默认关闭：只有 REQUIRE_EMAIL_CODE=1 且发信服务正常时才要求验证码
+const REQUIRE_EMAIL_CODE = process.env.REQUIRE_EMAIL_CODE === '1';
 function mailUsable(){
-  return mail.isConfigured() && Date.now() > mailBrokenUntil;
+  return REQUIRE_EMAIL_CODE && mail.isConfigured() && Date.now() > mailBrokenUntil;
 }
 
 // ============================================================
@@ -680,7 +682,7 @@ async function handleApi(req, res, urlPath){
     if (!EMAIL_RE.test(email)) return sendJSON(res, 400, {ok:false,msg:'邮箱格式不对'});
     if (u && accounts.has(u)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res, 409, {ok:false,msg:'这个邮箱已经注册过账号了'});
-    if (!mail.isConfigured()) return sendJSON(res, 503, {ok:false,msg:'服务器还没配置邮箱服务，暂时不能发验证码'});
+    if (!REQUIRE_EMAIL_CODE || !mail.isConfigured()) return sendJSON(res, 503, {ok:false,msg:'现在注册不需要邮箱验证码，直接填用户名和密码就行'});
     if (Date.now() < mailBrokenUntil) return sendJSON(res, 503, {ok:false,msg:'邮箱服务刚出故障，暂时发不了验证码；不填邮箱也能直接注册'});
     const last = codeCooldown.get(email) || 0;
     if (Date.now() - last < CODE_GAP){
