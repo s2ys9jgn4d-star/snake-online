@@ -164,9 +164,9 @@ html,body {
 
 /* ============ 邮箱验证码 / 好友 / 私聊 ============ */
 .code-row { display:flex; gap:8px; }
-.code-row input { flex:1; min-width:0; margin-bottom:0; }
+.code-row input { flex:1 1 auto; width:auto; min-width:0; margin-bottom:0; }
 .code-row button {
-  flex:none; padding:0 12px; border-radius:10px; border:1px solid var(--line);
+  flex:none; width:auto; padding:0 12px; border-radius:10px; border:1px solid var(--line);
   background:var(--panel2); color:var(--text); font-size:13px; white-space:nowrap;
 }
 .code-row button:disabled { opacity:.6; }

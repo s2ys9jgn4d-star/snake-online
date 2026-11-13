@@ -197,8 +197,8 @@ html,body {
 
 /* ============ 邮箱验证码 / 好友 / 私聊 ============ */
 .code-row { display:flex; gap:8px; margin-top:10px; }
-.code-row input { flex:1; min-width:0; }
-.code-row button { flex:none; white-space:nowrap; }
+.code-row input { flex:1 1 auto; width:auto; min-width:0; margin-bottom:0; }
+.code-row button { flex:none; width:auto; white-space:nowrap; padding:12px 16px; font-size:14px; }
 
 .people-list { display:flex; flex-direction:column; gap:6px; max-height:210px; overflow-y:auto; padding-right:2px; }
 .people-row {
