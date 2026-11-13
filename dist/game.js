@@ -299,8 +299,19 @@ function onAuthOk(user){
   $('lobbyChat').innerHTML = '';   // 每次进入大厅先清空，避免补发历史时重复
   refreshMe(); refreshScores();
   refreshFriends(); refreshPlayers();
+  startSocialPoll();
   showPanel('lobby');
   refreshRooms();
+}
+
+// 好友/玩家面板定时刷新：WS 推送可能因为断线或页面在后台而错过，靠轮询兜底
+let socialTimer = null;
+function startSocialPoll(){
+  if (socialTimer) return;
+  socialTimer = setInterval(() => {
+    if (currentPanel !== 'lobby') return;   // 只在看大厅时刷新，不打扰游戏
+    refreshFriends(); refreshPlayers();
+  }, 8000);
 }
 function onAuthFail(msg){
   showToast(msg);
