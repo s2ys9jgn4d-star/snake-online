@@ -1,10 +1,11 @@
 {
   "name": "snake-online",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Multiplayer snake game with accounts, rooms, leaderboard and chat",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "pack": "node 打包tar.js"
   },
   "engines": {
     "node": ">=18"
