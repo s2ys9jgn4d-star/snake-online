@@ -187,6 +187,7 @@
       <span id="online" class="hud-item">在线 0</span>
       <span id="ping" class="hud-item">延迟 -</span>
       <button id="fsBtn" class="hud-item fs-btn">⛶</button>
+      <button id="drawerBtn" class="hud-item drawer-btn" aria-label="Menu">☰</button>
     </div>
 
     <div id="stage">
@@ -227,10 +228,37 @@
       <button class="vbtn down" data-dir="down">▼</button>
       <button class="vbtn right" data-dir="right">▶</button>
     </div>
+
+    <!-- 房间侧栏（成员 / 聊天 / 设置 / 离开） -->
+    <div id="drawerMask" class="drawer-mask hidden"></div>
+    <aside id="drawer" class="drawer">
+      <div class="drawer-head">
+        <span data-i18n="members">👥 房间成员</span>
+        <button id="drawerClose" class="drawer-x" aria-label="Close">✕</button>
+      </div>
+      <ul id="memberList" class="member-list"></ul>
+
+      <div class="drawer-head" data-i18n="roomChat">💬 房间聊天</div>
+      <div id="roomChat" class="room-chat"></div>
+      <div class="chat-input">
+        <input id="roomChatInput" maxlength="200" placeholder="发消息（Enter 发送）" data-i18n-ph="roomChatPh">
+        <button id="roomChatSend" data-i18n="send">发送</button>
+      </div>
+
+      <div class="drawer-head" data-i18n="settings">⚙ 设置</div>
+      <div class="speed-row" id="speedRow2">
+        <button type="button" class="speed-btn" data-ms="300" data-i18n="slow">慢速</button>
+        <button type="button" class="speed-btn active" data-ms="200" data-i18n="normal">标准</button>
+        <button type="button" class="speed-btn" data-ms="110" data-i18n="fast">快速</button>
+        <button type="button" class="speed-btn" data-ms="50" data-i18n="ultra">超快</button>
+      </div>
+
+      <button id="leaveBtn" class="leave-btn" data-i18n="leaveRoom">离开房间</button>
+    </aside>
   </div>
 
 </div>
-<script src="i18n.js?v=20261114d"></script>
-<script src="mobile.js?v=20261114h"></script>
+<script src="i18n.js?v=20261115a"></script>
+<script src="mobile.js?v=20261115a"></script>
 </body>
 </html>

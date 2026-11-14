@@ -550,9 +550,10 @@ function renderLeaderboard(items){
 function esc(s){ return escHtml(s); }
 
 function onChat(msg){
-  // 手机版只显示 toast（避免遮挡游戏画面）；历史记录不弹，否则一进来就刷屏
+  // 聊天进入侧栏；侧栏收起时才用 toast 提示，避免遮挡游戏画面
   if (msg.history) return;
-  showToast(msg.from + ': ' + msg.text);
+  appendRoomChat(msg);
+  if (currentPanel === 'game' && !isDrawerOpen()) showToast(msg.from + ': ' + msg.text);
 }
 
 // ============================================================
@@ -685,7 +686,7 @@ curAt = _an;
   }
   foods = msg.foods;
   if (msg.tickMs) TICK_MS = msg.tickMs;
-  render(); updateHUD();
+  render(); updateHUD(); updateMemberList(); syncSpeedButtons(msg.tickMs);
 }
 
 function updateHUD(){
@@ -804,3 +805,87 @@ function refreshI18nText(){
 window.addEventListener('snakelangchange', refreshI18nText);
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshI18nText);
 else refreshI18nText();
+
+// ============================================================
+//  房间侧栏（成员 / 聊天 / 设置 / 离开）
+// ============================================================
+function updateMemberList(){
+  const el = $('memberList'); if (!el) return;
+  el.innerHTML = '';
+  for (const p of players.values()){
+    const li = document.createElement('li');
+    const me = p.id === wsPlayerId;
+    if (me) li.className = 'me';
+    li.innerHTML = '<div class="left"><span class="dot" style="background:'
+      + escHtml(p.color || '#5b8cff') + '"></span><span class="nm">' + escHtml(p.name)
+      + (me ? escHtml(t('meSuffix')) : '') + '</span></div>'
+      + '<span class="sc">' + (p.score || 0) + '</span>';
+    el.appendChild(li);
+  }
+}
+
+function isDrawerOpen(){
+  const d = $('drawer');
+  return !!(d && d.classList.contains('open'));
+}
+function openDrawer(){
+  const d = $('drawer'), m = $('drawerMask');
+  if (!d || !m) return;
+  d.classList.add('open'); m.classList.remove('hidden');
+  updateMemberList();
+}
+function closeDrawer(){
+  const d = $('drawer'), m = $('drawerMask');
+  if (!d || !m) return;
+  d.classList.remove('open'); m.classList.add('hidden');
+}
+if ($('drawerBtn')) $('drawerBtn').addEventListener('click', openDrawer);
+if ($('drawerClose')) $('drawerClose').addEventListener('click', closeDrawer);
+if ($('drawerMask')) $('drawerMask').addEventListener('click', closeDrawer);
+
+// —— 房间聊天 ——
+function appendRoomChat(msg){
+  const box = $('roomChat'); if (!box) return;
+  const div = document.createElement('div');
+  div.className = 'msg';
+  const cls = msg.from === '系统' ? 'sys' : (msg.from === authUser ? 'me' : '');
+  div.innerHTML = '<span class="from ' + cls + '">' + escHtml(msg.from) + ':</span>' + escHtml(msg.text);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function sendRoomChat(){
+  const input = $('roomChatInput'); if (!input) return;
+  const text = input.value.trim(); if (!text) return;
+  sendWS({ t:'chat', text });
+  input.value = '';
+}
+if ($('roomChatSend')) $('roomChatSend').addEventListener('click', sendRoomChat);
+if ($('roomChatInput')) $('roomChatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendRoomChat();
+});
+
+// —— 设置：游戏内切速度 ——
+document.querySelectorAll('#speedRow2 .speed-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const ms = Number(b.dataset.ms) || 200;
+    chosenMs = ms;
+    document.querySelectorAll('#speedRow2 .speed-btn').forEach(x =>
+      x.classList.toggle('active', Number(x.dataset.ms) === ms));
+    if (wsPlayerId) sendWS({ t:'speed', ms });
+  });
+});
+function syncSpeedButtons(ms){
+  if (!ms) return;
+  chosenMs = ms;
+  document.querySelectorAll('#speedRow .speed-btn, #speedRow2 .speed-btn').forEach(x =>
+    x.classList.toggle('active', Number(x.dataset.ms) === ms));
+}
+
+// —— 离开房间 ——
+if ($('leaveBtn')) $('leaveBtn').addEventListener('click', () => {
+  sendWS({ t:'leave_room' });
+  closeDrawer();
+  players.clear(); wsPlayerId = null;
+  showPanel('lobby');
+  refreshRooms();
+});

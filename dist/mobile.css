@@ -329,3 +329,70 @@ body::before {
 @media (prefers-reduced-motion:reduce) {
   *, *::before, *::after { animation:none !important; transition:none !important; }
 }
+
+/* ============ 房间侧栏（成员 / 聊天 / 设置 / 离开） ============ */
+.drawer-btn { font-size:15px; padding:4px 9px; cursor:pointer; color:var(--text); }
+.drawer-mask {
+  position:fixed; inset:0; z-index:40; background:rgba(6,9,20,.55);
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+  transition:opacity .22s;
+}
+.drawer {
+  position:fixed; top:0; right:0; bottom:0; z-index:41;
+  width:min(320px,86vw); display:flex; flex-direction:column;
+  background:linear-gradient(180deg, rgba(26,33,60,.98), rgba(14,19,36,.99));
+  border-left:1px solid var(--line); box-shadow:-12px 0 32px rgba(0,0,0,.45);
+  transform:translateX(102%); transition:transform .26s cubic-bezier(.32,.72,0,1);
+  padding:calc(10px + var(--safe-t)) 14px calc(10px + var(--safe-b));
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+}
+.drawer.open { transform:translateX(0); }
+.drawer-head {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:13px; font-weight:700; color:var(--muted);
+  padding:12px 0 8px; border-bottom:1px solid var(--line); margin-bottom:8px;
+}
+.drawer-head:first-child { padding-top:0; }
+.drawer-x {
+  background:none; border:0; color:var(--muted); font-size:16px;
+  padding:2px 6px; cursor:pointer; line-height:1;
+}
+.drawer-x:active { color:var(--text); }
+.member-list { list-style:none; margin:0 0 4px; padding:0; }
+.member-list li {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:9px 10px; margin-bottom:6px; border-radius:10px;
+  background:rgba(30,38,67,.6); border:1px solid var(--line); font-size:13px;
+}
+.member-list li.me { border-color:rgba(91,140,255,.55); background:rgba(91,140,255,.12); }
+.member-list .left { display:flex; align-items:center; gap:7px; min-width:0; }
+.member-list .dot { width:9px; height:9px; border-radius:50%; flex:none; }
+.member-list .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.member-list .sc { color:var(--accent2); font-variant-numeric:tabular-nums; flex:none; }
+.room-chat {
+  height:150px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:9px 10px; border-radius:10px; border:1px solid var(--line);
+  background:rgba(10,14,28,.6); font-size:12.5px; line-height:1.7;
+  margin-bottom:8px;
+}
+.room-chat .msg { word-break:break-word; }
+.room-chat .from { color:var(--accent-2); font-weight:600; }
+.room-chat .from.sys { color:var(--gold); }
+.room-chat .from.me { color:var(--purple); }
+.chat-input { display:flex; gap:8px; margin-bottom:6px; }
+.chat-input input {
+  flex:1 1 auto; min-width:0; margin-bottom:0; height:38px;
+  padding:0 12px; border-radius:10px; border:1px solid var(--line);
+  background:rgba(30,38,67,.85); color:var(--text); font-size:13px; outline:none;
+}
+.chat-input button {
+  flex:none; width:auto; padding:0 16px; height:38px; border-radius:10px;
+  border:0; background:linear-gradient(135deg,#5b8cff,#8b5cf6); color:#fff;
+  font-size:13px; font-weight:600;
+}
+.leave-btn {
+  margin-top:14px; width:100%; padding:12px; border-radius:11px;
+  border:1px solid rgba(239,68,68,.45); background:rgba(239,68,68,.1);
+  color:#f87171; font-size:14px; font-weight:600; cursor:pointer;
+}
+.leave-btn:active { background:rgba(239,68,68,.2); }
