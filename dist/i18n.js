@@ -112,7 +112,7 @@
       'Close','Message (Enter to send)','Send','Room password:','Enter a room name first','🔒 Locked','Host {name} · {n}/{max}','No rooms yet. Create one!','🙋 {name} wants to be your friend','🤝 You and {name} are friends now',
       '💬 {name}: {text}','Accept','Reject','Chat','Requested','Add friend','No friends yet. Add one below','No player with that name','No other players yet','Request sent',
       'Request failed','Loading…','Load failed','No messages yet. Say hi!','Me',' (you)','Disconnected, reconnecting…','Room is full','Enter your email first','Email should look like abc@example.com',
-      'Email is required to sign up','Sending…','Could not send','Code sent to {email} (check spam)','{n}s','Send again','Network error, code not sent','Tap “Send code” then enter the 6 digits','Type the 4 characters from the picture','Something went wrong',
+      'Email is required to sign up','Sending…','Could not send','Code sent to {email}. If you can’t find it, check your spam folder.','{n}s','Send again','Network error, code not sent','Tap “Send code” then enter the 6 digits','Type the 4 characters from the picture','Something went wrong',
       'Signed up, but login failed','Network error','This deletes your account and scores forever. Sure?','Enter password to confirm:','Account deleted. Thanks for playing!','Delete failed','Network error, not deleted','Auto-rotate not supported, rotate the phone','Score {n}','Online {n}',
       'Ping {n}ms'
     ],
@@ -125,7 +125,7 @@
       '关闭','发消息（Enter 发送）','发送','输入房间密码：','请先填房间名','🔒 有密码','房主 {name} · {n}/{max} 人','暂无房间，创建一个吧！','🙋 {name} 想加你为好友','🤝 你和 {name} 成为好友了',
       '💬 {name}：{text}','同意','拒绝','聊天','已申请','加好友','还没有好友，去下面「所有玩家」里加一个吧','没搜到这个名字','除了你还没有别的玩家','申请已发送',
       '申请失败','加载中…','加载失败','还没聊过，打个招呼吧','我','（你）','连接断开，正在重连…','房间已满','先填邮箱','邮箱格式不对，要像 abc@example.com 这样',
-      '注册要填邮箱（用于账号追溯）','发送中…','发送失败','验证码已发到 {email}（收不到就看看垃圾箱）','{n} 秒','重新发送','网络错误，验证码没发出去','先点「发送验证码」，再把收到的 6 位数字填上','照图片填一下 4 个字符','操作失败',
+      '注册要填邮箱（用于账号追溯）','发送中…','发送失败','验证码已发到 {email}，如果没有找到，请检查你的垃圾邮箱','{n} 秒','重新发送','网络错误，验证码没发出去','先点「发送验证码」，再把收到的 6 位数字填上','照图片填一下 4 个字符','操作失败',
       '注册后登录失败','网络错误','注销账号会永久删除账号和排行榜成绩，确定吗？','输入密码确认注销：','账号已注销，感谢游玩','注销失败','网络错误，注销失败','不支持自动横屏，请手动旋转手机','得分 {n}','在线 {n} 人',
       '延迟 {n}ms'
     ],
@@ -138,7 +138,7 @@
       '關閉','發送訊息（Enter 送出）','傳送','輸入房間密碼：','請先填房間名稱','🔒 有密碼','房主 {name} · {n}/{max} 人','暫無房間，建立一個吧！','🙋 {name} 想加你為好友','🤝 你和 {name} 成為好友了',
       '💬 {name}：{text}','同意','拒絕','聊天','已申請','加好友','還沒有好友，去下面「所有玩家」裡加一個吧','沒搜到這個名字','除了你還沒有別的玩家','申請已送出',
       '申請失敗','載入中…','載入失敗','還沒聊過，打個招呼吧','我','（你）','連線中斷，正在重新連線…','房間已滿','先填電子郵件','電子郵件格式不對，要像 abc@example.com 這樣',
-      '註冊要填電子郵件（用於帳號追溯）','傳送中…','傳送失敗','驗證碼已寄到 {email}（收不到就看看垃圾郵件）','{n} 秒','重新傳送','網路錯誤，驗證碼沒寄出','先點「傳送驗證碼」，再把收到的 6 位數字填上','照圖片填一下 4 個字元','操作失敗',
+      '註冊要填電子郵件（用於帳號追溯）','傳送中…','傳送失敗','驗證碼已寄到 {email}，如果沒有找到，請檢查你的垃圾郵件匣','{n} 秒','重新傳送','網路錯誤，驗證碼沒寄出','先點「傳送驗證碼」，再把收到的 6 位數字填上','照圖片填一下 4 個字元','操作失敗',
       '註冊後登入失敗','網路錯誤','刪除帳號會永久刪除帳號和排行榜成績，確定嗎？','輸入密碼確認刪除：','帳號已刪除，感謝遊玩','刪除失敗','網路錯誤，刪除失敗','不支援自動橫屏，請手動旋轉手機','得分 {n}','線上 {n} 人',
       '延遲 {n}ms'
     ],
