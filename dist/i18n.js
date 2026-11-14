@@ -99,7 +99,7 @@
     'reqFail','loading','loadFail','noHistory','me','meSuffix','reconnecting','roomFull','errEmail','errEmailFormat',
     'errEmailRequired','sending','sendFailed','codeSent','seconds','resend','errCodeNet','errNeedCode','errNeedCaptcha','opFailed',
     'regLoginFailed','networkError','confirmDelete','promptPwd','deleted','deleteFailed','deleteNet','noLandscape','score','online',
-    'ping'
+    'ping','dlTitle','dlHead','dlSub','dlPlayWeb','dlPlayMobile','dlSecDesktop','dlSecMobile','dlSecScratch','dlDownload','dlMacMeta','dlWinMeta','dlLinuxMeta','dlAndroidMeta','dlIosName','dlIosMeta','dlSb3Name','dlSb3Meta','dlTipsTitle','dlTip1','dlTip2','dlTip3','dlTip4','dlTip5','dlFooter'
   ];
 
   var RAW = {
@@ -114,7 +114,8 @@
       'Request failed','Loading…','Load failed','No messages yet. Say hi!','Me',' (you)','Disconnected, reconnecting…','Room is full','Enter your email first','Email should look like abc@example.com',
       'Email is required to sign up','Sending…','Could not send','Code sent to {email}. If you can’t find it, check your spam folder.','{n}s','Send again','Network error, code not sent','Tap “Send code” then enter the 6 digits','Type the 4 characters from the picture','Something went wrong',
       'Signed up, but login failed','Network error','This deletes your account and scores forever. Sure?','Enter password to confirm:','Account deleted. Thanks for playing!','Delete failed','Network error, not deleted','Auto-rotate not supported, rotate the phone','Score {n}','Online {n}',
-      'Ping {n}ms'
+      'Ping {n}ms',
+      'Snake Online – Multiplayer Battles & Download Center','Snake Online','Multiplayer · Room battles · Leaderboards · Cross-platform clients','🖥️ Play in browser','📱 Play on mobile','📦 Desktop clients','📱 Mobile clients','🧩 Scratch / TurboWarp','Download','Snake.app · DMG installer · Native WKWebView window','Snake.exe · Win64 ZIP · Requires WebView2 Runtime','snake-game · DEB package · Debian / Ubuntu / Deepin','com.snake.game · APK · Android 5.0+','🍎 iOS (unsigned)','IPA · Self-sign required · Install with Sideloadly / AltStore','🎮 Scratch 3 project file','.sb3 · Open in TurboWarp, click the green flag · Fullscreen web build is always up to date','💡 Tips','The web version needs no download — sign up / log in / rooms / chat / leaderboard','Fullscreen client = built-in TurboWarp + multiplayer extension; enter username and password when prompted','Web client = the full site built in; opens straight to the login screen','On Windows 10 install WebView2 Runtime first (Windows 11 already has it)','The iOS IPA is unsigned — sign it yourself with Sideloadly / AltStore / Xcode','🐍 Snake Online · Real-time multiplayer · Supports 50ms ultra mode'
     ],
     'zh-CN': [
       '🐍 多人联机贪吃蛇','注册账号 → 进大厅 → 创建或加入房间','登录','注册','用户名（字母/数字/中文）','密码（4-32 位）','邮箱（注册必填，用于账号追溯）','6 位验证码','发送验证码','照图片里的 4 个字符填写就能注册',
@@ -127,7 +128,8 @@
       '申请失败','加载中…','加载失败','还没聊过，打个招呼吧','我','（你）','连接断开，正在重连…','房间已满','先填邮箱','邮箱格式不对，要像 abc@example.com 这样',
       '注册要填邮箱（用于账号追溯）','发送中…','发送失败','验证码已发到 {email}，如果没有找到，请检查你的垃圾邮箱','{n} 秒','重新发送','网络错误，验证码没发出去','先点「发送验证码」，再把收到的 6 位数字填上','照图片填一下 4 个字符','操作失败',
       '注册后登录失败','网络错误','注销账号会永久删除账号和排行榜成绩，确定吗？','输入密码确认注销：','账号已注销，感谢游玩','注销失败','网络错误，注销失败','不支持自动横屏，请手动旋转手机','得分 {n}','在线 {n} 人',
-      '延迟 {n}ms'
+      '延迟 {n}ms',
+      '联机贪吃蛇 - 多人在线对战 · 下载中心','联机贪吃蛇','多人联机 · 房间对战 · 排行榜 · 跨平台客户端','🖥️ 网页版立即玩','📱 手机版立即玩','📦 桌面客户端','📱 手机客户端','🧩 Scratch / TurboWarp','下载','贪吃蛇.app · DMG 安装包 · 原生 WKWebView 窗口','Snake.exe · Win64 ZIP · 需安装 WebView2 Runtime','snake-game · DEB 包 · Debian / Ubuntu / 深度','com.snake.game · APK · Android 5.0+','🍎 iOS（未签名）','IPA · 需自行签名 · 用 Sideloadly / AltStore 安装','🎮 Scratch 3 工程文件','.sb3 · 导入 TurboWarp 点绿旗即玩 · 全屏打开最新网页版，永不落伍','💡 使用提示','网页版无需下载，打开即玩，支持账号注册 / 登录 / 房间系统 / 聊天 / 排行榜','全屏版客户端 = 内置 TurboWarp + 联机扩展，启动后按积木提示输入用户名和密码','网页版客户端 = 内置完整网页，打开就是登录界面','Windows 10 首次运行需安装 WebView2 Runtime（Windows 11 已自带）','iOS IPA 未签名，需要通过 Sideloadly / AltStore / Xcode 自签安装','🐍 联机贪吃蛇 · 多人实时对战 · 支持 50ms 超快模式'
     ],
     'zh-TW': [
       '🐍 多人連線貪吃蛇','註冊帳號 → 進大廳 → 建立或加入房間','登入','註冊','使用者名稱（字母/數字/中文）','密碼（4-32 位）','電子郵件（註冊必填，用於帳號追溯）','6 位驗證碼','傳送驗證碼','照圖片裡的 4 個字元填寫就能註冊',
@@ -140,7 +142,8 @@
       '申請失敗','載入中…','載入失敗','還沒聊過，打個招呼吧','我','（你）','連線中斷，正在重新連線…','房間已滿','先填電子郵件','電子郵件格式不對，要像 abc@example.com 這樣',
       '註冊要填電子郵件（用於帳號追溯）','傳送中…','傳送失敗','驗證碼已寄到 {email}，如果沒有找到，請檢查你的垃圾郵件匣','{n} 秒','重新傳送','網路錯誤，驗證碼沒寄出','先點「傳送驗證碼」，再把收到的 6 位數字填上','照圖片填一下 4 個字元','操作失敗',
       '註冊後登入失敗','網路錯誤','刪除帳號會永久刪除帳號和排行榜成績，確定嗎？','輸入密碼確認刪除：','帳號已刪除，感謝遊玩','刪除失敗','網路錯誤，刪除失敗','不支援自動橫屏，請手動旋轉手機','得分 {n}','線上 {n} 人',
-      '延遲 {n}ms'
+      '延遲 {n}ms',
+      '聯機貪吃蛇 - 多人線上對戰 · 下載中心','聯機貪吃蛇','多人聯機 · 房間對戰 · 排行榜 · 跨平台客戶端','🖥️ 網頁版立即玩','📱 手機版立即玩','📦 桌面客戶端','📱 手機客戶端','🧩 Scratch / TurboWarp','下載','貪吃蛇.app · DMG 安裝包 · 原生 WKWebView 視窗','Snake.exe · Win64 ZIP · 需安裝 WebView2 Runtime','snake-game · DEB 套件 · Debian / Ubuntu / 深度','com.snake.game · APK · Android 5.0+','🍎 iOS（未簽名）','IPA · 需自行簽名 · 用 Sideloadly / AltStore 安裝','🎮 Scratch 3 專案檔','.sb3 · 匯入 TurboWarp 點綠旗即玩 · 全螢幕開啟最新網頁版，永不過時','💡 使用提示','網頁版無需下載，開啟即玩，支援帳號註冊 / 登入 / 房間系統 / 聊天 / 排行榜','全螢幕版客戶端 = 內建 TurboWarp + 聯機擴充，啟動後依積木提示輸入使用者名稱和密碼','網頁版客戶端 = 內建完整網頁，開啟就是登入畫面','Windows 10 首次執行需安裝 WebView2 Runtime（Windows 11 已內建）','iOS IPA 未簽名，需透過 Sideloadly / AltStore / Xcode 自簽安裝','🐍 聯機貪吃蛇 · 多人即時對戰 · 支援 50ms 超快模式'
     ],
     'uk': [
       '🐍 Багатокористувацька змійка','Реєстрація → Лобі → Створи або приєднайся до кімнати','Увійти','Реєстрація','Ім’я користувача','Пароль (4-32 символи)','Ел. пошта (потрібна для реєстрації)','6-значний код','Надіслати код','Введи 4 символи з картинки, щоб зареєструватися',
@@ -192,7 +195,8 @@
       'Solicitud fallida','Cargando…','Error al cargar','Aún no hay mensajes. ¡Saluda!','Yo',' (tú)','Desconectado, reconectando…','La sala está llena','Escribe tu correo primero','El correo debe ser como abc@example.com',
       'Para registrarte hace falta el correo','Enviando…','No se pudo enviar','Código enviado a {email} (mira el spam)','{n} s','Enviar otra vez','Error de red, código no enviado','Pulsa “Enviar código” y escribe los 6 dígitos','Escribe los 4 caracteres de la imagen','Algo salió mal',
       'El registro funcionó, pero el acceso falló','Error de red','Se borrarán la cuenta y los puntos para siempre. ¿Seguro?','Escribe la contraseña para confirmar:','Cuenta borrada. ¡Gracias por jugar!','No se pudo borrar','Error de red, no se borró','Giro automático no compatible, gira el móvil','Puntos {n}','En línea {n}',
-      'Ping {n} ms'
+      'Ping {n} ms',
+      'Snake Online: batallas multijugador y centro de descargas','Snake Online','Multijugador · salas · clasificación · multijugador multiplataforma','🖥️ Jugar en el navegador','📱 Jugar en móvil','📦 Clientes de escritorio','📱 Clientes móviles','🧩 Scratch / TurboWarp','Descargar','Snake.app · instalador DMG · ventana nativa WKWebView','Snake.exe · Win64 ZIP · requiere WebView2 Runtime','snake-game · paquete DEB · Debian / Ubuntu / Deepin','com.snake.game · APK · Android 5.0+','🍎 iOS (sin firmar)','IPA · firma propia · instalar con Sideloadly / AltStore','🎮 Archivo de proyecto Scratch 3','.sb3 · ábrelo en TurboWarp y pulsa la bandera verde · la versión web siempre al día','💡 Consejos','La versión web no requiere descarga: registro, inicio de sesión, salas, chat y clasificación','El cliente a pantalla completa incluye TurboWarp y la extensión multijugador; introduzca usuario y contraseña','Cliente web = el sitio completo integrado; abre la pantalla de inicio de sesión','En Windows 10 instala WebView2 Runtime (Windows 11 ya lo incluye)','El IPA de iOS no está firmado; fírmalo con Sideloadly / AltStore / Xcode','🐍 Snake Online · multijugador en tiempo real · modo ultra de 50 ms'
     ],
     'fa': [
       '🐍 مار چندنفره','ثبت‌نام → سالن → ساخت یا ورود به اتاق','ورود','ثبت‌نام','نام کاربری','رمز عبور (۴ تا ۳۲ نویسه)','ایمیل (برای ثبت‌نام لازم است)','کد ۶ رقمی','ارسال کد','برای ثبت‌نام ۴ نویسهٔ تصویر را بنویس',
@@ -218,7 +222,8 @@
       'Demande échouée','Chargement…','Chargement impossible','Pas encore de messages. Dis bonjour !','Moi',' (toi)','Déconnecté, reconnexion…','Le salon est plein','Mets d’abord ton e-mail','L’e-mail doit ressembler à abc@example.com',
       'L’e-mail est obligatoire pour l’inscription','Envoi…','Envoi impossible','Code envoyé à {email} (regarde les spams)','{n} s','Renvoyer','Erreur réseau, code non envoyé','Clique sur « Envoyer le code » puis tape les 6 chiffres','Tape les 4 caractères de l’image','Un problème est survenu',
       'Inscription réussie mais connexion impossible','Erreur réseau','Ton compte et tes scores seront supprimés pour toujours. Sûr ?','Mot de passe pour confirmer :','Compte supprimé. Merci d’avoir joué !','Suppression impossible','Erreur réseau, rien n’a été supprimé','Rotation auto non prise en charge, tourne le téléphone','Score {n}','En ligne {n}',
-      'Ping {n} ms'
+      'Ping {n} ms',
+      'Snake Online : batailles multijoueur et téléchargements','Snake Online','Multijoueur · salons · classements · multi-plateforme','🖥️ Jouer dans le navigateur','📱 Jouer sur mobile','📦 Clients de bureau','📱 Clients mobiles','🧩 Scratch / TurboWarp','Télécharger','Snake.app · installateur DMG · fenêtre native WKWebView','Snake.exe · Win64 ZIP · nécessite WebView2 Runtime','snake-game · paquet DEB · Debian / Ubuntu / Deepin','com.snake.game · APK · Android 5.0+','🍎 iOS (non signé)','IPA · auto-signature requise · installer avec Sideloadly / AltStore','🎮 Fichier de projet Scratch 3','.sb3 · ouvrez-le dans TurboWarp et cliquez sur le drapeau vert · la version web toujours à jour','💡 Astuces','La version web ne nécessite aucun téléchargement : inscription, connexion, salons, chat et classement','Le client plein écran intègre TurboWarp et l’extension multijoueur ; saisissez identifiant et mot de passe','Client web = le site complet intégré ; ouvre directement l’écran de connexion','Sous Windows 10, installez WebView2 Runtime (Windows 11 l’inclut)','L’IPA iOS n’est pas signé : signez-le avec Sideloadly / AltStore / Xcode','🐍 Snake Online · multijoueur temps réel · mode ultra 50 ms'
     ],
     'de': [
       '🐍 Mehrspieler-Schlange','Anmelden → Lobby → Raum erstellen oder beitreten','Einloggen','Registrieren','Benutzername','Passwort (4-32 Zeichen)','E-Mail (für Registrierung nötig)','6-stelliger Code','Code senden','Tippe die 4 Zeichen im Bild ein, um dich anzumelden',
@@ -231,7 +236,8 @@
       'Anfrage fehlgeschlagen','Lädt…','Laden fehlgeschlagen','Noch keine Nachrichten. Sag Hallo!','Ich',' (du)','Verbindung weg, verbinde neu…','Der Raum ist voll','Gib zuerst deine E-Mail ein','E-Mail muss wie abc@example.com aussehen',
       'Für die Registrierung ist E-Mail nötig','Senden…','Senden fehlgeschlagen','Code an {email} gesendet (auch Spam prüfen)','{n} s','Erneut senden','Netzwerkfehler, Code nicht gesendet','Klicke auf „Code senden“ und gib die 6 Ziffern ein','Tippe die 4 Zeichen aus dem Bild ein','Etwas ist schiefgelaufen',
       'Registrierung okay, Login fehlgeschlagen','Netzwerkfehler','Konto und Punkte werden für immer gelöscht. Sicher?','Passwort zur Bestätigung:','Konto gelöscht. Danke fürs Spielen!','Löschen fehlgeschlagen','Netzwerkfehler, nichts gelöscht','Auto-Drehen nicht möglich, dreh das Handy','Punkte {n}','Online {n}',
-      'Ping {n} ms'
+      'Ping {n} ms',
+      'Snake Online – Mehrspieler-Duelle & Download-Center','Snake Online','Mehrspieler · Räume · Rangliste · plattformübergreifend','🖥️ Im Browser spielen','📱 Auf dem Handy spielen','📦 Desktop-Clients','📱 Mobile Clients','🧩 Scratch / TurboWarp','Herunterladen','Snake.app · DMG-Installer · natives WKWebView-Fenster','Snake.exe · Win64 ZIP · benötigt WebView2 Runtime','snake-game · DEB-Paket · Debian / Ubuntu / Deepin','com.snake.game · APK · Android 5.0+','🍎 iOS (unsigniert)','IPA · Selbstsignierung nötig · Installation via Sideloadly / AltStore','🎮 Scratch-3-Projektdatei','.sb3 · in TurboWarp öffnen und grüne Flagge klicken · Web-Version immer aktuell','💡 Hinweise','Webversion ohne Download: Registrierung, Login, Räume, Chat, Rangliste','Vollbild-Client = integriertes TurboWarp + Multiplayer-Erweiterung; Benutzername und Passwort eingeben','Web-Client = komplette Website integriert; öffnet direkt den Login','Unter Windows 10 WebView2 Runtime installieren (Windows 11 hat es schon)','Das iOS-IPA ist unsigniert — mit Sideloadly / AltStore / Xcode selbst signieren','🐍 Snake Online · Echtzeit-Multiplayer · 50-ms-Ultra-Modus'
     ],
     'pl': [
       '🐍 Wąż wieloosobowy','Zarejestruj się → Lobby → Utwórz lub dołącz do pokoju','Zaloguj','Zarejestruj','Nazwa użytkownika','Hasło (4-32 znaki)','E-mail (wymagany do rejestracji)','6-cyfrowy kod','Wyślij kod','Wpisz 4 znaki z obrazka, aby się zarejestrować',
@@ -296,7 +302,8 @@
       '申請に失敗','読み込み中…','読み込み失敗','まだメッセージなし。あいさつしよう！','自分','（あなた）','切断されました。再接続中…','部屋が満員です','先にメールを入れてね','メールは abc@example.com の形で',
       '登録にはメールが必要です','送信中…','送信できませんでした','{email} にコードを送りました（迷惑メールも見てね）','{n} 秒','もう一度送る','ネットワークエラー、コード未送信','「コードを送る」を押して6桁を入力','画像の4文字を入力してね','何かうまくいきませんでした',
       '登録はできたけどログイン失敗','ネットワークエラー','アカウントとスコアが永久に消えます。本当に？','確認のためパスワードを入力：','アカウントを削除しました。遊んでくれてありがとう！','削除に失敗','ネットワークエラー、削除できません','自動横画面に非対応。スマホを回してね','スコア {n}','オンライン {n}',
-      '遅延 {n}ms'
+      '遅延 {n}ms',
+      'スネークオンライン – オンライン対戦・ダウンロード','スネークオンライン','マルチプレイ・ルーム対戦・ランキング・クロスプラットフォーム','🖥️ ブラウザ版ですぐ遊ぶ','📱 スマホ版ですぐ遊ぶ','📦 デスクトップ版','📱 モバイル版','🧩 Scratch / TurboWarp','ダウンロード','Snake.app · DMG インストーラー · ネイティブ WKWebView ウィンドウ','Snake.exe · Win64 ZIP · WebView2 Runtime が必要','snake-game · DEB パッケージ · Debian / Ubuntu / Deepin','com.snake.game · APK · Android 5.0+','🍎 iOS（未署名）','IPA · 自己署名が必要 · Sideloadly / AltStore でインストール','🎮 Scratch 3 プロジェクトファイル','.sb3 · TurboWarp で読み込み、緑の旗を押すだけ · 最新のWeb版を全画面で','💡 ヒント','Web版はダウンロード不要、開けばすぐ遊べます（登録・ログイン・ルーム・チャット・ランキング）','全画面クライアント = TurboWarp 内蔵＋オンライン拡張。起動後にユーザー名とパスワードを入力','Webクライアント = サイト全体を内蔵。開くとすぐログイン画面','Windows 10 は初回に WebView2 Runtime が必要（Windows 11 は標準搭載）','iOS の IPA は未署名です。Sideloadly / AltStore / Xcode で自己署名してください','🐍 スネークオンライン · リアルタイム対戦 · 50ms ウルトラモード対応'
     ],
     'nl': [
       '🐍 Multiplayer-slang','Registreer → Lobby → Maak of join een kamer','Inloggen','Registreren','Gebruikersnaam','Wachtwoord (4-32 tekens)','E-mail (nodig om te registreren)','6-cijferige code','Code sturen','Typ de 4 tekens op de afbeelding om te registreren',
@@ -335,7 +342,8 @@
       'Запрос не удался','Загрузка…','Не удалось загрузить','Сообщений пока нет. Поздоровайся!','Я',' (ты)','Связь потеряна, подключаемся…','Комната заполнена','Сначала введи почту','Почта должна быть как abc@example.com',
       'Для регистрации нужна почта','Отправляем…','Не удалось отправить','Код отправлен на {email} (проверь спам)','{n} с','Отправить снова','Ошибка сети, код не отправлен','Нажми «Отправить код» и введи 6 цифр','Введи 4 символа с картинки','Что-то пошло не так',
       'Регистрация прошла, но вход не удался','Ошибка сети','Аккаунт и рекорды удалятся навсегда. Точно?','Введи пароль для подтверждения:','Аккаунт удалён. Спасибо за игру!','Не удалось удалить','Ошибка сети, не удалено','Автоповорот не поддерживается, поверни телефон','Очки {n}','Онлайн {n}',
-      'Пинг {n} мс'
+      'Пинг {n} мс',
+      'Змейка Онлайн — сетевая игра и центр загрузок','Змейка Онлайн','Мультиплеер · комнаты · рейтинг · кроссплатформа','🖥️ Играть в браузере','📱 Играть на мобильном','📦 Клиент для ПК','📱 Мобильный клиент','🧩 Scratch / TurboWarp','Скачать','Snake.app · DMG-установщик · нативное окно WKWebView','Snake.exe · Win64 ZIP · требуется WebView2 Runtime','snake-game · пакет DEB · Debian / Ubuntu / Deepin','com.snake.game · APK · Android 5.0+','🍎 iOS (без подписи)','IPA · требуется самоподпись · установка через Sideloadly / AltStore','🎮 проект Scratch 3','.sb3 · откройте в TurboWarp и нажмите зелёный флажок · последняя веб-версия всегда актуальна','💡 Советы','Веб-версия без загрузки: регистрация, вход, комнаты, чат, рейтинг','Полноэкранный клиент = встроенный TurboWarp + онлайн-расширение; введите имя и пароль','Веб-клиент = встроенный полный сайт, сразу открывается экран входа','В Windows 10 нужен WebView2 Runtime (в Windows 11 уже есть)','IPA для iOS без подписи — подпишите через Sideloadly / AltStore / Xcode','🐍 Змейка Онлайн · игра в реальном времени · режим 50 мс'
     ],
     'pt-PT': [
       '🐍 Serpente multijogador','Regista-te → Sala → Cria ou entra numa sala','Entrar','Registar','Nome de utilizador','Palavra-passe (4-32 caracteres)','Email (obrigatório para registar)','Código de 6 dígitos','Enviar código','Escreve os 4 caracteres da imagem para te registares',
@@ -1074,7 +1082,7 @@
     var arr = RAW[code], obj = {};
     for (var i = 0; i < KEYS.length; i++) obj[KEYS[i]] = arr[i];
     TRANSLATIONS[code] = obj;
-    if (arr.length !== KEYS.length && typeof console !== 'undefined') {
+    if (arr.length > KEYS.length && typeof console !== 'undefined') {
       console.warn('[i18n] 语言 ' + code + ' 的条目数不是 ' + KEYS.length + '（实际 ' + arr.length + '）');
     }
   }

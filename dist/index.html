@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>联机贪吃蛇 - 多人在线对战 · 下载中心</title>
+<title data-i18n="dlTitle">联机贪吃蛇 - 多人在线对战 · 下载中心</title>
 <meta name="description" content="联机贪吃蛇：支持多人实时对战、房间系统、排行榜、聊天的跨平台贪吃蛇游戏。提供 Windows、macOS、Linux、Android、iOS 客户端下载，网页版打开即玩。">
 <meta name="keywords" content="贪吃蛇,联机贪吃蛇,多人贪吃蛇,贪吃蛇游戏,贪吃蛇下载,在线贪吃蛇,snake game,多人在线游戏">
 <meta name="author" content="联机贪吃蛇">
@@ -45,7 +45,7 @@
     min-height: 100vh;
     padding: 40px 20px;
   }
-  .container { max-width: 900px; margin: 0 auto; }
+  .container { max-width: 900px; margin: 0 auto; position: relative; }
   header { text-align: center; margin-bottom: 40px; }
   h1 { font-size: 42px; margin-bottom: 12px; }
   h1 .emoji { font-size: 48px; }
@@ -86,9 +86,21 @@
   }
   .note b { color: #fbbf24; }
   footer { text-align: center; color: #64748b; font-size: 13px; margin-top: 40px; }
+  .lang-bar { position: absolute; top: -20px; right: 0; z-index: 10; }
+  .lang-sel {
+    min-height: 32px; max-width: 200px; padding: 6px 26px 6px 10px;
+    border: 1px solid #2a3152; border-radius: 8px; background: #1a1f35;
+    color: #e2e8f0; font-size: 13px; cursor: pointer; outline: none;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b94b8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 9px center;
+  }
+  .lang-sel:hover, .lang-sel:focus { border-color: #5b8cff; }
+  .lang-sel option { background: #1a1f35; color: #e2e8f0; }
   @media (max-width: 600px) {
     h1 { font-size: 30px; }
     .quick-play a { padding: 12px 22px; font-size: 15px; }
+    .lang-bar { position: static; text-align: right; margin-bottom: 12px; }
   }
 </style>
 <link rel="icon" href="favicon.png" type="image/png">
@@ -97,77 +109,99 @@
 <body>
 <div class="container">
 
+  <div class="lang-bar">
+    <select id="langSel" class="lang-sel" aria-label="Language"></select>
+  </div>
+
   <header>
-    <h1><span class="emoji">🐍</span>联机贪吃蛇</h1>
-    <p class="subtitle">多人联机 · 房间对战 · 排行榜 · 跨平台客户端</p>
+    <h1><span class="emoji">🐍</span><span data-i18n="dlHead">联机贪吃蛇</span></h1>
+    <p class="subtitle" data-i18n="dlSub">多人联机 · 房间对战 · 排行榜 · 跨平台客户端</p>
     <div class="quick-play">
-      <a href="play.html" class="btn-primary">🖥️ 网页版立即玩</a>
-      <a href="mobile.html" class="btn-secondary">📱 手机版立即玩</a>
+      <a href="play.html" class="btn-primary" data-i18n="dlPlayWeb">🖥️ 网页版立即玩</a>
+      <a href="mobile.html" class="btn-secondary" data-i18n="dlPlayMobile">📱 手机版立即玩</a>
     </div>
   </header>
 
   <section>
-    <h2><span class="emoji">📦</span>桌面客户端</h2>
+    <h2 data-i18n="dlSecDesktop">📦 桌面客户端</h2>
     <div class="grid">
       <div class="card">
         <div class="name">🍎 macOS</div>
-        <div class="meta">贪吃蛇.app · DMG 安装包<br>原生 WKWebView 窗口</div>
-        <a href="贪吃蛇.dmg">下载 DMG</a>
+        <div class="meta" data-i18n="dlMacMeta">贪吃蛇.app · DMG 安装包 · 原生 WKWebView 窗口</div>
+        <a href="贪吃蛇.dmg"><span data-i18n="dlDownload">下载</span> DMG</a>
       </div>
       <div class="card">
         <div class="name">🖥️ Windows</div>
-        <div class="meta">Snake.exe · Win64 ZIP<br>需安装 WebView2 Runtime</div>
-        <a href="贪吃蛇-win64.zip">下载 ZIP</a>
+        <div class="meta" data-i18n="dlWinMeta">Snake.exe · Win64 ZIP · 需安装 WebView2 Runtime</div>
+        <a href="贪吃蛇-win64.zip"><span data-i18n="dlDownload">下载</span> ZIP</a>
       </div>
       <div class="card">
         <div class="name">🐧 Linux</div>
-        <div class="meta">snake-game · DEB 包<br>Debian / Ubuntu / 深度</div>
-        <a href="贪吃蛇.deb">下载 DEB</a>
+        <div class="meta" data-i18n="dlLinuxMeta">snake-game · DEB 包 · Debian / Ubuntu / 深度</div>
+        <a href="贪吃蛇.deb"><span data-i18n="dlDownload">下载</span> DEB</a>
       </div>
     </div>
   </section>
 
   <section>
-    <h2><span class="emoji">📱</span>手机客户端</h2>
+    <h2 data-i18n="dlSecMobile">📱 手机客户端</h2>
     <div class="grid">
       <div class="card">
         <div class="name">🤖 Android</div>
-        <div class="meta">com.snake.game · APK<br>Android 5.0+</div>
-        <a href="贪吃蛇.apk">下载 APK</a>
+        <div class="meta" data-i18n="dlAndroidMeta">com.snake.game · APK · Android 5.0+</div>
+        <a href="贪吃蛇.apk"><span data-i18n="dlDownload">下载</span> APK</a>
       </div>
       <div class="card">
-        <div class="name">🍎 iOS（未签名）</div>
-        <div class="meta">IPA · 需自行签名<br>用 Sideloadly / AltStore 安装</div>
-        <a href="贪吃蛇-unsigned.ipa">下载 IPA</a>
+        <div class="name" data-i18n="dlIosName">🍎 iOS（未签名）</div>
+        <div class="meta" data-i18n="dlIosMeta">IPA · 需自行签名 · 用 Sideloadly / AltStore 安装</div>
+        <a href="贪吃蛇-unsigned.ipa"><span data-i18n="dlDownload">下载</span> IPA</a>
       </div>
     </div>
   </section>
 
   <section>
-    <h2><span class="emoji">🧩</span>Scratch / TurboWarp</h2>
+    <h2 data-i18n="dlSecScratch">🧩 Scratch / TurboWarp</h2>
     <div class="grid">
       <div class="card">
-        <div class="name">🎮 Scratch 3 工程文件</div>
-        <div class="meta">.sb3 · 导入 TurboWarp 点绿旗即玩<br>全屏打开最新网页版，永不落伍</div>
-        <a href="联机贪吃蛇.sb3">下载 SB3</a>
-        <a href="snake-ext.js" class="ghost" target="_blank">查看扩展</a>
+        <div class="name" data-i18n="dlSb3Name">🎮 Scratch 3 工程文件</div>
+        <div class="meta" data-i18n="dlSb3Meta">.sb3 · 导入 TurboWarp 点绿旗即玩 · 全屏打开最新网页版，永不落伍</div>
+        <a href="联机贪吃蛇.sb3"><span data-i18n="dlDownload">下载</span> SB3</a>
+        <a href="snake-ext.js" class="ghost" target="_blank">Ext</a>
       </div>
     </div>
   </section>
 
   <section>
     <div class="note">
-      <b>💡 使用提示</b><br>
-      · 网页版无需下载，打开即玩，支持账号注册 / 登录 / 房间系统 / 聊天 / 排行榜<br>
-      · 全屏版客户端 = 内置 TurboWarp + 联机扩展，启动后按积木提示输入用户名和密码<br>
-      · 网页版客户端 = 内置完整网页，打开就是登录界面<br>
-      · Windows 10 首次运行需安装 <a href="https://developer.microsoft.com/microsoft-edge/webview2/" target="_blank" style="color:#5b8cff">WebView2 Runtime</a>（Windows 11 已自带）<br>
-      · iOS IPA 未签名，需要通过 Sideloadly / AltStore / Xcode 自签安装
+      <b data-i18n="dlTipsTitle">💡 使用提示</b><br>
+      <span data-i18n="dlTip1">网页版无需下载，打开即玩，支持账号注册 / 登录 / 房间系统 / 聊天 / 排行榜</span><br>
+      <span data-i18n="dlTip2">全屏版客户端 = 内置 TurboWarp + 联机扩展，启动后按积木提示输入用户名和密码</span><br>
+      <span data-i18n="dlTip3">网页版客户端 = 内置完整网页，打开就是登录界面</span><br>
+      <span data-i18n="dlTip4">Windows 10 首次运行需安装 WebView2 Runtime（Windows 11 已自带）</span><br>
+      <span data-i18n="dlTip5">iOS IPA 未签名，需要通过 Sideloadly / AltStore / Xcode 自签安装</span>
     </div>
   </section>
 
-  <footer>🐍 联机贪吃蛇 · 多人实时对战 · 支持 50ms 超快模式<br><span style="opacity:.65;font-size:12px">© 2026 Snake Online, Inc.</span></footer>
+  <footer><span data-i18n="dlFooter">🐍 联机贪吃蛇 · 多人实时对战 · 支持 50ms 超快模式</span><br><span style="opacity:.65;font-size:12px">© 2026 Snake Online, Inc.</span></footer>
 
 </div>
+<script src="i18n.js"></script>
+<script>
+(function () {
+  var sel = document.getElementById('langSel');
+  if (!sel || !window.LANG_LIST) return;
+  for (var i = 0; i < LANG_LIST.length; i++) {
+    var o = document.createElement('option');
+    o.value = LANG_LIST[i].code;
+    o.textContent = LANG_LIST[i].name;
+    sel.appendChild(o);
+  }
+  sel.value = window.getLang ? getLang() : 'en';
+  sel.addEventListener('change', function () {
+    setLang(this.value);
+    applyI18n(document);
+  });
+})();
+</script>
 </body>
 </html>
