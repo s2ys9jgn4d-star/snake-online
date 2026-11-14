@@ -119,8 +119,9 @@ html,body {
 #rankList li.top1 .rk { color:#ffd34d; }
 #rankList li.top2 .rk { color:#cfd8e3; }
 #rankList li.top3 .rk { color:#e0915b; }
-#rankList .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#rankList .sc { font-weight:700; color:var(--accent2); }
+#rankList .nm { flex:1; min-width:0; display:flex; align-items:center; gap:2px; }
+#rankList .sc { font-weight:700; color:var(--accent2); font-size:13px; flex:none; }
+.nm-t { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ============ 聊天（大厅 + 房间） ============ */
 .chat-box {
@@ -221,7 +222,7 @@ html,body {
   display:flex; align-items:center; gap:8px; padding:7px 10px;
   background:var(--panel2); border:1px solid var(--line); border-radius:8px; font-size:13px;
 }
-.people-row .pn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.people-row .pn { flex:1; min-width:0; display:flex; align-items:center; gap:2px; }
 .people-row .pb { color:var(--muted); font-size:12px; flex:none; }
 .dot { width:8px; height:8px; border-radius:50%; background:#64748b; flex:none; }
 .dot.on { background:var(--accent2); box-shadow:0 0 6px var(--accent2); }
@@ -262,5 +263,5 @@ html,body {
 .off-badge{
   margin-left:5px; padding:0 5px; border-radius:6px; font-size:10px; line-height:16px;
   background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#231a05; font-weight:700;
-  vertical-align:middle; white-space:nowrap;
+  vertical-align:middle; white-space:nowrap; flex:none;
 }

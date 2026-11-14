@@ -105,8 +105,9 @@ html,body {
 .rank-list li.top1 .rk { color:#ffd34d; }
 .rank-list li.top2 .rk { color:#cfd8e3; }
 .rank-list li.top3 .rk { color:#e0915b; }
-.rank-list .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.rank-list .sc { font-weight:700; color:var(--accent2); }
+.rank-list .nm { flex:1; min-width:0; display:flex; align-items:center; gap:2px; }
+.rank-list .sc { font-weight:700; color:var(--accent2); flex:none; }
+.nm-t { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ============ 游戏 ============ */
 #panel-game { flex-direction:column; }
@@ -192,7 +193,7 @@ html,body {
   display:flex; align-items:center; gap:8px; padding:9px 10px;
   background:var(--panel); border:1px solid var(--line); border-radius:10px; font-size:14px;
 }
-.people-row .pn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.people-row .pn { flex:1; min-width:0; display:flex; align-items:center; gap:2px; }
 .people-row .pb { color:var(--muted); font-size:12px; flex:none; }
 .dot { width:8px; height:8px; border-radius:50%; background:#64748b; flex:none; }
 .dot.on { background:var(--accent2); box-shadow:0 0 6px var(--accent2); }
@@ -244,5 +245,5 @@ html,body {
 .off-badge{
   margin-left:5px; padding:0 5px; border-radius:6px; font-size:10px; line-height:16px;
   background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#231a05; font-weight:700;
-  vertical-align:middle; white-space:nowrap;
+  vertical-align:middle; white-space:nowrap; flex:none;
 }

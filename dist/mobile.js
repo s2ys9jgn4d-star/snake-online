@@ -311,7 +311,7 @@ function onAuthFail(msg){
 
 async function refreshMe(){
   const r = await api('/api/me');
-  if (r.ok){ myBest = r.best || 0; $('lobbyBest').textContent = t('best', { n: myBest }); }
+  if (r.ok){ myBest = r.best || 0; $('lobbyBest').textContent = t('best', { n: fmtNum(myBest) }); }
 }
 async function refreshScores(){
   const r = await api('/api/scores');
@@ -330,10 +330,12 @@ function escHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// 名字 + 官方徽章（off 由服务器标记）
+// 名字 + 官方徽章（off 由服务器标记）；名字单独包一层，超长时只省略名字，徽章不被裁掉
 function nameHtml(u, off){
-  return escHtml(u) + (off ? '<span class="off-badge">✓ 官方</span>' : '');
+  return '<span class="nm-t">' + escHtml(u) + '</span>' + (off ? '<span class="off-badge">✓ 官方</span>' : '');
 }
+// 大数字加千分位：10000000000 → 10,000,000,000
+function fmtNum(n){ return Number(n || 0).toLocaleString('en-US'); }
 
 async function refreshFriends(){
   const r = await api('/api/friends');
@@ -379,7 +381,7 @@ function renderFriends(){
   for (const f of friendCache.friends){
     const row = document.createElement('div');
     row.className = 'people-row';
-    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${nameHtml(f.u, f.off)}</span><span class="pb">${t('best', { n: f.best || 0 })}</span>`;
+    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${nameHtml(f.u, f.off)}</span><span class="pb">${t('best', { n: fmtNum(f.best) })}</span>`;
     const chatBtn = document.createElement('button');
     chatBtn.className = 'mini-btn'; chatBtn.textContent = t('chat');
     chatBtn.onclick = () => openDm(f.u);
@@ -400,7 +402,7 @@ function renderPlayers(){
   for (const p of items.slice(0, 100)){
     const row = document.createElement('div');
     row.className = 'people-row';
-    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${nameHtml(p.u, p.off)}</span><span class="pb">${t('best', { n: p.best || 0 })}</span>`;
+    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${nameHtml(p.u, p.off)}</span><span class="pb">${t('best', { n: fmtNum(p.best) })}</span>`;
     const btn = document.createElement('button');
     btn.className = 'mini-btn';
     if (p.relation === 'friend'){
@@ -540,7 +542,7 @@ function renderLeaderboard(items){
     const li = document.createElement('li');
     if (p.u === authUser) li.classList.add('me');
     li.classList.add('top' + (i+1));
-    li.innerHTML = `<span class="rk">${i+1}</span><span class="nm">${nameHtml(p.u, p.off)}</span><span class="sc">${p.s}</span>`;
+    li.innerHTML = `<span class="rk">${i+1}</span><span class="nm">${nameHtml(p.u, p.off)}</span><span class="sc">${fmtNum(p.s)}</span>`;
     el.appendChild(li);
   });
 }
@@ -786,7 +788,7 @@ function refreshI18nText(){
   const authBtn = $('authBtn'); if (authBtn) authBtn.textContent = authTab === 'login' ? t('login') : t('register');
   const codeBtn = $('sendCodeBtn');
   if (codeBtn && !codeBtn.disabled && codeLeft <= 0) codeBtn.textContent = t('sendCode');
-  if ($('lobbyBest')) $('lobbyBest').textContent = t('best', { n: myBest });
+  if ($('lobbyBest')) $('lobbyBest').textContent = t('best', { n: fmtNum(myBest) });
   if (dmWith) $('dmTitle').textContent = '💬 ' + dmWith;
   if (roomsLoaded) renderRooms(lastRooms);
   if (!players.size){
