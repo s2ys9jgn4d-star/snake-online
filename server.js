@@ -782,7 +782,7 @@ async function handleApi(req, res, urlPath){
       emailCodes.delete(email);
       mailBrokenUntil = Date.now() + MAIL_BROKEN_MS;   // 10 分钟内不再强求验证码
       console.log('发验证码失败：' + e.message);
-      return sendJSON(res, 500, {ok:false,msg:'邮件发送失败：' + e.message + '（现在不填邮箱也能注册）'});
+      return sendJSON(res, 500, {ok:false,msg:'邮件发送失败：' + e.message + '（这次直接用下面图片里的 4 个字符注册就行）'});
     }
     mailBrokenUntil = 0;
     return sendJSON(res, 200, {ok:true, msg:'验证码已发到邮箱，10 分钟内有效'});
