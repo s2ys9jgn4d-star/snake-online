@@ -87,6 +87,8 @@ document.querySelectorAll('.auth-tabs .tab').forEach(b => {
 
 // 邮箱发信是否可用：不可用时注册就改成图片验证码
 let mailReady = null;
+// 邮箱格式：和服务器一致，用户名@域名.后缀，比如 abc@example.com
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
 let captchaId = '';
 function applyRegExtra(){
   const reg = authTab === 'register';
@@ -124,6 +126,7 @@ $('sendCodeBtn').addEventListener('click', async () => {
   const u = $('authUser').value.trim();
   const btn = $('sendCodeBtn');
   if (!email) { $('authErr').textContent = '先填邮箱'; return; }
+  if (!EMAIL_RE.test(email)) { $('authErr').textContent = '邮箱格式不对，要像 abc@example.com 这样'; return; }
   $('authErr').textContent = '';
   $('codeTip').textContent = '';
   btn.disabled = true; btn.textContent = '发送中…';
@@ -161,6 +164,7 @@ async function doAuthAction(){
   $('authErr').textContent = '';
   if (authTab === 'register'){
     if (!email) { $('authErr').textContent = '注册要填邮箱（用于账号追溯）'; return; }
+    if (!EMAIL_RE.test(email)) { $('authErr').textContent = '邮箱格式不对，要像 abc@example.com 这样'; return; }
     if (mailReady === true && !code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
     if (mailReady === false && !captcha){ $('authErr').textContent = '照图片填一下 4 个字符'; return; }
   }

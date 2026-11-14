@@ -144,7 +144,8 @@ const emailCodes = new Map();     // email -> { code, exp }
 const codeCooldown = new Map();   // email -> 上次发送时间
 const CODE_TTL = 10 * 60 * 1000;
 const CODE_GAP = 60 * 1000;
-const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/;
+// 邮箱格式：用户名@域名.后缀，比如 abc@example.com
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
 function normalizeEmail(s){ return String(s || '').trim().toLowerCase(); }
 
 // 发信刚失败过就先认为邮箱不可用（10 分钟后自动重试），期间注册不强制验证码
@@ -755,7 +756,7 @@ async function handleApi(req, res, urlPath){
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const email = normalizeEmail(body.email);
     const u = String(body.u||'').trim();
-    if (!EMAIL_RE.test(email)) return sendJSON(res, 400, {ok:false,msg:'邮箱格式不对'});
+    if (!EMAIL_RE.test(email)) return sendJSON(res, 400, {ok:false,msg:'邮箱格式不对，要像 abc@example.com 这样'});
     if (u && accounts.has(u)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res, 409, {ok:false,msg:'这个邮箱已经注册过账号了'});
     if (bannedHit(email, '')) return sendJSON(res, 403, {ok:false,msg:'这个邮箱以前有账号因违规被封，不能再注册了'});
@@ -797,7 +798,7 @@ async function handleApi(req, res, urlPath){
     if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
     // 邮箱必填：即使发不了验证码也要填，用来追溯封号
     const needEmail = mailUsable();
-    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
+    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'邮箱格式不对，要像 abc@example.com 这样'});
     if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
     if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
