@@ -27,6 +27,9 @@ const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} }
 const OPPOSITE = { up:'down', down:'up', left:'right', right:'left' };
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
+// 官方账号名：徽章、默认好友、免处罚、自动回复都围绕它
+const OFFICIAL_NAME = 'SnakeOnline官方';
+
 function randInt(n){ return (Math.random()*n)|0; }
 
 // ============================================================
@@ -211,13 +214,35 @@ function loadSocial(){
 loadSocial();
 function saveSocial(){ atomicWrite(FRIENDS_FILE, social); }
 function pairKey(a, b){ return [a, b].sort().join('|'); }
-function friendListOf(u){ return social.friends[u] || []; }
+// 好友列表：官方账号与所有人默认互为好友（不用申请）
+function friendListOf(u){
+  const list = social.friends[u] || [];
+  if (u !== OFFICIAL_NAME && accounts.has(OFFICIAL_NAME) && !list.includes(OFFICIAL_NAME))
+    return [...list, OFFICIAL_NAME];
+  return list;
+}
 function areFriends(a, b){ return friendListOf(a).includes(b); }
 function addFriendPair(a, b){
   social.friends[a] = social.friends[a] || [];
   social.friends[b] = social.friends[b] || [];
   if (!social.friends[a].includes(b)) social.friends[a].push(b);
   if (!social.friends[b].includes(a)) social.friends[b].push(a);
+}
+// 私聊官方时的自动回复（同一个人 10 分钟内最多回一次，避免刷屏）
+const OFFICIAL_AUTO_REPLY = '你好，我是本游戏的官方，发现什么 Bug 请联系邮箱：nqzyy@hotmail.com，谢谢您对联机贪吃蛇的支持！';
+const OFFICIAL_REPLY_GAP = 10 * 60 * 1000;
+const officialReplyAt = new Map();   // 发送者 -> 上次自动回复时间
+function maybeOfficialReply(from){
+  if (from === OFFICIAL_NAME) return;
+  if (Date.now() - (officialReplyAt.get(from) || 0) < OFFICIAL_REPLY_GAP) return;
+  officialReplyAt.set(from, Date.now());
+  const k = pairKey(from, OFFICIAL_NAME);
+  const arr = social.msgs[k] = social.msgs[k] || [];
+  const item = { from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
+  arr.push(item);
+  if (arr.length > 100) arr.splice(0, arr.length - 100);
+  saveSocial();
+  pushToUser(from, { t:'friend_msg', from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: item.ts });
 }
 // 账号注销时，把它从别人的好友/申请/聊天里摘干净
 function cleanupSocial(u){
@@ -273,7 +298,6 @@ function relationOf(me, other){
 function bestOf(u){ const s = leaderboard.find(x => x.u === u); return s ? s.s : 0; }
 
 // 官方账号的展示分数：固定值，不会被真实游戏成绩覆盖（只升不降）
-const OFFICIAL_NAME = 'SnakeOnline官方';
 const OFFICIAL_BEST = 10000000000;
 function ensureOfficialScore(){
   const row = leaderboard.find(x => x.u === OFFICIAL_NAME);
@@ -976,9 +1000,10 @@ async function handleApi(req, res, urlPath){
     const body = await readBody(req);
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const u = String(body.u||'').trim();
-    social.friends[me] = friendListOf(me).filter(x => x !== u);
+    if (u === OFFICIAL_NAME) return sendJSON(res, 403, {ok:false,msg:'官方好友不能删除'});
+    social.friends[me] = (social.friends[me] || []).filter(x => x !== u);
     if (!social.friends[me].length) delete social.friends[me];
-    social.friends[u] = friendListOf(u).filter(x => x !== me);
+    social.friends[u] = (social.friends[u] || []).filter(x => x !== me);
     if (!social.friends[u].length) delete social.friends[u];
     delete social.msgs[pairKey(me, u)];
     saveSocial();
@@ -1018,6 +1043,7 @@ async function handleApi(req, res, urlPath){
     if (arr.length > 100) arr.splice(0, arr.length - 100);
     saveSocial();
     pushToUser(to, { t:'friend_msg', from: me, text, ts: item.ts });
+    if (to === OFFICIAL_NAME) maybeOfficialReply(me);   // 给官方发消息会自动收到一条说明
     return sendJSON(res, 200, {ok:true, ts:item.ts});
   }
   // —— 管理员接口 ——
