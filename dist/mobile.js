@@ -26,8 +26,8 @@ function showPanel(name){
 // - 同源（Mac 直接访问 / 局域网）：用 location.origin
 // - 本机 server：file:// 或非 https 页面探测 localhost:8180
 // - 其他（如 Cloudflare Pages）：用 Funnel 公网地址
-const FALLBACK_WS = 'wss://snake-online-production-2de5.up.railway.app';
-const FALLBACK_HTTP = 'https://snake-online-production-2de5.up.railway.app';
+const FALLBACK_WS = 'wss://snake-online.up.railway.app';
+const FALLBACK_HTTP = 'https://snake-online.up.railway.app';
 let API_BASE = FALLBACK_HTTP;
 let WS_BASE_OVERRIDE = null;
 
