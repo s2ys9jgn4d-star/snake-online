@@ -15,6 +15,19 @@ html,body {
 .panel-wrap { height:100vh; display:flex; flex-direction:column; }
 .hidden { display:none !important; }
 
+/* ============ 语言选择（登录卡右上角） ============ */
+.lang-row { display:flex; justify-content:flex-end; margin:-4px 0 8px; }
+.lang-sel {
+  min-height:32px; max-width:100%; min-width:0; padding:6px 26px 6px 10px;
+  border:1px solid var(--line); border-radius:8px; background:var(--panel2);
+  color:var(--text); font-size:13px; line-height:1.2; outline:none;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b94b8'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 9px center;
+}
+.lang-sel:focus { border-color:var(--accent); }
+.lang-sel option { background:var(--panel); color:var(--text); }
+
 /* ============ 登录 ============ */
 #panel-auth {
   justify-content:center; align-items:center; padding:20px;

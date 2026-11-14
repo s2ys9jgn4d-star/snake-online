@@ -71,7 +71,7 @@ document.querySelectorAll('.auth-tabs .tab').forEach(b => {
   b.addEventListener('click', () => {
     authTab = b.dataset.tab;
     document.querySelectorAll('.auth-tabs .tab').forEach(x => x.classList.toggle('active', x===b));
-    $('authBtn').textContent = authTab === 'login' ? '登录' : '注册';
+    $('authBtn').textContent = authTab === 'login' ? t('login') : t('register');
     $('authErr').textContent = '';
     applyRegExtra();
     $('authPass').autocomplete = authTab === 'login' ? 'current-password' : 'new-password';
@@ -119,33 +119,33 @@ $('sendCodeBtn').addEventListener('click', async () => {
   const email = $('authEmail').value.trim();
   const u = $('authUser').value.trim();
   const btn = $('sendCodeBtn');
-  if (!email) { $('authErr').textContent = '先填邮箱'; return; }
-  if (!EMAIL_RE.test(email)) { $('authErr').textContent = '邮箱格式不对，要像 abc@example.com 这样'; return; }
+  if (!email) { $('authErr').textContent = t('errEmail'); return; }
+  if (!EMAIL_RE.test(email)) { $('authErr').textContent = t('errEmailFormat'); return; }
   $('authErr').textContent = '';
   $('codeTip').textContent = '';
-  btn.disabled = true; btn.textContent = '发送中…';
+  btn.disabled = true; btn.textContent = t('sending');
   try {
     const r = await api('/api/send-code', { method:'POST', body: JSON.stringify({ email, u }) });
     if (!r.ok){
-      $('authErr').textContent = r.msg || '发送失败';
-      btn.disabled = false; btn.textContent = '发送验证码';
+      $('authErr').textContent = r.msg || t('sendFailed');
+      btn.disabled = false; btn.textContent = t('sendCode');
       refreshMailReady();   // 发不出去就切到「免验证码注册」
       return;
     }
-    $('codeTip').textContent = '验证码已发到 ' + email + '（收不到就看看垃圾箱）';
+    $('codeTip').textContent = t('codeSent', { email });
     codeLeft = 60;
-    btn.textContent = codeLeft + ' 秒';
+    btn.textContent = t('seconds', { n: codeLeft });
     clearInterval(codeTimer);
     codeTimer = setInterval(() => {
       codeLeft--;
       if (codeLeft <= 0){
         clearInterval(codeTimer);
-        btn.disabled = false; btn.textContent = '重新发送';
-      } else btn.textContent = codeLeft + ' 秒';
+        btn.disabled = false; btn.textContent = t('resend');
+      } else btn.textContent = t('seconds', { n: codeLeft });
     }, 1000);
   } catch (e){
-    $('authErr').textContent = '网络错误，验证码没发出去';
-    btn.disabled = false; btn.textContent = '发送验证码';
+    $('authErr').textContent = t('errCodeNet');
+    btn.disabled = false; btn.textContent = t('sendCode');
   }
 });
 
@@ -157,17 +157,17 @@ async function doAuth(){
   const captcha = $('captchaInput').value.trim();
   $('authErr').textContent = '';
   if (authTab === 'register'){
-    if (!email) { $('authErr').textContent = '注册要填邮箱（用于账号追溯）'; return; }
-    if (!EMAIL_RE.test(email)) { $('authErr').textContent = '邮箱格式不对，要像 abc@example.com 这样'; return; }
-    if (mailReady === true && !code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
-    if (mailReady === false && !captcha){ $('authErr').textContent = '照图片填一下 4 个字符'; return; }
+    if (!email) { $('authErr').textContent = t('errEmailRequired'); return; }
+    if (!EMAIL_RE.test(email)) { $('authErr').textContent = t('errEmailFormat'); return; }
+    if (mailReady === true && !code) { $('authErr').textContent = t('errNeedCode'); return; }
+    if (mailReady === false && !captcha){ $('authErr').textContent = t('errNeedCaptcha'); return; }
   }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
       method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code, cid: captchaId, captcha})
     });
     if (!r.ok){
-      $('authErr').textContent = r.msg || '操作失败';
+      $('authErr').textContent = r.msg || t('opFailed');
       if (authTab === 'register' && mailReady === false) refreshCaptcha();
       return;
     }
@@ -175,9 +175,9 @@ async function doAuth(){
       saveAuth(r);
     } else {
       const r2 = await api('/api/login', { method:'POST', body: JSON.stringify({u, p}) });
-      if (r2.ok) saveAuth(r2); else $('authErr').textContent = r2.msg || '注册后登录失败';
+      if (r2.ok) saveAuth(r2); else $('authErr').textContent = r2.msg || t('regLoginFailed');
     }
-  } catch (e) { $('authErr').textContent = '网络错误'; }
+  } catch (e) { $('authErr').textContent = t('networkError'); }
 }
 
 function saveAuth(r){
@@ -196,21 +196,21 @@ $('logoutBtn').addEventListener('click', () => {
 
 // 注销账号：密码确认后永久删除
 $('deleteAcctBtn').addEventListener('click', async () => {
-  if (!confirm('注销账号会永久删除账号和排行榜成绩，确定吗？')) return;
-  const p = prompt('输入密码确认注销：');
+  if (!confirm(t('confirmDelete'))) return;
+  const p = prompt(t('promptPwd'));
   if (p === null) return;
   try {
     const r = await api('/api/delete-account', { method:'POST', body: JSON.stringify({ p }) });
     if (r.ok){
-      alert('账号已注销，感谢游玩');
+      alert(t('deleted'));
       localStorage.removeItem('snakeToken'); localStorage.removeItem('snakeUser');
       authToken = null; authUser = null;
       if (ws) ws.close(); ws = null;
       showPanel('auth');
     } else {
-      alert(r.msg || '注销失败');
+      alert(r.msg || t('deleteFailed'));
     }
-  } catch (e) { alert('网络错误，注销失败'); }
+  } catch (e) { alert(t('deleteNet')); }
 });
 
 (async function init(){
@@ -244,7 +244,7 @@ function connectWs(){
   ws.onopen = () => ws.send(JSON.stringify({t:'auth', token:authToken}));
   ws.onclose = () => {
     if (currentPanel === 'lobby' || currentPanel === 'game'){
-      showToast('连接断开，正在重连…');
+      showToast(t('reconnecting'));
       setTimeout(connectWs, 1500);
     }
   };
@@ -264,16 +264,16 @@ function handleWs(msg){
     case 'rooms': renderRooms(msg.items); break;
     case 'room_created': /* 自动 joined_room */ break;
     case 'joined_room': onJoinedRoom(msg); break;
-    case 'room_full': showToast('房间已满'); break;
+    case 'room_full': showToast(t('roomFull')); break;
     case 'left_room': showPanel('lobby'); break;
     case 'chat': onChat(msg); break;
     case 'sys': showToast(msg.msg); break;
     // —— 好友实时事件 ——
-    case 'friend_request': showToast('🙋 ' + msg.from + ' 想加你为好友'); refreshFriends(); refreshPlayers(); break;
-    case 'friend_accept': showToast('🤝 你和 ' + msg.by + ' 成为好友了'); refreshFriends(); refreshPlayers(); break;
+    case 'friend_request': showToast(t('friendWants', { name: msg.from })); refreshFriends(); refreshPlayers(); break;
+    case 'friend_accept': showToast(t('nowFriends', { name: msg.by })); refreshFriends(); refreshPlayers(); break;
     case 'friend_msg':
       if (dmWith === msg.from && !$('dmBox').classList.contains('hidden')) appendDm(msg);
-      else showToast('💬 ' + msg.from + '：' + msg.text);
+      else showToast(t('friendMsg', { name: msg.from, text: msg.text }));
       break;
     case 'presence': onPresence(msg.user, msg.online); break;
     case 'state': onState(msg); break;
@@ -311,7 +311,7 @@ function onAuthFail(msg){
 
 async function refreshMe(){
   const r = await api('/api/me');
-  if (r.ok) $('lobbyBest').textContent = '最高分 ' + (r.best||0);
+  if (r.ok){ myBest = r.best || 0; $('lobbyBest').textContent = t('best', { n: myBest }); }
 }
 async function refreshScores(){
   const r = await api('/api/scores');
@@ -349,15 +349,15 @@ function renderFriends(){
   for (const q of friendCache.requests){
     const row = document.createElement('div');
     row.className = 'req-row';
-    row.innerHTML = `<span>🙋 <b>${escHtml(q.from)}</b> 想加你</span>`;
+    row.innerHTML = `<span>${t('friendWants', { name: '<b>' + escHtml(q.from) + '</b>' })}</span>`;
     const okBtn = document.createElement('button');
-    okBtn.className = 'mini-btn'; okBtn.textContent = '同意';
+    okBtn.className = 'mini-btn'; okBtn.textContent = t('accept');
     okBtn.onclick = async () => {
       await api('/api/friend/accept', { method:'POST', body: JSON.stringify({ from:q.from }) });
       refreshFriends(); refreshPlayers();
     };
     const noBtn = document.createElement('button');
-    noBtn.className = 'mini-btn ghost'; noBtn.textContent = '拒绝';
+    noBtn.className = 'mini-btn ghost'; noBtn.textContent = t('reject');
     noBtn.onclick = async () => {
       await api('/api/friend/reject', { method:'POST', body: JSON.stringify({ from:q.from }) });
       refreshFriends();
@@ -368,15 +368,15 @@ function renderFriends(){
   const list = $('friendList');
   list.innerHTML = '';
   if (!friendCache.friends.length){
-    list.innerHTML = '<div class="empty-tip">还没有好友，去下面「所有玩家」里加一个吧</div>';
+    list.innerHTML = '<div class="empty-tip">' + escHtml(t('noFriends')) + '</div>';
     return;
   }
   for (const f of friendCache.friends){
     const row = document.createElement('div');
     row.className = 'people-row';
-    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${escHtml(f.u)}</span><span class="pb">最高 ${f.best || 0}</span>`;
+    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${escHtml(f.u)}</span><span class="pb">${t('best', { n: f.best || 0 })}</span>`;
     const chatBtn = document.createElement('button');
-    chatBtn.className = 'mini-btn'; chatBtn.textContent = '聊天';
+    chatBtn.className = 'mini-btn'; chatBtn.textContent = t('chat');
     chatBtn.onclick = () => openDm(f.u);
     row.appendChild(chatBtn);
     list.appendChild(row);
@@ -389,30 +389,30 @@ function renderPlayers(){
   list.innerHTML = '';
   const items = playerCache.filter(p => !q || p.u.toLowerCase().includes(q));
   if (!items.length){
-    list.innerHTML = '<div class="empty-tip">' + (playerCache.length ? '没搜到这个名字' : '除了你还没有别的玩家') + '</div>';
+    list.innerHTML = '<div class="empty-tip">' + escHtml(playerCache.length ? t('noSearch') : t('noPlayers')) + '</div>';
     return;
   }
   for (const p of items.slice(0, 100)){
     const row = document.createElement('div');
     row.className = 'people-row';
-    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${escHtml(p.u)}</span><span class="pb">最高 ${p.best || 0}</span>`;
+    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${escHtml(p.u)}</span><span class="pb">${t('best', { n: p.best || 0 })}</span>`;
     const btn = document.createElement('button');
     btn.className = 'mini-btn';
     if (p.relation === 'friend'){
-      btn.textContent = '聊天'; btn.onclick = () => openDm(p.u);
+      btn.textContent = t('chat'); btn.onclick = () => openDm(p.u);
     } else if (p.relation === 'outgoing'){
-      btn.textContent = '已申请'; btn.disabled = true;
+      btn.textContent = t('requested'); btn.disabled = true;
     } else if (p.relation === 'incoming'){
-      btn.textContent = '同意';
+      btn.textContent = t('accept');
       btn.onclick = async () => {
         await api('/api/friend/accept', { method:'POST', body: JSON.stringify({ from:p.u }) });
         refreshFriends(); refreshPlayers();
       };
     } else {
-      btn.textContent = '加好友';
+      btn.textContent = t('addFriend');
       btn.onclick = async () => {
         const r = await api('/api/friend/request', { method:'POST', body: JSON.stringify({ to:p.u }) });
-        showToast(r.msg || (r.ok ? '申请已发送' : '申请失败'));
+        showToast(r.msg || (r.ok ? t('reqSent') : t('reqFail')));
         refreshPlayers(); refreshFriends();
       };
     }
@@ -432,15 +432,15 @@ function onPresence(user, online){
 function openDm(user){
   dmWith = user;
   $('dmTitle').textContent = '💬 ' + user;
-  $('dmMsgs').innerHTML = '<div class="empty-tip">加载中…</div>';
+  $('dmMsgs').innerHTML = '<div class="empty-tip">' + escHtml(t('loading')) + '</div>';
   $('dmBox').classList.remove('hidden');
   $('dmInput').value = '';
   setTimeout(() => $('dmInput').focus(), 50);
   api('/api/friend/history', { method:'POST', body: JSON.stringify({ with:user }) }).then(r => {
     if (dmWith !== user) return;
     $('dmMsgs').innerHTML = '';
-    if (!r.ok){ $('dmMsgs').innerHTML = '<div class="empty-tip">' + escHtml(r.msg || '加载失败') + '</div>'; return; }
-    if (!r.items.length) $('dmMsgs').innerHTML = '<div class="empty-tip">还没聊过，打个招呼吧</div>';
+    if (!r.ok){ $('dmMsgs').innerHTML = '<div class="empty-tip">' + escHtml(r.msg || t('loadFail')) + '</div>'; return; }
+    if (!r.items.length) $('dmMsgs').innerHTML = '<div class="empty-tip">' + escHtml(t('noHistory')) + '</div>';
     else for (const m of r.items) appendDm(m);
   });
 }
@@ -449,7 +449,7 @@ function appendDm(m){
   if (box.querySelector('.empty-tip')) box.innerHTML = '';
   const div = document.createElement('div');
   div.className = 'msg dm' + (m.from === authUser ? ' mine' : '');
-  div.innerHTML = `<span class="from">${escHtml(m.from === authUser ? '我' : m.from)}:</span>${escHtml(m.text)}`;
+  div.innerHTML = `<span class="from">${escHtml(m.from === authUser ? t('me') : m.from)}:</span>${escHtml(m.text)}`;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
@@ -459,7 +459,7 @@ async function sendDm(){
   if (!text || !dmWith) return;
   input.value = '';
   const r = await api('/api/friend/chat', { method:'POST', body: JSON.stringify({ to: dmWith, text }) });
-  if (!r.ok){ showToast(r.msg || '发送失败'); input.value = text; return; }
+  if (!r.ok){ showToast(r.msg || t('sendFailed')); input.value = text; return; }
   appendDm({ from: authUser, text });
 }
 $('dmSend').addEventListener('click', sendDm);
@@ -474,13 +474,14 @@ $('refreshRooms').addEventListener('click', refreshRooms);
 function refreshRooms(){ sendWS({t:'list_rooms'}); }
 
 function renderRooms(items){
+  lastRooms = items; roomsLoaded = true;
   const el = $('roomList');
-  if (!items.length){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px;text-align:center">暂无房间，创建一个吧！</div>'; return; }
+  if (!items.length){ el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px;text-align:center">' + escHtml(t('noRooms')) + '</div>'; return; }
   el.innerHTML = '';
   for (const r of items){
     const row = document.createElement('div');
     row.className = 'room-row';
-    row.innerHTML = `<div><div class="room-name">${esc(r.name)}${r.hasPwd ? '<span class="room-pass"> 🔒</span>' : ''}</div><div class="room-meta">房主 ${esc(r.owner)} · ${r.count}/${r.max} 人</div></div>`;
+    row.innerHTML = `<div><div class="room-name">${esc(r.name)}${r.hasPwd ? '<span class="room-pass"> ' + escHtml(t('roomPwdTag')) + '</span>' : ''}</div><div class="room-meta">${t('roomMeta', { name: esc(r.owner), n: r.count, max: r.max })}</div></div>`;
     row.addEventListener('click', () => joinRoom(r));
     el.appendChild(row);
   }
@@ -488,7 +489,7 @@ function renderRooms(items){
 
 function joinRoom(room){
   if (room.hasPwd){
-    const p = prompt('输入房间密码：');
+    const p = prompt(t('roomPwdPrompt'));
     if (p === null) return;
     sendWS({t:'join_room', id:room.id, pass:p});
   } else {
@@ -503,7 +504,7 @@ if (soloBtnEl) soloBtnEl.addEventListener('click', () => sendWS({ t:'solo' }));
 $('createRoomBtn').addEventListener('click', () => {
   const name = $('newRoomName').value.trim();
   const pass = $('newRoomPass').value.trim();
-  if (!name) { showToast('请先填房间名'); return; }
+  if (!name) { showToast(t('needRoomName')); return; }
   sendWS({t:'create_room', name, pass: pass || undefined});
   $('newRoomName').value = ''; $('newRoomPass').value = '';
 });
@@ -527,6 +528,7 @@ $('enterBtn').addEventListener('click', () => {
 //  排行榜
 // ============================================================
 function renderLeaderboard(items){
+  lastRank = items || [];
   const el = $('rankList'); if (!el) return;
   el.innerHTML = '';
   items.forEach((p,i) => {
@@ -634,7 +636,7 @@ $('fsBtn').addEventListener('click', async () => {
     }
     if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
   } catch (e) {
-    showToast('不支持自动横屏，请手动旋转手机');
+    showToast(t('noLandscape'));
   }
 });
 
@@ -682,7 +684,7 @@ curAt = _an;
 function updateHUD(){
   const me = players.get(wsPlayerId);
   if (me){
-    $('myScore').textContent = '得分 ' + me.score;
+    $('myScore').textContent = t('score', { n: me.score });
     if (!me.alive){
       if (!deadShown){
         deadShown = true;
@@ -692,8 +694,8 @@ function updateHUD(){
       }
     } else { deadShown = false; $('dead').classList.add('hidden'); }
   }
-  $('online').textContent = '在线 ' + players.size + ' 人';
-  $('ping').textContent = '延迟 ' + Math.round(halfRtt*2) + 'ms';
+  $('online').textContent = t('online', { n: players.size });
+  $('ping').textContent = t('ping', { n: Math.round(halfRtt*2) });
 }
 
 const DIRS_MAP = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
@@ -760,10 +762,38 @@ function roundRect(x,y,w,h,r){
 }
 
 function showToast(msg){
-  const t = $('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.remove('hidden');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.add('hidden'), 2200);
+  const el = $('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.add('hidden'), 2200);
 }
+
+// ============================================================
+//  多语言：静态标注由 applyI18n 处理，这里补动态文案
+// ============================================================
+let myBest = 0, lastRooms = [], lastRank = [], roomsLoaded = false;
+
+function refreshI18nText(){
+  if (window.applyI18n) applyI18n(document);
+  const cap = $('captchaImg'); if (cap) cap.alt = t('captchaAlt');
+  const authBtn = $('authBtn'); if (authBtn) authBtn.textContent = authTab === 'login' ? t('login') : t('register');
+  const codeBtn = $('sendCodeBtn');
+  if (codeBtn && !codeBtn.disabled && codeLeft <= 0) codeBtn.textContent = t('sendCode');
+  if ($('lobbyBest')) $('lobbyBest').textContent = t('best', { n: myBest });
+  if (dmWith) $('dmTitle').textContent = '💬 ' + dmWith;
+  if (roomsLoaded) renderRooms(lastRooms);
+  if (!players.size){
+    $('myScore').textContent = t('score', { n: 0 });
+    $('online').textContent = t('online', { n: 0 });
+    $('ping').textContent = t('pingDash');
+  }
+  if (lastRank.length) renderLeaderboard(lastRank);
+  if (currentPanel === 'lobby'){ renderFriends(); renderPlayers(); }
+  if (currentPanel === 'game' && wsPlayerId) updateHUD();
+}
+
+window.addEventListener('snakelangchange', refreshI18nText);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshI18nText);
+else refreshI18nText();

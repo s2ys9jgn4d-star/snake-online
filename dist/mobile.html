@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>贪吃蛇 手机版</title>
+<title data-i18n="appTitle">贪吃蛇 手机版</title>
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="favicon.png">
-<link rel="stylesheet" href="mobile.css?v=20261113a">
+<link rel="stylesheet" href="mobile.css?v=20261114c">
 </head>
 <body>
 <div id="app">
@@ -16,31 +16,109 @@
   <!-- ============ 面板 1：登录 / 注册 ============ -->
   <div id="panel-auth" class="panel-wrap">
     <div class="auth-card">
-      <h1>🐍 联机贪吃蛇</h1>
-      <p class="auth-sub">注册账号 → 进大厅 → 创建或加入房间</p>
+      <div class="lang-row">
+        <select id="langSel" class="lang-sel" aria-label="Language">
+          <option value="en">English</option>
+          <option value="uk">Українська</option>
+          <option value="cs">Čeština</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="zh-TW">繁体中文</option>
+          <option value="hu">Magyar</option>
+          <option value="es">Español</option>
+          <option value="fa">فارسی</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="pl">Polski</option>
+          <option value="id">Indonesian</option>
+          <option value="fi">Suomi</option>
+          <option value="ml">മലയാളം</option>
+          <option value="ja">日本語</option>
+          <option value="nl">Nederlands</option>
+          <option value="it">Italiano</option>
+          <option value="ru">Русский</option>
+          <option value="pt-PT">Português (Portugal)</option>
+          <option value="pt-BR">Português (Brasil)</option>
+          <option value="eo">Esperanto</option>
+          <option value="ko">한국어</option>
+          <option value="ar">العربي</option>
+          <option value="vi">Tiếng Việt</option>
+          <option value="da">Dansk</option>
+          <option value="el">Ελληνικά</option>
+          <option value="tr">Türkçe</option>
+          <option value="no">Norsk</option>
+          <option value="ro">Română</option>
+          <option value="ka">ქართული</option>
+          <option value="af">Afrikaans</option>
+          <option value="sq">Shqip</option>
+          <option value="am">አማርኛ</option>
+          <option value="az">Azərbaycan</option>
+          <option value="be">Беларуская</option>
+          <option value="bn">বাংলা</option>
+          <option value="bs">Bosanski</option>
+          <option value="bg">Български</option>
+          <option value="ca">Català</option>
+          <option value="cy">Cymraeg</option>
+          <option value="et">Eesti</option>
+          <option value="eu">Euskara</option>
+          <option value="ga">Gaeilge</option>
+          <option value="gl">Galego</option>
+          <option value="hr">Hrvatski</option>
+          <option value="is">Íslenska</option>
+          <option value="he">עברית</option>
+          <option value="hi">हिन्दी</option>
+          <option value="hy">Հայերեն</option>
+          <option value="km">ខ្មែរ</option>
+          <option value="kk">Қазақша</option>
+          <option value="ky">Кыргызча</option>
+          <option value="lo">ລາວ</option>
+          <option value="lt">Lietuvių</option>
+          <option value="lv">Latviešu</option>
+          <option value="mk">Македонски</option>
+          <option value="mt">Malti</option>
+          <option value="mn">Монгол</option>
+          <option value="my">မြန်မာ</option>
+          <option value="ne">नेपाली</option>
+          <option value="nb">Norsk bokmål</option>
+          <option value="nn">Norsk nynorsk</option>
+          <option value="uz">Oʻzbekcha</option>
+          <option value="pa">ਪੰਜਾਬੀ</option>
+          <option value="sr">Српски</option>
+          <option value="si">සිංහල</option>
+          <option value="sk">Slovenčina</option>
+          <option value="sl">Slovenščina</option>
+          <option value="sv">Svenska</option>
+          <option value="sw">Kiswahili</option>
+          <option value="ta">தமிழ்</option>
+          <option value="te">తెలుగు</option>
+          <option value="th">ไทย</option>
+          <option value="ur">اردو</option>
+        </select>
+      </div>
+      <h1 data-i18n="appTitle">🐍 联机贪吃蛇</h1>
+      <p class="auth-sub" data-i18n="authSub">注册账号 → 进大厅 → 创建或加入房间</p>
       <div class="auth-tabs">
-        <button class="tab active" data-tab="login">登录</button>
-        <button class="tab" data-tab="register">注册</button>
+        <button class="tab active" data-tab="login" data-i18n="login">登录</button>
+        <button class="tab" data-tab="register" data-i18n="register">注册</button>
       </div>
       <div class="auth-body">
-        <input id="authUser" maxlength="16" placeholder="用户名" autocomplete="username">
-        <input id="authPass" type="password" maxlength="32" placeholder="密码（4-32 位）" autocomplete="current-password">
+        <input id="authUser" maxlength="16" placeholder="用户名" data-i18n-ph="username" autocomplete="username">
+        <input id="authPass" type="password" maxlength="32" placeholder="密码（4-32 位）" data-i18n-ph="password" autocomplete="current-password">
         <div id="regExtra" class="hidden">
-          <input id="authEmail" type="email" maxlength="100" placeholder="邮箱（注册必填，用于账号追溯）" autocomplete="email">
+          <input id="authEmail" type="email" maxlength="100" placeholder="邮箱（注册必填，用于账号追溯）" data-i18n-ph="email" autocomplete="email">
           <div id="mailCodeBox" class="hidden">
             <div class="code-row">
-              <input id="authCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
+              <input id="authCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码" data-i18n-ph="code6">
               <button id="sendCodeBtn" type="button">发送验证码</button>
             </div>
             <p id="codeTip" class="muted"></p>
           </div>
         </div>
-        <p id="noMailTip" class="muted hidden">照图片里的 4 个字符填写就能注册</p>
+        <p id="noMailTip" class="muted hidden" data-i18n="noMailTip">照图片里的 4 个字符填写就能注册</p>
         <div id="captchaBox" class="hidden">
           <img id="captchaImg" class="captcha-img" alt="图片验证码">
           <div class="code-row">
-            <input id="captchaInput" maxlength="4" placeholder="图片里的 4 个字符" autocomplete="off">
-            <button id="captchaRefresh" type="button">换一张</button>
+            <input id="captchaInput" maxlength="4" placeholder="图片里的 4 个字符" data-i18n-ph="captchaPh" autocomplete="off">
+            <button id="captchaRefresh" type="button" data-i18n="refreshImg">换一张</button>
           </div>
         </div>
         <button id="authBtn">登录</button>
@@ -54,34 +132,34 @@
     <div class="lobby-header">
       <span class="lobby-user" id="lobbyUserName"></span>
       <span class="lobby-best" id="lobbyBest"></span>
-      <button id="logoutBtn" class="ghost-btn">退出</button>
-      <button id="deleteAcctBtn" class="ghost-btn" style="color:#ef4444;border-color:#ef4444">注销账号</button>
+      <button id="logoutBtn" class="ghost-btn" data-i18n="logout">退出</button>
+      <button id="deleteAcctBtn" class="ghost-btn" style="color:#ef4444;border-color:#ef4444" data-i18n="deleteAccount">注销账号</button>
     </div>
     <div class="lobby-body">
       <div class="lobby-section">
-        <h3>🏠 房间列表</h3>
-        <button id="refreshRooms" class="ghost-btn">刷新</button>
+        <h3 data-i18n="roomList">🏠 房间列表</h3>
+        <button id="refreshRooms" class="ghost-btn" data-i18n="refresh">刷新</button>
         <div id="roomList" class="room-list"></div>
       </div>
       <div class="lobby-section">
-        <h3>➕ 创建房间</h3>
-        <input id="newRoomName" maxlength="20" placeholder="房间名">
-        <input id="newRoomPass" maxlength="32" placeholder="密码（可选）">
-        <button id="createRoomBtn" class="primary-btn">创建并加入</button>
-        <button id="soloBtn" class="primary-btn" style="margin-top:8px">🤖 单人模式（对战豆包）</button>
+        <h3 data-i18n="createRoom">➕ 创建房间</h3>
+        <input id="newRoomName" maxlength="20" placeholder="房间名" data-i18n-ph="roomName">
+        <input id="newRoomPass" maxlength="32" placeholder="密码（可选）" data-i18n-ph="passOptional">
+        <button id="createRoomBtn" class="primary-btn" data-i18n="createJoin">创建并加入</button>
+        <button id="soloBtn" class="primary-btn" style="margin-top:8px" data-i18n="solo">🤖 单人模式（对战豆包）</button>
       </div>
       <div class="lobby-section">
-        <h3>🏆 排行榜</h3>
+        <h3 data-i18n="rank">🏆 排行榜</h3>
         <ol id="rankList" class="rank-list"></ol>
       </div>
       <div class="lobby-section">
-        <h3>👥 好友</h3>
+        <h3 data-i18n="friends">👥 好友</h3>
         <div id="friendReqBox"></div>
         <div id="friendList" class="people-list"></div>
       </div>
       <div class="lobby-section">
-        <h3>🌐 所有玩家</h3>
-        <input id="playerSearch" maxlength="16" placeholder="搜索玩家名...">
+        <h3 data-i18n="allPlayers">🌐 所有玩家</h3>
+        <input id="playerSearch" maxlength="16" placeholder="搜索玩家名..." data-i18n-ph="searchPh">
         <div id="playerList" class="people-list"></div>
       </div>
     </div>
@@ -90,13 +168,13 @@
   <!-- ============ 私聊（手机上是底部抽屉） ============ -->
   <div id="dmBox" class="dm-box hidden">
     <div class="dm-head">
-      <span id="dmTitle">私聊</span>
-      <button id="dmClose" class="ghost-btn">关闭</button>
+      <span id="dmTitle" data-i18n="dm">私聊</span>
+      <button id="dmClose" class="ghost-btn" data-i18n="close">关闭</button>
     </div>
     <div id="dmMsgs" class="chat-box dm-msgs"></div>
     <div class="chat-input">
-      <input id="dmInput" maxlength="200" placeholder="发消息（Enter 发送）">
-      <button id="dmSend">发送</button>
+      <input id="dmInput" maxlength="200" placeholder="发消息（Enter 发送）" data-i18n-ph="dmPh">
+      <button id="dmSend" data-i18n="send">发送</button>
     </div>
   </div>
 
@@ -116,14 +194,14 @@
       <!-- 加入房间菜单（选速度） -->
       <div id="menu" class="overlay">
         <div class="panel">
-          <h2>进入：<span id="enterRoomName"></span></h2>
+          <h2><span data-i18n="enterPrefix">进入：</span><span id="enterRoomName"></span></h2>
           <div class="speed-row" id="speedRow">
-            <button type="button" class="speed-btn" data-ms="300">慢速</button>
-            <button type="button" class="speed-btn active" data-ms="200">标准</button>
-            <button type="button" class="speed-btn" data-ms="110">快速</button>
-            <button type="button" class="speed-btn" data-ms="50">超快</button>
+            <button type="button" class="speed-btn" data-ms="300" data-i18n="slow">慢速</button>
+            <button type="button" class="speed-btn active" data-ms="200" data-i18n="normal">标准</button>
+            <button type="button" class="speed-btn" data-ms="110" data-i18n="fast">快速</button>
+            <button type="button" class="speed-btn" data-ms="50" data-i18n="ultra">超快</button>
           </div>
-          <button id="enterBtn">进入房间</button>
+          <button id="enterBtn" data-i18n="enterRoom">进入房间</button>
           <p id="menuError" class="error"></p>
         </div>
       </div>
@@ -131,10 +209,10 @@
       <!-- 死亡 -->
       <div id="dead" class="overlay hidden">
         <div class="panel">
-          <h2>你挂了 💀</h2>
+          <h2 data-i18n="died">你挂了 💀</h2>
           <p id="deadReason" class="sub"></p>
-          <p>得分：<b id="deadScore">0</b></p>
-          <button id="respawnBtn">马上重生</button>
+          <p><span data-i18n="roundScore">得分：</span><b id="deadScore">0</b></p>
+          <button id="respawnBtn" data-i18n="respawn">马上重生</button>
         </div>
       </div>
 
@@ -151,6 +229,7 @@
   </div>
 
 </div>
-<script src="mobile.js?v=20261114b"></script>
+<script src="i18n.js?v=20261114c"></script>
+<script src="mobile.js?v=20261114c"></script>
 </body>
 </html>

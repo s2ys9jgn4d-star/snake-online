@@ -1,0 +1,1204 @@
+'use strict';
+/*
+ * 多人联机贪吃蛇 · 多语言（纯脚本，无模块、无构建）
+ * 对外暴露：LANG_LIST / TRANSLATIONS / setLang / getLang / t / applyI18n
+ *
+ * 为了文件体积可控，各语言先用「定长数组」写，再按 KEYS 顺序组装成
+ * TRANSLATIONS['xx'] = { key: '文案' }。数组顺序必须与 KEYS 完全一致。
+ */
+(function(global){
+  var LANG_LIST = [
+    { code:'en',    name:'English' },
+    { code:'uk',    name:'Українська' },
+    { code:'cs',    name:'Čeština' },
+    { code:'zh-CN', name:'简体中文' },
+    { code:'zh-TW', name:'繁体中文' },
+    { code:'hu',    name:'Magyar' },
+    { code:'es',    name:'Español' },
+    { code:'fa',    name:'فارسی' },
+    { code:'fr',    name:'Français' },
+    { code:'de',    name:'Deutsch' },
+    { code:'pl',    name:'Polski' },
+    { code:'id',    name:'Indonesian' },
+    { code:'fi',    name:'Suomi' },
+    { code:'ml',    name:'മലയാളം' },
+    { code:'ja',    name:'日本語' },
+    { code:'nl',    name:'Nederlands' },
+    { code:'it',    name:'Italiano' },
+    { code:'ru',    name:'Русский' },
+    { code:'pt-PT', name:'Português (Portugal)' },
+    { code:'pt-BR', name:'Português (Brasil)' },
+    { code:'eo',    name:'Esperanto' },
+    { code:'ko',    name:'한국어' },
+    { code:'ar',    name:'العربي' },
+    { code:'vi',    name:'Tiếng Việt' },
+    { code:'da',    name:'Dansk' },
+    { code:'el',    name:'Ελληνικά' },
+    { code:'tr',    name:'Türkçe' },
+    { code:'no',    name:'Norsk' },
+    { code:'ro',    name:'Română' },
+    { code:'ka',    name:'ქართული' },
+    { code:'af',    name:'Afrikaans' },
+    { code:'sq',    name:'Shqip' },
+    { code:'am',    name:'አማርኛ' },
+    { code:'az',    name:'Azərbaycan' },
+    { code:'be',    name:'Беларуская' },
+    { code:'bn',    name:'বাংলা' },
+    { code:'bs',    name:'Bosanski' },
+    { code:'bg',    name:'Български' },
+    { code:'ca',    name:'Català' },
+    { code:'cy',    name:'Cymraeg' },
+    { code:'et',    name:'Eesti' },
+    { code:'eu',    name:'Euskara' },
+    { code:'ga',    name:'Gaeilge' },
+    { code:'gl',    name:'Galego' },
+    { code:'hr',    name:'Hrvatski' },
+    { code:'is',    name:'Íslenska' },
+    { code:'he',    name:'עברית' },
+    { code:'hi',    name:'हिन्दी' },
+    { code:'hy',    name:'Հայերեն' },
+    { code:'km',    name:'ខ្មែរ' },
+    { code:'kk',    name:'Қазақша' },
+    { code:'ky',    name:'Кыргызча' },
+    { code:'lo',    name:'ລາວ' },
+    { code:'lt',    name:'Lietuvių' },
+    { code:'lv',    name:'Latviešu' },
+    { code:'mk',    name:'Македонски' },
+    { code:'mt',    name:'Malti' },
+    { code:'mn',    name:'Монгол' },
+    { code:'my',    name:'မြန်မာ' },
+    { code:'ne',    name:'नेपाली' },
+    { code:'nb',    name:'Norsk bokmål' },
+    { code:'nn',    name:'Norsk nynorsk' },
+    { code:'uz',    name:'Oʻzbekcha' },
+    { code:'pa',    name:'ਪੰਜਾਬੀ' },
+    { code:'sr',    name:'Српски' },
+    { code:'si',    name:'සිංහල' },
+    { code:'sk',    name:'Slovenčina' },
+    { code:'sl',    name:'Slovenščina' },
+    { code:'sv',    name:'Svenska' },
+    { code:'sw',    name:'Kiswahili' },
+    { code:'ta',    name:'தமிழ்' },
+    { code:'te',    name:'తెలుగు' },
+    { code:'th',    name:'ไทย' },
+    { code:'ur',    name:'اردو' }
+  ];
+
+  // 从右往左书写的语言
+  var RTL = { ar:1, fa:1, he:1, ur:1 };
+
+  // 文案 key（顺序即各语言数组的顺序，每 10 个一组方便核对）
+  var KEYS = [
+    'appTitle','authSub','login','register','username','password','email','code6','sendCode','noMailTip',
+    'captchaPh','refreshImg','captchaAlt','foot1','foot2','guest','best','logout','deleteAccount','roomList',
+    'refresh','createRoom','roomName','passOptional','createJoin','solo','lobbyChat','chatPh','friends','allPlayers',
+    'searchPh','rank','scoreZero','onlineZero','pingDash','enterPrefix','slow','normal','fast','ultra',
+    'enterRoom','died','roundScore','respawn','members','leaveRoom','roomChat','roomChatPh','settings','dm',
+    'close','dmPh','send','roomPwdPrompt','needRoomName','roomPwdTag','roomMeta','noRooms','friendWants','nowFriends',
+    'friendMsg','accept','reject','chat','requested','addFriend','noFriends','noSearch','noPlayers','reqSent',
+    'reqFail','loading','loadFail','noHistory','me','meSuffix','reconnecting','roomFull','errEmail','errEmailFormat',
+    'errEmailRequired','sending','sendFailed','codeSent','seconds','resend','errCodeNet','errNeedCode','errNeedCaptcha','opFailed',
+    'regLoginFailed','networkError','confirmDelete','promptPwd','deleted','deleteFailed','deleteNet','noLandscape','score','online',
+    'ping'
+  ];
+
+  var RAW = {
+    'en': [
+      '🐍 Multiplayer Snake','Sign up → Lobby → Create or join a room','Log in','Sign up','Username','Password (4-32 chars)','Email (required to sign up)','6-digit code','Send code','Type the 4 characters in the picture to sign up',
+      '4 characters in the picture','New image','verification image','⌨️ Desktop: arrows / WASD, Space to respawn','🍎 Eat food to grow. Wall, yourself or another snake = game over','Guest','Best {n}','Log out','Delete account','🏠 Rooms',
+      'Refresh','➕ Create room','Room name','Password (optional)','Create & join','🤖 Solo (vs Doubao)','💬 Lobby chat','Say something...','👥 Friends','🌐 All players',
+      'Search players...','🏆 Leaderboard','Score 0','Online 0','Ping -','Enter: ','Slow','Normal','Fast','Turbo',
+      'Enter room','You died 💀','Score this round:','Respawn','👥 Players','Leave room','💬 Room chat','Chat (Enter to send)','⚙️ Settings','Private chat',
+      'Close','Message (Enter to send)','Send','Room password:','Enter a room name first','🔒 Locked','Host {name} · {n}/{max}','No rooms yet. Create one!','🙋 {name} wants to be your friend','🤝 You and {name} are friends now',
+      '💬 {name}: {text}','Accept','Reject','Chat','Requested','Add friend','No friends yet. Add one below','No player with that name','No other players yet','Request sent',
+      'Request failed','Loading…','Load failed','No messages yet. Say hi!','Me',' (you)','Disconnected, reconnecting…','Room is full','Enter your email first','Email should look like abc@example.com',
+      'Email is required to sign up','Sending…','Could not send','Code sent to {email} (check spam)','{n}s','Send again','Network error, code not sent','Tap “Send code” then enter the 6 digits','Type the 4 characters from the picture','Something went wrong',
+      'Signed up, but login failed','Network error','This deletes your account and scores forever. Sure?','Enter password to confirm:','Account deleted. Thanks for playing!','Delete failed','Network error, not deleted','Auto-rotate not supported, rotate the phone','Score {n}','Online {n}',
+      'Ping {n}ms'
+    ],
+    'zh-CN': [
+      '🐍 多人联机贪吃蛇','注册账号 → 进大厅 → 创建或加入房间','登录','注册','用户名（字母/数字/中文）','密码（4-32 位）','邮箱（注册必填，用于账号追溯）','6 位验证码','发送验证码','照图片里的 4 个字符填写就能注册',
+      '图片里的 4 个字符','换一张','图片验证码','⌨️ 电脑：方向键 / WASD 控制，死亡后空格重生','🍎 吃食物变长，撞墙 / 撞自己 / 撞别人 = 失败','游客','最高分 {n}','退出','注销账号','🏠 房间列表',
+      '刷新','➕ 创建房间','房间名','密码（可选）','创建并加入','🤖 单人模式（对战豆包）','💬 大厅聊天','说点什么...','👥 好友','🌐 所有玩家',
+      '搜索玩家名...','🏆 排行榜','得分 0','在线 0 人','延迟 -','进入：','慢速','标准','快速','超快',
+      '进入房间','你挂了 💀','本局得分：','马上重生（空格）','👥 房间成员','离开房间','💬 房间聊天','聊天（按 Enter 发送）','⚙️ 设置','私聊',
+      '关闭','发消息（Enter 发送）','发送','输入房间密码：','请先填房间名','🔒 有密码','房主 {name} · {n}/{max} 人','暂无房间，创建一个吧！','🙋 {name} 想加你为好友','🤝 你和 {name} 成为好友了',
+      '💬 {name}：{text}','同意','拒绝','聊天','已申请','加好友','还没有好友，去下面「所有玩家」里加一个吧','没搜到这个名字','除了你还没有别的玩家','申请已发送',
+      '申请失败','加载中…','加载失败','还没聊过，打个招呼吧','我','（你）','连接断开，正在重连…','房间已满','先填邮箱','邮箱格式不对，要像 abc@example.com 这样',
+      '注册要填邮箱（用于账号追溯）','发送中…','发送失败','验证码已发到 {email}（收不到就看看垃圾箱）','{n} 秒','重新发送','网络错误，验证码没发出去','先点「发送验证码」，再把收到的 6 位数字填上','照图片填一下 4 个字符','操作失败',
+      '注册后登录失败','网络错误','注销账号会永久删除账号和排行榜成绩，确定吗？','输入密码确认注销：','账号已注销，感谢游玩','注销失败','网络错误，注销失败','不支持自动横屏，请手动旋转手机','得分 {n}','在线 {n} 人',
+      '延迟 {n}ms'
+    ],
+    'zh-TW': [
+      '🐍 多人連線貪吃蛇','註冊帳號 → 進大廳 → 建立或加入房間','登入','註冊','使用者名稱（字母/數字/中文）','密碼（4-32 位）','電子郵件（註冊必填，用於帳號追溯）','6 位驗證碼','傳送驗證碼','照圖片裡的 4 個字元填寫就能註冊',
+      '圖片裡的 4 個字元','換一張','圖片驗證碼','⌨️ 電腦：方向鍵 / WASD 控制，死亡後按空白鍵重生','🍎 吃食物變長，撞牆 / 撞自己 / 撞別人 = 失敗','訪客','最高分 {n}','登出','刪除帳號','🏠 房間列表',
+      '重新整理','➕ 建立房間','房間名稱','密碼（選填）','建立並加入','🤖 單人模式（對戰豆包）','💬 大廳聊天','說點什麼...','👥 好友','🌐 所有玩家',
+      '搜尋玩家名稱...','🏆 排行榜','得分 0','線上 0 人','延遲 -','進入：','慢速','標準','快速','超快',
+      '進入房間','你掛了 💀','本局得分：','馬上重生（空白鍵）','👥 房間成員','離開房間','💬 房間聊天','聊天（按 Enter 送出）','⚙️ 設定','私聊',
+      '關閉','發送訊息（Enter 送出）','傳送','輸入房間密碼：','請先填房間名稱','🔒 有密碼','房主 {name} · {n}/{max} 人','暫無房間，建立一個吧！','🙋 {name} 想加你為好友','🤝 你和 {name} 成為好友了',
+      '💬 {name}：{text}','同意','拒絕','聊天','已申請','加好友','還沒有好友，去下面「所有玩家」裡加一個吧','沒搜到這個名字','除了你還沒有別的玩家','申請已送出',
+      '申請失敗','載入中…','載入失敗','還沒聊過，打個招呼吧','我','（你）','連線中斷，正在重新連線…','房間已滿','先填電子郵件','電子郵件格式不對，要像 abc@example.com 這樣',
+      '註冊要填電子郵件（用於帳號追溯）','傳送中…','傳送失敗','驗證碼已寄到 {email}（收不到就看看垃圾郵件）','{n} 秒','重新傳送','網路錯誤，驗證碼沒寄出','先點「傳送驗證碼」，再把收到的 6 位數字填上','照圖片填一下 4 個字元','操作失敗',
+      '註冊後登入失敗','網路錯誤','刪除帳號會永久刪除帳號和排行榜成績，確定嗎？','輸入密碼確認刪除：','帳號已刪除，感謝遊玩','刪除失敗','網路錯誤，刪除失敗','不支援自動橫屏，請手動旋轉手機','得分 {n}','線上 {n} 人',
+      '延遲 {n}ms'
+    ],
+    'uk': [
+      '🐍 Багатокористувацька змійка','Реєстрація → Лобі → Створи або приєднайся до кімнати','Увійти','Реєстрація','Ім’я користувача','Пароль (4-32 символи)','Ел. пошта (потрібна для реєстрації)','6-значний код','Надіслати код','Введи 4 символи з картинки, щоб зареєструватися',
+      '4 символи з картинки','Інша картинка','картинка-капча','⌨️ Комп’ютер: стрілки / WASD, пробіл — відродження','🍎 Їж їжу, щоб рости. Стіна, своє тіло чи інша змійка = кінець','Гість','Рекорд {n}','Вийти','Видалити акаунт','🏠 Кімнати',
+      'Оновити','➕ Створити кімнату','Назва кімнати','Пароль (необов’язково)','Створити й увійти','🤖 Соло (проти Дубао)','💬 Чат лобі','Напиши щось...','👥 Друзі','🌐 Усі гравці',
+      'Пошук гравців...','🏆 Рейтинг','Очки 0','Онлайн 0','Пінг -','Вхід: ','Повільно','Звичайно','Швидко','Дуже швидко',
+      'Увійти в кімнату','Ти загинув 💀','Очки за гру:','Відродитися','👥 Гравці','Вийти з кімнати','💬 Чат кімнати','Чат (Enter — надіслати)','⚙️ Налаштування','Особистий чат',
+      'Закрити','Повідомлення (Enter — надіслати)','Надіслати','Пароль кімнати:','Спочатку введи назву кімнати','🔒 З паролем','Власник {name} · {n}/{max}','Кімнат ще немає. Створи одну!','🙋 {name} хоче додати тебе в друзі','🤝 Тепер ви з {name} друзі',
+      '💬 {name}: {text}','Прийняти','Відхилити','Чат','Запит надіслано','Додати друга','Друзів ще немає. Додай когось нижче','Гравця з таким ім’ям не знайдено','Інших гравців ще немає','Запит надіслано',
+      'Запит не вдався','Завантаження…','Не вдалося завантажити','Повідомлень ще немає. Привітайся!','Я',' (ти)','З’єднання втрачено, підключаємося…','Кімната заповнена','Спочатку введи ел. пошту','Пошта має бути як abc@example.com',
+      'Для реєстрації потрібна пошта','Надсилаємо…','Не вдалося надіслати','Код надіслано на {email} (перевір спам)','{n} с','Надіслати ще','Помилка мережі, код не надіслано','Натисни «Надіслати код» і введи 6 цифр','Введи 4 символи з картинки','Щось пішло не так',
+      'Реєстрація успішна, але вхід не вдався','Помилка мережі','Акаунт і результати буде видалено назавжди. Точно?','Введи пароль для підтвердження:','Акаунт видалено. Дякуємо за гру!','Не вдалося видалити','Помилка мережі, не видалено','Автоповорот не підтримується, поверни телефон','Очки {n}','Онлайн {n}',
+      'Пінг {n}мс'
+    ],
+    'cs': [
+      '🐍 Multiplayer had','Registrace → Lobby → Vytvoř nebo se připoj k místnosti','Přihlásit se','Registrovat se','Uživatelské jméno','Heslo (4-32 znaků)','E-mail (povinný pro registraci)','6místný kód','Poslat kód','Napiš 4 znaky z obrázku a můžeš se registrovat',
+      '4 znaky z obrázku','Jiný obrázek','obrázek s kódem','⌨️ Počítač: šipky / WASD, mezerník = znovuzrození','🍎 Jez jídlo a rostl. Zeď, ty sám nebo jiný had = konec','Host','Nejlepší {n}','Odhlásit','Smazat účet','🏠 Místnosti',
+      'Obnovit','➕ Vytvořit místnost','Název místnosti','Heslo (nepovinné)','Vytvořit a připojit','🤖 Sólo (proti Doubao)','💬 Chat v lobby','Napiš něco...','👥 Přátelé','🌐 Všichni hráči',
+      'Hledat hráče...','🏆 Žebříček','Skóre 0','Online 0','Ping -','Vstup: ','Pomalu','Normálně','Rychle','Turbo',
+      'Vstoupit do místnosti','Zemřel jsi 💀','Skóre této hry:','Znovuzrození','👥 Hráči','Opustit místnost','💬 Chat místnosti','Chat (Enter odešle)','⚙️ Nastavení','Soukromý chat',
+      'Zavřít','Zpráva (Enter odešle)','Poslat','Heslo místnosti:','Nejdřív zadej název místnosti','🔒 Zamčeno','Hostitel {name} · {n}/{max}','Zatím žádné místnosti. Vytvoř jednu!','🙋 {name} si tě chce přidat mezi přátele','🤝 Ty a {name} jste teď přátelé',
+      '💬 {name}: {text}','Přijmout','Odmítnout','Chat','Odesláno','Přidat přítele','Zatím žádní přátelé. Přidej si někoho níže','Hráč s tímto jménem není','Zatím žádní další hráči','Žádost odeslána',
+      'Žádost selhala','Načítání…','Načtení selhalo','Zatím žádné zprávy. Pozdrav!','Já',' (ty)','Odpojeno, připojuji znovu…','Místnost je plná','Nejdřív vyplň e-mail','E-mail má vypadat jako abc@example.com',
+      'Pro registraci je potřeba e-mail','Odesílám…','Nepodařilo se odeslat','Kód poslán na {email} (zkontroluj spam)','{n} s','Poslat znovu','Chyba sítě, kód neodeslán','Klikni na „Poslat kód“ a vlož 6 číslic','Napiš 4 znaky z obrázku','Něco se pokazilo',
+      'Registrace prošla, ale přihlášení selhalo','Chyba sítě','Účet i skóre se smažou navždy. Jsi si jistý?','Zadej heslo pro potvrzení:','Účet smazán. Díky za hru!','Smazání selhalo','Chyba sítě, nesmazáno','Automatické otočení není podporováno, otoč telefon','Skóre {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'hu': [
+      '🐍 Többjátékos kígyó','Regisztrálj → Lobby → Hozz létre vagy lépj be szobába','Bejelentkezés','Regisztráció','Felhasználónév','Jelszó (4-32 karakter)','E-mail (regisztrációhoz kötelező)','6 jegyű kód','Kód küldése','Írd be a képen látható 4 karaktert a regisztrációhoz',
+      '4 karakter a képen','Másik kép','captcha kép','⌨️ Számítógép: nyilak / WASD, szóköz = újjászületés','🍎 Egyél, hogy nőj. Fal, magad vagy más kígyó = vége','Vendég','Rekord {n}','Kilépés','Fiók törlése','🏠 Szobák',
+      'Frissítés','➕ Szoba létrehozása','Szobanév','Jelszó (nem kötelező)','Létrehozás és belépés','🤖 Egyedül (Doubao ellen)','💬 Lobby csevegés','Írj valamit...','👥 Barátok','🌐 Minden játékos',
+      'Játékos keresése...','🏆 Ranglista','Pont 0','Online 0','Ping -','Belépés: ','Lassú','Normál','Gyors','Turbo',
+      'Belépés a szobába','Meghaltál 💀','Pont ebben a körben:','Újjászületés','👥 Játékosok','Kilépés a szobából','💬 Szoba csevegés','Csevegés (Enter küld)','⚙️ Beállítások','Privát csevegés',
+      'Bezárás','Üzenet (Enter küld)','Küldés','Szoba jelszava:','Előbb add meg a szoba nevét','🔒 Jelszavas','Házigazda {name} · {n}/{max}','Még nincs szoba. Hozz létre egyet!','🙋 {name} barátkozni szeretne veled','🤝 Te és {name} most barátok vagytok',
+      '💬 {name}: {text}','Elfogad','Elutasít','Csevegés','Elküldve','Barát hozzáadása','Még nincs barátod. Adj hozzá valakit lent','Nincs ilyen nevű játékos','Még nincs más játékos','Kérés elküldve',
+      'A kérés nem sikerült','Betöltés…','A betöltés nem sikerült','Még nincs üzenet. Köszönj!','Én',' (te)','Kapcsolat megszakadt, újracsatlakozás…','A szoba tele van','Előbb add meg az e-mailt','Az e-mail legyen ilyen: abc@example.com',
+      'Regisztrációhoz e-mail kell','Küldés…','Nem sikerült elküldeni','Kód elküldve ide: {email} (nézd a spamet is)','{n} mp','Újraküldés','Hálózati hiba, a kód nem ment el','Nyomd meg a „Kód küldése” gombot, majd írd be a 6 számot','Írd be a kép 4 karakterét','Valami hiba történt',
+      'Sikerült a regisztráció, de a belépés nem','Hálózati hiba','A fiók és a pontok véglegesen törlődnek. Biztos?','Add meg a jelszót megerősítéshez:','Fiók törölve. Kösz a játékot!','A törlés nem sikerült','Hálózati hiba, nem törlődött','Az automatikus forgatás nem támogatott, fordítsd el a telefont','Pont {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'es': [
+      '🐍 Serpiente multijugador','Regístrate → Sala → Crea o únete a una partida','Entrar','Registrarse','Usuario','Contraseña (4-32 caracteres)','Correo (obligatorio para registrarse)','Código de 6 dígitos','Enviar código','Escribe los 4 caracteres de la imagen para registrarte',
+      '4 caracteres de la imagen','Otra imagen','imagen de verificación','⌨️ Ordenador: flechas / WASD, espacio para renacer','🍎 Come para crecer. Muro, tú mismo u otra serpiente = fin','Invitado','Récord {n}','Salir','Borrar cuenta','🏠 Salas',
+      'Actualizar','➕ Crear sala','Nombre de la sala','Contraseña (opcional)','Crear y unirse','🤖 Solo (contra Doubao)','💬 Chat de la sala','Di algo...','👥 Amigos','🌐 Todos los jugadores',
+      'Buscar jugadores...','🏆 Clasificación','Puntos 0','En línea 0','Ping -','Entrar: ','Lenta','Normal','Rápida','Turbo',
+      'Entrar a la sala','Has muerto 💀','Puntos de esta ronda:','Renacer','👥 Jugadores','Salir de la sala','💬 Chat de la sala','Chat (Enter para enviar)','⚙️ Ajustes','Chat privado',
+      'Cerrar','Mensaje (Enter para enviar)','Enviar','Contraseña de la sala:','Escribe el nombre de la sala primero','🔒 Con contraseña','Dueño {name} · {n}/{max}','Aún no hay salas. ¡Crea una!','🙋 {name} quiere ser tu amigo','🤝 Tú y {name} ya sois amigos',
+      '💬 {name}: {text}','Aceptar','Rechazar','Chat','Solicitado','Añadir amigo','Aún no tienes amigos. Añade uno abajo','No hay ningún jugador con ese nombre','Aún no hay otros jugadores','Solicitud enviada',
+      'Solicitud fallida','Cargando…','Error al cargar','Aún no hay mensajes. ¡Saluda!','Yo',' (tú)','Desconectado, reconectando…','La sala está llena','Escribe tu correo primero','El correo debe ser como abc@example.com',
+      'Para registrarte hace falta el correo','Enviando…','No se pudo enviar','Código enviado a {email} (mira el spam)','{n} s','Enviar otra vez','Error de red, código no enviado','Pulsa “Enviar código” y escribe los 6 dígitos','Escribe los 4 caracteres de la imagen','Algo salió mal',
+      'El registro funcionó, pero el acceso falló','Error de red','Se borrarán la cuenta y los puntos para siempre. ¿Seguro?','Escribe la contraseña para confirmar:','Cuenta borrada. ¡Gracias por jugar!','No se pudo borrar','Error de red, no se borró','Giro automático no compatible, gira el móvil','Puntos {n}','En línea {n}',
+      'Ping {n} ms'
+    ],
+    'fa': [
+      '🐍 مار چندنفره','ثبت‌نام → سالن → ساخت یا ورود به اتاق','ورود','ثبت‌نام','نام کاربری','رمز عبور (۴ تا ۳۲ نویسه)','ایمیل (برای ثبت‌نام لازم است)','کد ۶ رقمی','ارسال کد','برای ثبت‌نام ۴ نویسهٔ تصویر را بنویس',
+      '۴ نویسهٔ تصویر','تصویر دیگر','تصویر کپچا','⌨️ رایانه: کلیدهای جهت / WASD، فاصله برای تولد دوباره','🍎 غذا بخور تا رشد کنی. دیوار، خودت یا مار دیگر = پایان','مهمان','رکورد {n}','خروج','حذف حساب','🏠 اتاق‌ها',
+      'به‌روزرسانی','➕ ساخت اتاق','نام اتاق','رمز (اختیاری)','بساز و وارد شو','🤖 تک‌نفره (با دوبائو)','💬 گفتگوی سالن','چیزی بنویس...','👥 دوستان','🌐 همهٔ بازیکنان',
+      'جستجوی بازیکن...','🏆 جدول امتیاز','امتیاز ۰','آنلاین ۰','پینگ -','ورود: ','آهسته','معمولی','سریع','خیلی سریع',
+      'ورود به اتاق','مُردی 💀','امتیاز این دست:','تولد دوباره','👥 بازیکنان','ترک اتاق','💬 گفتگوی اتاق','گفتگو (Enter برای ارسال)','⚙️ تنظیمات','گفتگوی خصوصی',
+      'بستن','پیام (Enter برای ارسال)','ارسال','رمز اتاق:','اول نام اتاق را بنویس','🔒 رمزدار','میزبان {name} · {n}/{max}','هنوز اتاقی نیست. یکی بساز!','🙋 {name} می‌خواهد دوستت شود','🤝 تو و {name} دوست شدید',
+      '💬 {name}: {text}','قبول','رد','گفتگو','درخواست شد','افزودن دوست','هنوز دوستی نداری. پایین یکی اضافه کن','بازیکنی با این نام نیست','هنوز بازیکن دیگری نیست','درخواست ارسال شد',
+      'درخواست ناموفق','در حال بارگذاری…','بارگذاری نشد','هنوز پیامی نیست. سلام کن!','من',' (تو)','قطع شد، در حال اتصال…','اتاق پر است','اول ایمیل را بنویس','ایمیل باید مثل abc@example.com باشد',
+      'برای ثبت‌نام ایمیل لازم است','در حال ارسال…','ارسال نشد','کد به {email} ارسال شد (پوشهٔ هرزنامه را هم ببین)','{n} ثانیه','ارسال دوباره','خطای شبکه، کد ارسال نشد','دکمهٔ «ارسال کد» را بزن و ۶ رقم را بنویس','۴ نویسهٔ تصویر را بنویس','مشکلی پیش آمد',
+      'ثبت‌نام شد ولی ورود نشد','خطای شبکه','حساب و امتیازها برای همیشه حذف می‌شوند. مطمئنی؟','برای تأیید رمز را بنویس:','حساب حذف شد. ممنون که بازی کردی!','حذف نشد','خطای شبکه، حذف نشد','چرخش خودکار پشتیبانی نمی‌شود، گوشی را بچرخان','امتیاز {n}','آنلاین {n}',
+      'پینگ {n} میلی‌ثانیه'
+    ],
+    'fr': [
+      '🐍 Serpent multijoueur','Inscris-toi → Salon → Crée ou rejoins une partie','Connexion','Inscription','Nom d’utilisateur','Mot de passe (4-32 caractères)','E-mail (obligatoire pour l’inscription)','Code à 6 chiffres','Envoyer le code','Tape les 4 caractères de l’image pour t’inscrire',
+      '4 caractères de l’image','Autre image','image de vérification','⌨️ Ordinateur : flèches / WASD, espace pour renaître','🍎 Mange pour grandir. Mur, toi-même ou un autre serpent = fin','Invité','Record {n}','Déconnexion','Supprimer le compte','🏠 Salons',
+      'Actualiser','➕ Créer un salon','Nom du salon','Mot de passe (facultatif)','Créer et rejoindre','🤖 Solo (contre Doubao)','💬 Chat du salon','Dis quelque chose...','👥 Amis','🌐 Tous les joueurs',
+      'Chercher des joueurs...','🏆 Classement','Score 0','En ligne 0','Ping -','Entrer : ','Lent','Normal','Rapide','Turbo',
+      'Entrer dans le salon','Tu es mort 💀','Score de la partie :','Renaître','👥 Joueurs','Quitter le salon','💬 Chat du salon','Chat (Entrée pour envoyer)','⚙️ Réglages','Discussion privée',
+      'Fermer','Message (Entrée pour envoyer)','Envoyer','Mot de passe du salon :','Donne d’abord un nom au salon','🔒 Verrouillé','Hôte {name} · {n}/{max}','Pas encore de salon. Crées-en un !','🙋 {name} veut être ton ami','🤝 Toi et {name} êtes amis',
+      '💬 {name} : {text}','Accepter','Refuser','Chat','Demandé','Ajouter un ami','Pas encore d’amis. Ajoutes-en un plus bas','Aucun joueur de ce nom','Pas encore d’autres joueurs','Demande envoyée',
+      'Demande échouée','Chargement…','Chargement impossible','Pas encore de messages. Dis bonjour !','Moi',' (toi)','Déconnecté, reconnexion…','Le salon est plein','Mets d’abord ton e-mail','L’e-mail doit ressembler à abc@example.com',
+      'L’e-mail est obligatoire pour l’inscription','Envoi…','Envoi impossible','Code envoyé à {email} (regarde les spams)','{n} s','Renvoyer','Erreur réseau, code non envoyé','Clique sur « Envoyer le code » puis tape les 6 chiffres','Tape les 4 caractères de l’image','Un problème est survenu',
+      'Inscription réussie mais connexion impossible','Erreur réseau','Ton compte et tes scores seront supprimés pour toujours. Sûr ?','Mot de passe pour confirmer :','Compte supprimé. Merci d’avoir joué !','Suppression impossible','Erreur réseau, rien n’a été supprimé','Rotation auto non prise en charge, tourne le téléphone','Score {n}','En ligne {n}',
+      'Ping {n} ms'
+    ],
+    'de': [
+      '🐍 Mehrspieler-Schlange','Anmelden → Lobby → Raum erstellen oder beitreten','Einloggen','Registrieren','Benutzername','Passwort (4-32 Zeichen)','E-Mail (für Registrierung nötig)','6-stelliger Code','Code senden','Tippe die 4 Zeichen im Bild ein, um dich anzumelden',
+      '4 Zeichen im Bild','Neues Bild','Captcha-Bild','⌨️ Computer: Pfeile / WASD, Leertaste zum Neustart','🍎 Iss, um zu wachsen. Wand, dich selbst oder andere = Ende','Gast','Bestwert {n}','Ausloggen','Konto löschen','🏠 Räume',
+      'Aktualisieren','➕ Raum erstellen','Raumname','Passwort (optional)','Erstellen & beitreten','🤖 Solo (gegen Doubao)','💬 Lobby-Chat','Sag etwas...','👥 Freunde','🌐 Alle Spieler',
+      'Spieler suchen...','🏆 Rangliste','Punkte 0','Online 0','Ping -','Beitreten: ','Langsam','Normal','Schnell','Turbo',
+      'Raum betreten','Du bist tot 💀','Punkte dieser Runde:','Neustart','👥 Spieler','Raum verlassen','💬 Raum-Chat','Chat (Enter zum Senden)','⚙️ Einstellungen','Privatchat',
+      'Schließen','Nachricht (Enter zum Senden)','Senden','Raumpasswort:','Gib zuerst einen Raumnamen ein','🔒 Gesperrt','Host {name} · {n}/{max}','Noch keine Räume. Erstelle einen!','🙋 {name} möchte dein Freund sein','🤝 Du und {name} seid jetzt Freunde',
+      '💬 {name}: {text}','Annehmen','Ablehnen','Chat','Angefragt','Freund hinzufügen','Noch keine Freunde. Füge unten einen hinzu','Kein Spieler mit diesem Namen','Noch keine anderen Spieler','Anfrage gesendet',
+      'Anfrage fehlgeschlagen','Lädt…','Laden fehlgeschlagen','Noch keine Nachrichten. Sag Hallo!','Ich',' (du)','Verbindung weg, verbinde neu…','Der Raum ist voll','Gib zuerst deine E-Mail ein','E-Mail muss wie abc@example.com aussehen',
+      'Für die Registrierung ist E-Mail nötig','Senden…','Senden fehlgeschlagen','Code an {email} gesendet (auch Spam prüfen)','{n} s','Erneut senden','Netzwerkfehler, Code nicht gesendet','Klicke auf „Code senden“ und gib die 6 Ziffern ein','Tippe die 4 Zeichen aus dem Bild ein','Etwas ist schiefgelaufen',
+      'Registrierung okay, Login fehlgeschlagen','Netzwerkfehler','Konto und Punkte werden für immer gelöscht. Sicher?','Passwort zur Bestätigung:','Konto gelöscht. Danke fürs Spielen!','Löschen fehlgeschlagen','Netzwerkfehler, nichts gelöscht','Auto-Drehen nicht möglich, dreh das Handy','Punkte {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'pl': [
+      '🐍 Wąż wieloosobowy','Zarejestruj się → Lobby → Utwórz lub dołącz do pokoju','Zaloguj','Zarejestruj','Nazwa użytkownika','Hasło (4-32 znaki)','E-mail (wymagany do rejestracji)','6-cyfrowy kod','Wyślij kod','Wpisz 4 znaki z obrazka, aby się zarejestrować',
+      '4 znaki z obrazka','Inny obrazek','obrazek captcha','⌨️ Komputer: strzałki / WASD, spacja = odrodzenie','🍎 Jedz, aby rosnąć. Ściana, ty lub inny wąż = koniec','Gość','Rekord {n}','Wyloguj','Usuń konto','🏠 Pokoje',
+      'Odśwież','➕ Utwórz pokój','Nazwa pokoju','Hasło (opcjonalne)','Utwórz i dołącz','🤖 Solo (z Doubao)','💬 Czat lobby','Napisz coś...','👥 Znajomi','🌐 Wszyscy gracze',
+      'Szukaj graczy...','🏆 Ranking','Punkty 0','Online 0','Ping -','Wejście: ','Wolno','Normalnie','Szybko','Turbo',
+      'Wejdź do pokoju','Nie żyjesz 💀','Punkty w tej rundzie:','Odrodź się','👥 Gracze','Wyjdź z pokoju','💬 Czat pokoju','Czat (Enter wysyła)','⚙️ Ustawienia','Czat prywatny',
+      'Zamknij','Wiadomość (Enter wysyła)','Wyślij','Hasło pokoju:','Najpierw wpisz nazwę pokoju','🔒 Z hasłem','Właściciel {name} · {n}/{max}','Brak pokoi. Utwórz jeden!','🙋 {name} chce zostać twoim znajomym','🤝 Ty i {name} jesteście znajomymi',
+      '💬 {name}: {text}','Przyjmij','Odrzuć','Czat','Wysłano','Dodaj znajomego','Brak znajomych. Dodaj kogoś niżej','Nie ma gracza o tej nazwie','Nie ma jeszcze innych graczy','Zaproszenie wysłane',
+      'Zaproszenie nieudane','Ładowanie…','Nie udało się wczytać','Brak wiadomości. Przywitaj się!','Ja',' (ty)','Rozłączono, łączę ponownie…','Pokój jest pełny','Najpierw wpisz e-mail','E-mail powinien wyglądać jak abc@example.com',
+      'Do rejestracji potrzebny jest e-mail','Wysyłanie…','Nie udało się wysłać','Kod wysłany na {email} (sprawdź spam)','{n} s','Wyślij ponownie','Błąd sieci, kod nie wysłany','Kliknij „Wyślij kod” i wpisz 6 cyfr','Wpisz 4 znaki z obrazka','Coś poszło nie tak',
+      'Rejestracja OK, ale logowanie nie','Błąd sieci','Konto i wyniki zostaną usunięte na zawsze. Pewnie?','Wpisz hasło, aby potwierdzić:','Konto usunięte. Dzięki za grę!','Usuwanie nie udało się','Błąd sieci, nie usunięto','Auto-obrót nieobsługiwany, obróć telefon','Punkty {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'id': [
+      '🐍 Ular Multiplayer','Daftar → Lobi → Buat atau gabung ruang','Masuk','Daftar','Nama pengguna','Kata sandi (4-32 karakter)','Email (wajib saat daftar)','Kode 6 digit','Kirim kode','Ketik 4 karakter di gambar untuk daftar',
+      '4 karakter di gambar','Gambar lain','gambar verifikasi','⌨️ Komputer: panah / WASD, spasi untuk lahir lagi','🍎 Makan agar tumbuh. Dinding, diri sendiri, atau ular lain = selesai','Tamu','Rekor {n}','Keluar','Hapus akun','🏠 Ruang',
+      'Segarkan','➕ Buat ruang','Nama ruang','Kata sandi (opsional)','Buat & gabung','🤖 Solo (lawan Doubao)','💬 Obrolan lobi','Katakan sesuatu...','👥 Teman','🌐 Semua pemain',
+      'Cari pemain...','🏆 Peringkat','Skor 0','Online 0','Ping -','Masuk: ','Pelan','Normal','Cepat','Turbo',
+      'Masuk ruang','Kamu mati 💀','Skor ronde ini:','Lahir lagi','👥 Pemain','Tinggalkan ruang','💬 Obrolan ruang','Obrolan (Enter untuk kirim)','⚙️ Pengaturan','Obrolan pribadi',
+      'Tutup','Pesan (Enter untuk kirim)','Kirim','Kata sandi ruang:','Isi nama ruang dulu','🔒 Terkunci','Tuan rumah {name} · {n}/{max}','Belum ada ruang. Buat satu!','🙋 {name} ingin berteman denganmu','🤝 Kamu dan {name} sekarang berteman',
+      '💬 {name}: {text}','Terima','Tolak','Obrolan','Diminta','Tambah teman','Belum ada teman. Tambah di bawah','Tidak ada pemain dengan nama itu','Belum ada pemain lain','Permintaan terkirim',
+      'Permintaan gagal','Memuat…','Gagal memuat','Belum ada pesan. Sapa dulu!','Saya',' (kamu)','Terputus, menyambung ulang…','Ruang penuh','Isi email dulu','Email harus seperti abc@example.com',
+      'Email wajib untuk daftar','Mengirim…','Gagal mengirim','Kode dikirim ke {email} (cek spam)','{n} dtk','Kirim lagi','Kesalahan jaringan, kode tidak terkirim','Tekan “Kirim kode” lalu isi 6 digit','Ketik 4 karakter dari gambar','Ada yang salah',
+      'Daftar berhasil, tapi masuk gagal','Kesalahan jaringan','Akun dan skor akan dihapus selamanya. Yakin?','Isi kata sandi untuk konfirmasi:','Akun dihapus. Terima kasih sudah bermain!','Gagal menghapus','Kesalahan jaringan, tidak dihapus','Putar otomatis tidak didukung, putar ponsel','Skor {n}','Online {n}',
+      'Ping {n}ms'
+    ],
+    'fi': [
+      '🐍 Moninpeli-mato','Rekisteröidy → Aula → Luo tai liity huoneeseen','Kirjaudu','Rekisteröidy','Käyttäjänimi','Salasana (4-32 merkkiä)','Sähköposti (pakollinen rekisteröinnissä)','6-numeroinen koodi','Lähetä koodi','Kirjoita kuvan 4 merkkiä rekisteröityäksesi',
+      'Kuvan 4 merkkiä','Uusi kuva','vahvistuskuva','⌨️ Tietokone: nuolet / WASD, välilyönti = uusi elämä','🍎 Syö kasvaaksesi. Seinä, itse tai toinen mato = loppu','Vieras','Ennätys {n}','Kirjaudu ulos','Poista tili','🏠 Huoneet',
+      'Päivitä','➕ Luo huone','Huoneen nimi','Salasana (valinnainen)','Luo ja liity','🤖 Yksin (Doubaota vastaan)','💬 Aulan chat','Sano jotain...','👥 Kaverit','🌐 Kaikki pelaajat',
+      'Hae pelaajia...','🏆 Tulostaulu','Pisteet 0','Paikalla 0','Ping -','Liity: ','Hidas','Normaali','Nopea','Turbo',
+      'Liity huoneeseen','Kuolit 💀','Tämän kierroksen pisteet:','Uusi elämä','👥 Pelaajat','Poistu huoneesta','💬 Huoneen chat','Chat (Enter lähettää)','⚙️ Asetukset','Yksityisviesti',
+      'Sulje','Viesti (Enter lähettää)','Lähetä','Huoneen salasana:','Anna ensin huoneen nimi','🔒 Lukittu','Isäntä {name} · {n}/{max}','Ei huoneita. Luo sellainen!','🙋 {name} haluaa kaveriksesi','🤝 Sinä ja {name} olette nyt kavereita',
+      '💬 {name}: {text}','Hyväksy','Hylkää','Chat','Pyydetty','Lisää kaveri','Ei vielä kavereita. Lisää yksi alta','Ei pelaajaa tuolla nimellä','Ei vielä muita pelaajia','Pyyntö lähetetty',
+      'Pyyntö epäonnistui','Ladataan…','Lataus epäonnistui','Ei vielä viestejä. Sano moi!','Minä',' (sinä)','Yhteys katkesi, yhdistetään…','Huone on täynnä','Anna ensin sähköposti','Sähköpostin pitää näyttää tältä: abc@example.com',
+      'Rekisteröinti vaatii sähköpostin','Lähetetään…','Lähetys epäonnistui','Koodi lähetetty osoitteeseen {email} (tarkista roskaposti)','{n} s','Lähetä uudelleen','Verkkovirhe, koodia ei lähetetty','Paina ”Lähetä koodi” ja kirjoita 6 numeroa','Kirjoita kuvan 4 merkkiä','Jokin meni vikaan',
+      'Rekisteröinti onnistui, kirjautuminen ei','Verkkovirhe','Tili ja pisteet poistetaan pysyvästi. Varma?','Anna salasana vahvistukseksi:','Tili poistettu. Kiitos pelaamisesta!','Poisto epäonnistui','Verkkovirhe, ei poistettu','Automaattikääntö ei tuettu, käännä puhelin','Pisteet {n}','Paikalla {n}',
+      'Ping {n} ms'
+    ],
+    'ml': [
+      '🐍 മൾട്ടിപ്ലെയർ പാമ്പ്','സൈൻ അപ്പ് → ലോബി → റൂം ഉണ്ടാക്കുക അല്ലെങ്കിൽ ചേരുക','ലോഗിൻ','സൈൻ അപ്പ്','ഉപയോക്തൃനാമം','പാസ്വേഡ് (4-32 അക്ഷരം)','ഇമെയിൽ (സൈൻ അപ്പിന് വേണം)','6 അക്ക കോഡ്','കോഡ് അയയ്ക്കുക','രജിസ്റ്റർ ചെയ്യാൻ ചിത്രത്തിലെ 4 അക്ഷരങ്ങൾ എഴുതുക',
+      'ചിത്രത്തിലെ 4 അക്ഷരങ്ങൾ','മറ്റൊരു ചിത്രം','വെരിഫിക്കേഷൻ ചിത്രം','⌨️ കമ്പ്യൂട്ടർ: അമ്പുകൾ / WASD, സ്പേസ് = വീണ്ടും ജനിക്കാൻ','🍎 ഭക്ഷണം തിന്ന് വളരുക. ചുവര്, നിങ്ങൾ അല്ലെങ്കിൽ മറ്റൊരു പാമ്പ് = തീരും','അതിഥി','റെക്കോർഡ് {n}','ലോഗ് ഔട്ട്','അക്കൗണ്ട് ഡിലീറ്റ്','🏠 റൂമുകൾ',
+      'പുതുക്കുക','➕ റൂം ഉണ്ടാക്കുക','റൂം പേര്','പാസ്വേഡ് (ഓപ്ഷണൽ)','ഉണ്ടാക്കി ചേരുക','🤖 സോളോ (ദൗബാവോയ്ക്കെതിരെ)','💬 ലോബി ചാറ്റ്','എന്തെങ്കിലും പറയൂ...','👥 സുഹൃത്തുക്കൾ','🌐 എല്ലാ കളിക്കാരും',
+      'കളിക്കാരെ തിരയുക...','🏆 ലീഡർബോർഡ്','സ്കോർ 0','ഓൺലൈൻ 0','പിംഗ് -','പ്രവേശനം: ','പതിയെ','സാധാരണ','വേഗം','വളരെ വേഗം',
+      'റൂമിൽ ചേരുക','നിങ്ങൾ മരിച്ചു 💀','ഈ റൗണ്ടിലെ സ്കോർ:','വീണ്ടും ജനിക്കുക','👥 കളിക്കാർ','റൂം വിടുക','💬 റൂം ചാറ്റ്','ചാറ്റ് (Enter അയയ്ക്കാൻ)','⚙️ ക്രമീകരണം','സ്വകാര്യ ചാറ്റ്',
+      'അടയ്ക്കുക','സന്ദേശം (Enter അയയ്ക്കാൻ)','അയയ്ക്കുക','റൂം പാസ്വേഡ്:','ആദ്യം റൂം പേര് എഴുതുക','🔒 ലോക്ക്','ഹോസ്റ്റ് {name} · {n}/{max}','റൂമുകൾ ഇല്ല. ഒന്നുണ്ടാക്കൂ!','🙋 {name} നിങ്ങളുടെ സുഹൃത്താകാൻ ആഗ്രഹിക്കുന്നു','🤝 നിങ്ങളും {name} ഉം ഇപ്പോൾ സുഹൃത്തുക്കളാണ്',
+      '💬 {name}: {text}','സ്വീകരിക്കുക','നിരസിക്കുക','ചാറ്റ്','അഭ്യർത്ഥിച്ചു','സുഹൃത്തിനെ ചേർക്കുക','സുഹൃത്തുക്കൾ ഇല്ല. താഴെ ഒരാളെ ചേർക്കുക','ആ പേരിൽ കളിക്കാരനില്ല','മറ്റ് കളിക്കാരില്ല','അഭ്യർത്ഥന അയച്ചു',
+      'അഭ്യർത്ഥന പരാജയപ്പെട്ടു','ലോഡ് ചെയ്യുന്നു…','ലോഡ് പരാജയപ്പെട്ടു','സന്ദേശങ്ങൾ ഇല്ല. ഹായ് പറയൂ!','ഞാൻ',' (നിങ്ങൾ)','വിച്ഛേദിച്ചു, വീണ്ടും ബന്ധിപ്പിക്കുന്നു…','റൂം നിറഞ്ഞു','ആദ്യം ഇമെയിൽ എഴുതുക','ഇമെയിൽ abc@example.com പോലെ ആയിരിക്കണം',
+      'സൈൻ അപ്പിന് ഇമെയിൽ വേണം','അയയ്ക്കുന്നു…','അയയ്ക്കാൻ കഴിഞ്ഞില്ല','{email} ലേക്ക് കോഡ് അയച്ചു (സ്പാം നോക്കുക)','{n} സെ','വീണ്ടും അയയ്ക്കുക','നെറ്റ്വർക്ക് പിശക്, കോഡ് അയച്ചില്ല','“കോഡ് അയയ്ക്കുക” അമർത്തി 6 അക്കങ്ങൾ എഴുതുക','ചിത്രത്തിലെ 4 അക്ഷരങ്ങൾ എഴുതുക','എന്തോ കുഴപ്പമുണ്ടായി',
+      'സൈൻ അപ്പ് കഴിഞ്ഞു, ലോഗിൻ പരാജയപ്പെട്ടു','നെറ്റ്വർക്ക് പിശക്','അക്കൗണ്ടും സ്കോറും എന്നെന്നേക്കുമായി ഡിലീറ്റാകും. ഉറപ്പാണോ?','സ്ഥിരീകരിക്കാൻ പാസ്വേഡ് എഴുതുക:','അക്കൗണ്ട് ഡിലീറ്റ് ചെയ്തു. കളിച്ചതിന് നന്ദി!','ഡിലീറ്റ് പരാജയപ്പെട്ടു','നെറ്റ്വർക്ക് പിശക്, ഡിലീറ്റ് ചെയ്തില്ല','ഓട്ടോ റൊട്ടേറ്റ് പിന്തുണയില്ല, ഫോൺ തിരിക്കുക','സ്കോർ {n}','ഓൺലൈൻ {n}',
+      'പിംഗ് {n}ms'
+    ],
+    'ja': [
+      '🐍 みんなでスネーク','登録 → ロビー → 部屋を作るか参加','ログイン','新規登録','ユーザー名','パスワード（4〜32文字）','メール（登録に必要）','6桁のコード','コードを送る','画像の4文字を入力して登録',
+      '画像の4文字','別の画像','画像認証','⌨️ PC：矢印キー / WASD、スペースで復活','🍎 エサで伸びる。壁・自分・他のヘビに当たると終了','ゲスト','最高 {n}','ログアウト','アカウント削除','🏠 部屋一覧',
+      '更新','➕ 部屋を作る','部屋名','パスワード（任意）','作って参加','🤖 ひとりで（豆包と対戦）','💬 ロビーチャット','何か話そう...','👥 フレンド','🌐 全プレイヤー',
+      'プレイヤーを検索...','🏆 ランキング','スコア 0','オンライン 0','遅延 -','入室：','ゆっくり','ふつう','はやい','とても速い',
+      '部屋に入る','やられた 💀','今回のスコア：','復活する','👥 プレイヤー','部屋を出る','💬 部屋チャット','チャット（Enterで送信）','⚙️ 設定','個人チャット',
+      '閉じる','メッセージ（Enterで送信）','送信','部屋のパスワード：','先に部屋名を入れてね','🔒 パスあり','ホスト {name} · {n}/{max}','まだ部屋がないよ。作ってみよう！','🙋 {name} がフレンドになりたがっています','🤝 {name} とフレンドになりました',
+      '💬 {name}：{text}','承認','拒否','チャット','申請済み','フレンド追加','フレンドがいません。下から追加しよう','その名前のプレイヤーはいません','まだ他のプレイヤーがいません','申請を送りました',
+      '申請に失敗','読み込み中…','読み込み失敗','まだメッセージなし。あいさつしよう！','自分','（あなた）','切断されました。再接続中…','部屋が満員です','先にメールを入れてね','メールは abc@example.com の形で',
+      '登録にはメールが必要です','送信中…','送信できませんでした','{email} にコードを送りました（迷惑メールも見てね）','{n} 秒','もう一度送る','ネットワークエラー、コード未送信','「コードを送る」を押して6桁を入力','画像の4文字を入力してね','何かうまくいきませんでした',
+      '登録はできたけどログイン失敗','ネットワークエラー','アカウントとスコアが永久に消えます。本当に？','確認のためパスワードを入力：','アカウントを削除しました。遊んでくれてありがとう！','削除に失敗','ネットワークエラー、削除できません','自動横画面に非対応。スマホを回してね','スコア {n}','オンライン {n}',
+      '遅延 {n}ms'
+    ],
+    'nl': [
+      '🐍 Multiplayer-slang','Registreer → Lobby → Maak of join een kamer','Inloggen','Registreren','Gebruikersnaam','Wachtwoord (4-32 tekens)','E-mail (nodig om te registreren)','6-cijferige code','Code sturen','Typ de 4 tekens op de afbeelding om te registreren',
+      '4 tekens op de afbeelding','Andere afbeelding','verificatieafbeelding','⌨️ Computer: pijlen / WASD, spatie = opnieuw','🍎 Eet om te groeien. Muur, jezelf of een andere slang = einde','Gast','Record {n}','Uitloggen','Account verwijderen','🏠 Kamers',
+      'Vernieuwen','➕ Kamer maken','Kamernaam','Wachtwoord (optioneel)','Maken en joinen','🤖 Solo (tegen Doubao)','💬 Lobbychat','Zeg iets...','👥 Vrienden','🌐 Alle spelers',
+      'Spelers zoeken...','🏆 Ranglijst','Score 0','Online 0','Ping -','Binnen: ','Langzaam','Normaal','Snel','Turbo',
+      'Kamer binnen','Je bent dood 💀','Score deze ronde:','Opnieuw','👥 Spelers','Kamer verlaten','💬 Kamerchat','Chat (Enter om te sturen)','⚙️ Instellingen','Privéchat',
+      'Sluiten','Bericht (Enter om te sturen)','Sturen','Kamerwachtwoord:','Vul eerst een kamernaam in','🔒 Op slot','Host {name} · {n}/{max}','Nog geen kamers. Maak er een!','🙋 {name} wil je vriend zijn','🤝 Jij en {name} zijn nu vrienden',
+      '💬 {name}: {text}','Accepteren','Weigeren','Chat','Aangevraagd','Vriend toevoegen','Nog geen vrienden. Voeg er hieronder een toe','Geen speler met die naam','Nog geen andere spelers','Verzoek verstuurd',
+      'Verzoek mislukt','Laden…','Laden mislukt','Nog geen berichten. Zeg hallo!','Ik',' (jij)','Verbinding weg, opnieuw verbinden…','Kamer is vol','Vul eerst je e-mail in','E-mail moet lijken op abc@example.com',
+      'E-mail is nodig om te registreren','Versturen…','Versturen mislukt','Code gestuurd naar {email} (check spam)','{n} s','Opnieuw sturen','Netwerkfout, code niet verstuurd','Klik op “Code sturen” en vul de 6 cijfers in','Typ de 4 tekens van de afbeelding','Er ging iets mis',
+      'Registratie gelukt, inloggen niet','Netwerkfout','Je account en scores worden voor altijd verwijderd. Zeker?','Vul wachtwoord in om te bevestigen:','Account verwijderd. Bedankt voor het spelen!','Verwijderen mislukt','Netwerkfout, niets verwijderd','Auto-draaien niet ondersteund, draai je telefoon','Score {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'it': [
+      '🐍 Serpente multigiocatore','Registrati → Sala → Crea o unisciti a una stanza','Accedi','Registrati','Nome utente','Password (4-32 caratteri)','Email (obbligatoria per registrarsi)','Codice a 6 cifre','Invia codice','Scrivi i 4 caratteri dell’immagine per registrarti',
+      '4 caratteri dell’immagine','Altra immagine','immagine di verifica','⌨️ Computer: frecce / WASD, spazio per rinascere','🍎 Mangia per crescere. Muro, te stesso o un altro serpente = fine','Ospite','Record {n}','Esci','Elimina account','🏠 Stanze',
+      'Aggiorna','➕ Crea stanza','Nome stanza','Password (facoltativa)','Crea e unisciti','🤖 Solo (contro Doubao)','💬 Chat della sala','Di’ qualcosa...','👥 Amici','🌐 Tutti i giocatori',
+      'Cerca giocatori...','🏆 Classifica','Punti 0','Online 0','Ping -','Entra: ','Lento','Normale','Veloce','Turbo',
+      'Entra nella stanza','Sei morto 💀','Punti di questa partita:','Rinasci','👥 Giocatori','Esci dalla stanza','💬 Chat della stanza','Chat (Invio per inviare)','⚙️ Impostazioni','Chat privata',
+      'Chiudi','Messaggio (Invio per inviare)','Invia','Password della stanza:','Scrivi prima il nome della stanza','🔒 Bloccata','Host {name} · {n}/{max}','Ancora nessuna stanza. Creane una!','🙋 {name} vuole essere tuo amico','🤝 Tu e {name} ora siete amici',
+      '💬 {name}: {text}','Accetta','Rifiuta','Chat','Richiesto','Aggiungi amico','Ancora nessun amico. Aggiungine uno sotto','Nessun giocatore con quel nome','Ancora nessun altro giocatore','Richiesta inviata',
+      'Richiesta fallita','Caricamento…','Caricamento fallito','Ancora nessun messaggio. Saluta!','Io',' (tu)','Disconnesso, riconnessione…','La stanza è piena','Scrivi prima la tua email','L’email deve essere come abc@example.com',
+      'Per registrarti serve l’email','Invio…','Invio non riuscito','Codice inviato a {email} (controlla lo spam)','{n} s','Invia di nuovo','Errore di rete, codice non inviato','Premi “Invia codice” e scrivi le 6 cifre','Scrivi i 4 caratteri dell’immagine','Qualcosa è andato storto',
+      'Registrazione ok, accesso fallito','Errore di rete','Account e punti saranno cancellati per sempre. Sicuro?','Scrivi la password per confermare:','Account eliminato. Grazie per aver giocato!','Eliminazione non riuscita','Errore di rete, non eliminato','Rotazione auto non supportata, gira il telefono','Punti {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'ru': [
+      '🐍 Многопользовательская змейка','Регистрация → Лобби → Создай или присоединись к комнате','Войти','Регистрация','Имя пользователя','Пароль (4-32 символа)','Почта (нужна для регистрации)','Код из 6 цифр','Отправить код','Введи 4 символа с картинки, чтобы зарегистрироваться',
+      '4 символа с картинки','Другая картинка','картинка-капча','⌨️ Компьютер: стрелки / WASD, пробел — возрождение','🍎 Ешь еду, чтобы расти. Стена, ты сам или другая змейка = конец','Гость','Рекорд {n}','Выйти','Удалить аккаунт','🏠 Комнаты',
+      'Обновить','➕ Создать комнату','Название комнаты','Пароль (необязательно)','Создать и войти','🤖 Один (против Дубао)','💬 Чат лобби','Напиши что-нибудь...','👥 Друзья','🌐 Все игроки',
+      'Поиск игроков...','🏆 Рейтинг','Очки 0','Онлайн 0','Пинг -','Вход: ','Медленно','Обычно','Быстро','Очень быстро',
+      'Войти в комнату','Ты погиб 💀','Очки за игру:','Возродиться','👥 Игроки','Выйти из комнаты','💬 Чат комнаты','Чат (Enter — отправить)','⚙️ Настройки','Личный чат',
+      'Закрыть','Сообщение (Enter — отправить)','Отправить','Пароль комнаты:','Сначала введи название комнаты','🔒 С паролем','Хозяин {name} · {n}/{max}','Комнат пока нет. Создай одну!','🙋 {name} хочет добавить тебя в друзья','🤝 Теперь вы с {name} друзья',
+      '💬 {name}: {text}','Принять','Отклонить','Чат','Запрос отправлен','Добавить друга','Друзей пока нет. Добавь кого-нибудь ниже','Игрок с таким именем не найден','Других игроков пока нет','Запрос отправлен',
+      'Запрос не удался','Загрузка…','Не удалось загрузить','Сообщений пока нет. Поздоровайся!','Я',' (ты)','Связь потеряна, подключаемся…','Комната заполнена','Сначала введи почту','Почта должна быть как abc@example.com',
+      'Для регистрации нужна почта','Отправляем…','Не удалось отправить','Код отправлен на {email} (проверь спам)','{n} с','Отправить снова','Ошибка сети, код не отправлен','Нажми «Отправить код» и введи 6 цифр','Введи 4 символа с картинки','Что-то пошло не так',
+      'Регистрация прошла, но вход не удался','Ошибка сети','Аккаунт и рекорды удалятся навсегда. Точно?','Введи пароль для подтверждения:','Аккаунт удалён. Спасибо за игру!','Не удалось удалить','Ошибка сети, не удалено','Автоповорот не поддерживается, поверни телефон','Очки {n}','Онлайн {n}',
+      'Пинг {n} мс'
+    ],
+    'pt-PT': [
+      '🐍 Serpente multijogador','Regista-te → Sala → Cria ou entra numa sala','Entrar','Registar','Nome de utilizador','Palavra-passe (4-32 caracteres)','Email (obrigatório para registar)','Código de 6 dígitos','Enviar código','Escreve os 4 caracteres da imagem para te registares',
+      '4 caracteres da imagem','Outra imagem','imagem de verificação','⌨️ Computador: setas / WASD, espaço para renascer','🍎 Come para crescer. Parede, tu ou outra serpente = fim','Convidado','Recorde {n}','Sair','Apagar conta','🏠 Salas',
+      'Atualizar','➕ Criar sala','Nome da sala','Palavra-passe (opcional)','Criar e entrar','🤖 Sozinho (contra Doubao)','💬 Chat da sala','Diz algo...','👥 Amigos','🌐 Todos os jogadores',
+      'Procurar jogadores...','🏆 Classificação','Pontos 0','Online 0','Ping -','Entrar: ','Lento','Normal','Rápido','Turbo',
+      'Entrar na sala','Morreste 💀','Pontos desta ronda:','Renascer','👥 Jogadores','Sair da sala','💬 Chat da sala','Chat (Enter para enviar)','⚙️ Definições','Chat privado',
+      'Fechar','Mensagem (Enter para enviar)','Enviar','Palavra-passe da sala:','Escreve primeiro o nome da sala','🔒 Com palavra-passe','Dono {name} · {n}/{max}','Ainda não há salas. Cria uma!','🙋 {name} quer ser teu amigo','🤝 Tu e {name} agora são amigos',
+      '💬 {name}: {text}','Aceitar','Recusar','Chat','Pedido enviado','Adicionar amigo','Ainda não tens amigos. Adiciona um abaixo','Nenhum jogador com esse nome','Ainda não há outros jogadores','Pedido enviado',
+      'Pedido falhou','A carregar…','Falha ao carregar','Ainda não há mensagens. Diz olá!','Eu',' (tu)','Desligado, a reconectar…','A sala está cheia','Escreve primeiro o teu email','O email deve ser como abc@example.com',
+      'O email é obrigatório para registar','A enviar…','Não foi possível enviar','Código enviado para {email} (vê o spam)','{n} s','Enviar outra vez','Erro de rede, código não enviado','Carrega em “Enviar código” e escreve os 6 dígitos','Escreve os 4 caracteres da imagem','Algo correu mal',
+      'Registo feito, mas o login falhou','Erro de rede','A conta e os pontos serão apagados para sempre. Tens a certeza?','Escreve a palavra-passe para confirmar:','Conta apagada. Obrigado por jogares!','Não foi possível apagar','Erro de rede, nada apagado','Rodar automático não suportado, roda o telemóvel','Pontos {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'pt-BR': [
+      '🐍 Cobra multijogador','Cadastre-se → Salão → Crie ou entre em uma sala','Entrar','Cadastrar','Nome de usuário','Senha (4-32 caracteres)','E-mail (obrigatório para cadastrar)','Código de 6 dígitos','Enviar código','Digite os 4 caracteres da imagem para se cadastrar',
+      '4 caracteres da imagem','Outra imagem','imagem de verificação','⌨️ Computador: setas / WASD, espaço para renascer','🍎 Coma para crescer. Parede, você ou outra cobra = fim','Convidado','Recorde {n}','Sair','Apagar conta','🏠 Salas',
+      'Atualizar','➕ Criar sala','Nome da sala','Senha (opcional)','Criar e entrar','🤖 Sozinho (contra Doubao)','💬 Chat do salão','Diga algo...','👥 Amigos','🌐 Todos os jogadores',
+      'Buscar jogadores...','🏆 Classificação','Pontos 0','Online 0','Ping -','Entrar: ','Lento','Normal','Rápido','Turbo',
+      'Entrar na sala','Você morreu 💀','Pontos desta rodada:','Renascer','👥 Jogadores','Sair da sala','💬 Chat da sala','Chat (Enter para enviar)','⚙️ Configurações','Chat privado',
+      'Fechar','Mensagem (Enter para enviar)','Enviar','Senha da sala:','Digite o nome da sala primeiro','🔒 Com senha','Dono {name} · {n}/{max}','Ainda não há salas. Crie uma!','🙋 {name} quer ser seu amigo','🤝 Você e {name} agora são amigos',
+      '💬 {name}: {text}','Aceitar','Recusar','Chat','Solicitado','Adicionar amigo','Ainda não tem amigos. Adicione um abaixo','Nenhum jogador com esse nome','Ainda não há outros jogadores','Solicitação enviada',
+      'Solicitação falhou','Carregando…','Falha ao carregar','Ainda não há mensagens. Diga oi!','Eu',' (você)','Desconectado, reconectando…','A sala está cheia','Digite seu e-mail primeiro','O e-mail deve ser como abc@example.com',
+      'O e-mail é obrigatório para cadastrar','Enviando…','Não foi possível enviar','Código enviado para {email} (veja o spam)','{n} s','Enviar de novo','Erro de rede, código não enviado','Toque em “Enviar código” e digite os 6 dígitos','Digite os 4 caracteres da imagem','Algo deu errado',
+      'Cadastro feito, mas o login falhou','Erro de rede','A conta e os pontos serão apagados para sempre. Tem certeza?','Digite a senha para confirmar:','Conta apagada. Obrigado por jogar!','Não foi possível apagar','Erro de rede, nada apagado','Rotação automática não suportada, gire o celular','Pontos {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'eo': [
+      '🐍 Plurpersona serpento','Registriĝu → Salono → Kreu aŭ aliĝu al ĉambro','Ensaluti','Registriĝi','Uzantnomo','Pasvorto (4-32 signoj)','Retpoŝto (necesa por registriĝo)','6-cifera kodo','Sendi kodon','Tajpu la 4 signojn en la bildo por registriĝi',
+      '4 signoj en la bildo','Alia bildo','bildo de kontrolo','⌨️ Komputilo: sagoj / WASD, spaco por reviviĝi','🍎 Manĝu por kreski. Muro, vi mem aŭ alia serpento = fino','Gasto','Rekordo {n}','Elsaluti','Forigi konton','🏠 Ĉambroj',
+      'Refreŝigi','➕ Krei ĉambron','Ĉambra nomo','Pasvorto (laŭvola)','Krei kaj aliĝi','🤖 Sole (kontraŭ Doubao)','💬 Salona babilejo','Diru ion...','👥 Amikoj','🌐 Ĉiuj ludantoj',
+      'Serĉi ludantojn...','🏆 Rangotabelo','Poentoj 0','Enline 0','Ping -','Eniri: ','Malrapide','Normale','Rapide','Tre rapide',
+      'Eniri ĉambron','Vi mortis 💀','Poentoj de ĉi tiu raŭndo:','Reviviĝi','👥 Ludantoj','Forlasi ĉambron','💬 Ĉambra babilejo','Babilejo (Enter por sendi)','⚙️ Agordoj','Privata babilejo',
+      'Fermi','Mesaĝo (Enter por sendi)','Sendi','Ĉambra pasvorto:','Unue tajpu ĉambran nomon','🔒 Ŝlosita','Gastiganto {name} · {n}/{max}','Ankoraŭ neniuj ĉambroj. Kreu unu!','🙋 {name} volas amikiĝi kun vi','🤝 Vi kaj {name} nun estas amikoj',
+      '💬 {name}: {text}','Akcepti','Rifuzi','Babilejo','Petita','Aldoni amikon','Ankoraŭ neniuj amikoj. Aldonu unu malsupre','Neniu ludanto kun tiu nomo','Ankoraŭ neniuj aliaj ludantoj','Peto sendita',
+      'Peto malsukcesis','Ŝargado…','Ŝargo malsukcesis','Ankoraŭ neniuj mesaĝoj. Salutu!','Mi',' (vi)','Malkonektita, rekonektante…','Ĉambro plenas','Unue tajpu vian retpoŝton','Retpoŝto simu al abc@example.com',
+      'Retpoŝto necesas por registriĝo','Sendante…','Ne eblis sendi','Kodo sendita al {email} (kontrolu spamon)','{n} s','Sendi denove','Reta eraro, kodo ne sendita','Premu “Sendi kodon” kaj tajpu la 6 ciferojn','Tajpu la 4 signojn el la bildo','Io misfunkciis',
+      'Registriĝo sukcesis, sed ensaluto malsukcesis','Reta eraro','La konto kaj poentoj foriĝos por ĉiam. Ĉu certe?','Tajpu pasvorton por konfirmi:','Konto forigita. Dankon pro ludi!','Forigo malsukcesis','Reta eraro, ne forigita','Aŭtomata turnado ne subtenata, turnu la telefonon','Poentoj {n}','Enline {n}',
+      'Ping {n} ms'
+    ],
+    'ko': [
+      '🐍 멀티플레이 뱀','가입 → 로비 → 방 만들기 또는 참가','로그인','가입하기','사용자 이름','비밀번호 (4-32자)','이메일 (가입 시 필수)','6자리 코드','코드 보내기','그림 속 4글자를 입력하면 가입돼요',
+      '그림 속 4글자','다른 그림','그림 인증','⌨️ 컴퓨터: 방향키 / WASD, 스페이스로 부활','🍎 먹이를 먹으면 길어져요. 벽·나 자신·다른 뱀에 닿으면 끝','손님','최고 {n}','로그아웃','계정 삭제','🏠 방 목록',
+      '새로고침','➕ 방 만들기','방 이름','비밀번호 (선택)','만들고 참가','🤖 혼자 하기 (도우바오와 대전)','💬 로비 채팅','무슨 말이든 해봐요...','👥 친구','🌐 모든 플레이어',
+      '플레이어 검색...','🏆 순위표','점수 0','접속 0','지연 -','입장: ','느리게','보통','빠르게','아주 빠르게',
+      '방 들어가기','죽었어요 💀','이번 판 점수:','부활하기','👥 플레이어','방 나가기','💬 방 채팅','채팅 (Enter로 전송)','⚙️ 설정','개인 채팅',
+      '닫기','메시지 (Enter로 전송)','보내기','방 비밀번호:','먼저 방 이름을 입력해요','🔒 잠김','방장 {name} · {n}/{max}','아직 방이 없어요. 만들어 봐요!','🙋 {name} 님이 친구를 원해요','🤝 {name} 님과 친구가 됐어요',
+      '💬 {name}: {text}','수락','거절','채팅','신청함','친구 추가','아직 친구가 없어요. 아래에서 추가해요','그 이름의 플레이어가 없어요','아직 다른 플레이어가 없어요','신청을 보냈어요',
+      '신청 실패','불러오는 중…','불러오기 실패','아직 메시지가 없어요. 인사해 봐요!','나',' (너)','연결 끊김, 다시 연결 중…','방이 가득 찼어요','먼저 이메일을 입력해요','이메일은 abc@example.com 형식이어야 해요',
+      '가입에는 이메일이 필요해요','보내는 중…','보내지 못했어요','{email} 로 코드를 보냈어요 (스팸함도 확인)','{n}초','다시 보내기','네트워크 오류, 코드가 안 갔어요','“코드 보내기”를 누르고 6자리를 입력해요','그림 속 4글자를 입력해요','문제가 생겼어요',
+      '가입은 됐지만 로그인 실패','네트워크 오류','계정과 점수가 영구히 삭제돼요. 정말요?','확인을 위해 비밀번호를 입력:','계정을 삭제했어요. 놀아줘서 고마워요!','삭제 실패','네트워크 오류, 삭제 안 됨','자동 가로 모드를 지원하지 않아요. 폰을 돌려 주세요','점수 {n}','접속 {n}',
+      '지연 {n}ms'
+    ],
+    'ar': [
+      '🐍 ثعبان جماعي','سجّل → الردهة → أنشئ غرفة أو انضم إليها','تسجيل الدخول','إنشاء حساب','اسم المستخدم','كلمة المرور (4-32 حرفًا)','البريد الإلكتروني (مطلوب للتسجيل)','رمز من 6 أرقام','إرسال الرمز','اكتب الأحرف الأربعة في الصورة للتسجيل',
+      'الأحرف الأربعة في الصورة','صورة أخرى','صورة التحقق','⌨️ الكمبيوتر: الأسهم / WASD، المسافة للعودة','🍎 كُل لتنمو. الجدار أو نفسك أو ثعبان آخر = النهاية','ضيف','الأفضل {n}','تسجيل الخروج','حذف الحساب','🏠 الغرف',
+      'تحديث','➕ إنشاء غرفة','اسم الغرفة','كلمة المرور (اختياري)','أنشئ وانضم','🤖 فردي (ضد دوباو)','💬 دردشة الردهة','قل شيئًا...','👥 الأصدقاء','🌐 كل اللاعبين',
+      'ابحث عن لاعبين...','🏆 لوحة الصدارة','النقاط 0','متصل 0','الاستجابة -','دخول: ','بطيء','عادي','سريع','سريع جدًا',
+      'ادخل الغرفة','لقد مِت 💀','نقاط هذه الجولة:','عُد للحياة','👥 اللاعبون','مغادرة الغرفة','💬 دردشة الغرفة','دردشة (Enter للإرسال)','⚙️ الإعدادات','دردشة خاصة',
+      'إغلاق','رسالة (Enter للإرسال)','إرسال','كلمة مرور الغرفة:','اكتب اسم الغرفة أولًا','🔒 مقفلة','المضيف {name} · {n}/{max}','لا توجد غرف بعد. أنشئ واحدة!','🙋 {name} يريد أن يصبح صديقك','🤝 أنت و{name} صديقان الآن',
+      '💬 {name}: {text}','قبول','رفض','دردشة','تم الطلب','إضافة صديق','لا أصدقاء بعد. أضف واحدًا بالأسفل','لا يوجد لاعب بهذا الاسم','لا يوجد لاعبون آخرون بعد','تم إرسال الطلب',
+      'فشل الطلب','جارٍ التحميل…','فشل التحميل','لا رسائل بعد. قل مرحبًا!','أنا',' (أنت)','انقطع الاتصال، جارٍ إعادة الاتصال…','الغرفة ممتلئة','اكتب بريدك أولًا','يجب أن يكون البريد مثل abc@example.com',
+      'البريد مطلوب للتسجيل','جارٍ الإرسال…','تعذّر الإرسال','أُرسل الرمز إلى {email} (تحقق من المهملات)','{n} ث','إرسال مرة أخرى','خطأ بالشبكة، لم يُرسل الرمز','اضغط «إرسال الرمز» واكتب الأرقام الستة','اكتب الأحرف الأربعة من الصورة','حدث خطأ ما',
+      'تم التسجيل لكن الدخول فشل','خطأ بالشبكة','سيُحذف الحساب والنقاط نهائيًا. متأكد؟','اكتب كلمة المرور للتأكيد:','تم حذف الحساب. شكرًا للعب!','فشل الحذف','خطأ بالشبكة، لم يُحذف','التدوير التلقائي غير مدعوم، أدر الهاتف','النقاط {n}','متصل {n}',
+      'الاستجابة {n} مللي ثانية'
+    ],
+    'vi': [
+      '🐍 Rắn nhiều người chơi','Đăng ký → Sảnh → Tạo hoặc vào phòng','Đăng nhập','Đăng ký','Tên người dùng','Mật khẩu (4-32 ký tự)','Email (bắt buộc khi đăng ký)','Mã 6 chữ số','Gửi mã','Nhập 4 ký tự trong hình để đăng ký',
+      '4 ký tự trong hình','Ảnh khác','ảnh xác minh','⌨️ Máy tính: phím mũi tên / WASD, phím cách để hồi sinh','🍎 Ăn để dài ra. Tường, chính bạn hay rắn khác = kết thúc','Khách','Kỷ lục {n}','Đăng xuất','Xóa tài khoản','🏠 Phòng',
+      'Làm mới','➕ Tạo phòng','Tên phòng','Mật khẩu (không bắt buộc)','Tạo và vào','🤖 Một mình (đấu với Doubao)','💬 Chat sảnh','Nói gì đó...','👥 Bạn bè','🌐 Tất cả người chơi',
+      'Tìm người chơi...','🏆 Bảng xếp hạng','Điểm 0','Trực tuyến 0','Độ trễ -','Vào: ','Chậm','Thường','Nhanh','Siêu nhanh',
+      'Vào phòng','Bạn đã chết 💀','Điểm ván này:','Hồi sinh','👥 Người chơi','Rời phòng','💬 Chat phòng','Chat (Enter để gửi)','⚙️ Cài đặt','Chat riêng',
+      'Đóng','Tin nhắn (Enter để gửi)','Gửi','Mật khẩu phòng:','Nhập tên phòng trước','🔒 Có mật khẩu','Chủ phòng {name} · {n}/{max}','Chưa có phòng. Tạo một phòng đi!','🙋 {name} muốn kết bạn với bạn','🤝 Bạn và {name} đã là bạn bè',
+      '💬 {name}: {text}','Đồng ý','Từ chối','Chat','Đã gửi','Kết bạn','Chưa có bạn. Thêm một người bên dưới','Không tìm thấy người chơi đó','Chưa có người chơi khác','Đã gửi lời mời',
+      'Gửi lời mời thất bại','Đang tải…','Tải thất bại','Chưa có tin nhắn. Chào một câu đi!','Tôi',' (bạn)','Mất kết nối, đang kết nối lại…','Phòng đã đầy','Nhập email trước','Email phải giống abc@example.com',
+      'Cần email để đăng ký','Đang gửi…','Không gửi được','Đã gửi mã tới {email} (kiểm tra thư rác)','{n} giây','Gửi lại','Lỗi mạng, chưa gửi mã','Bấm “Gửi mã” rồi nhập 6 chữ số','Nhập 4 ký tự trong hình','Có gì đó không ổn',
+      'Đăng ký xong nhưng đăng nhập thất bại','Lỗi mạng','Tài khoản và điểm sẽ bị xóa vĩnh viễn. Chắc chưa?','Nhập mật khẩu để xác nhận:','Đã xóa tài khoản. Cảm ơn đã chơi!','Xóa thất bại','Lỗi mạng, chưa xóa','Không hỗ trợ tự xoay, hãy xoay điện thoại','Điểm {n}','Trực tuyến {n}',
+      'Độ trễ {n}ms'
+    ],
+    'da': [
+      '🐍 Multiplayer-slange','Tilmeld → Lobby → Opret eller join et rum','Log ind','Tilmeld','Brugernavn','Adgangskode (4-32 tegn)','E-mail (kræves ved tilmelding)','6-cifret kode','Send kode','Skriv de 4 tegn i billedet for at tilmelde dig',
+      '4 tegn i billedet','Nyt billede','bekræftelsesbillede','⌨️ Computer: pile / WASD, mellemrum = genopstå','🍎 Spis for at vokse. Væg, dig selv eller en anden slange = slut','Gæst','Rekord {n}','Log ud','Slet konto','🏠 Rum',
+      'Opdater','➕ Opret rum','Rumnavn','Adgangskode (valgfri)','Opret og join','🤖 Solo (mod Doubao)','💬 Lobbychat','Sig noget...','👥 Venner','🌐 Alle spillere',
+      'Søg spillere...','🏆 Rangliste','Point 0','Online 0','Ping -','Kom ind: ','Langsom','Normal','Hurtig','Turbo',
+      'Gå ind i rummet','Du døde 💀','Point i denne runde:','Genopstå','👥 Spillere','Forlad rummet','💬 Rumchat','Chat (Enter for at sende)','⚙️ Indstillinger','Privat chat',
+      'Luk','Besked (Enter for at sende)','Send','Rummets adgangskode:','Skriv først et rumnavn','🔒 Låst','Vært {name} · {n}/{max}','Ingen rum endnu. Opret et!','🙋 {name} vil være din ven','🤝 Du og {name} er nu venner',
+      '💬 {name}: {text}','Accepter','Afvis','Chat','Anmodet','Tilføj ven','Ingen venner endnu. Tilføj en nedenfor','Ingen spiller med det navn','Ingen andre spillere endnu','Anmodning sendt',
+      'Anmodning mislykkedes','Indlæser…','Indlæsning mislykkedes','Ingen beskeder endnu. Sig hej!','Mig',' (dig)','Forbindelse mistet, forbinder igen…','Rummet er fuldt','Skriv først din e-mail','E-mail skal se ud som abc@example.com',
+      'E-mail kræves for at tilmelde sig','Sender…','Kunne ikke sende','Kode sendt til {email} (tjek spam)','{n} s','Send igen','Netværksfejl, kode ikke sendt','Tryk på “Send kode” og skriv de 6 cifre','Skriv de 4 tegn fra billedet','Noget gik galt',
+      'Tilmelding lykkedes, login mislykkedes','Netværksfejl','Konto og point slettes for altid. Sikker?','Skriv adgangskode for at bekræfte:','Konto slettet. Tak for spillet!','Sletning mislykkedes','Netværksfejl, intet slettet','Auto-rotation understøttes ikke, drej telefonen','Point {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'el': [
+      '🐍 Φιδάκι για πολλούς','Εγγραφή → Λόμπι → Δημιούργησε ή μπες σε δωμάτιο','Σύνδεση','Εγγραφή','Όνομα χρήστη','Κωδικός (4-32 χαρακτήρες)','Email (απαιτείται για εγγραφή)','6ψήφιος κωδικός','Αποστολή κωδικού','Γράψε τους 4 χαρακτήρες της εικόνας για εγγραφή',
+      '4 χαρακτήρες στην εικόνα','Άλλη εικόνα','εικόνα επαλήθευσης','⌨️ Υπολογιστής: βελάκια / WASD, κενό για αναγέννηση','🍎 Φάε για να μεγαλώσεις. Τοίχος, εσύ ή άλλο φίδι = τέλος','Επισκέπτης','Ρεκόρ {n}','Αποσύνδεση','Διαγραφή λογαριασμού','🏠 Δωμάτια',
+      'Ανανέωση','➕ Δημιουργία δωματίου','Όνομα δωματίου','Κωδικός (προαιρετικός)','Δημιουργία και είσοδος','🤖 Μόνος (με Doubao)','💬 Συνομιλία λόμπι','Πες κάτι...','👥 Φίλοι','🌐 Όλοι οι παίκτες',
+      'Αναζήτηση παικτών...','🏆 Κατάταξη','Πόντοι 0','Σε σύνδεση 0','Καθυστέρηση -','Είσοδος: ','Αργά','Κανονικά','Γρήγορα','Πολύ γρήγορα',
+      'Μπες στο δωμάτιο','Πέθανες 💀','Πόντοι γύρου:','Αναγέννηση','👥 Παίκτες','Έξοδος από δωμάτιο','💬 Συνομιλία δωματίου','Συνομιλία (Enter για αποστολή)','⚙️ Ρυθμίσεις','Ιδιωτική συνομιλία',
+      'Κλείσιμο','Μήνυμα (Enter για αποστολή)','Αποστολή','Κωδικός δωματίου:','Γράψε πρώτα όνομα δωματίου','🔒 Κλειδωμένο','Οικοδεσπότης {name} · {n}/{max}','Δεν υπάρχουν δωμάτια. Φτιάξε ένα!','🙋 Ο/Η {name} θέλει να γίνει φίλος σου','🤝 Εσύ και ο/η {name} είστε φίλοι',
+      '💬 {name}: {text}','Αποδοχή','Απόρριψη','Συνομιλία','Ζητήθηκε','Προσθήκη φίλου','Δεν έχεις φίλους. Πρόσθεσε έναν παρακάτω','Δεν υπάρχει παίκτης με αυτό το όνομα','Δεν υπάρχουν άλλοι παίκτες','Το αίτημα στάλθηκε',
+      'Το αίτημα απέτυχε','Φόρτωση…','Η φόρτωση απέτυχε','Δεν υπάρχουν μηνύματα. Πες γεια!','Εγώ',' (εσύ)','Αποσυνδέθηκε, επανασύνδεση…','Το δωμάτιο είναι γεμάτο','Γράψε πρώτα το email σου','Το email πρέπει να είναι σαν abc@example.com',
+      'Χρειάζεται email για εγγραφή','Αποστολή…','Δεν στάλθηκε','Ο κωδικός στάλθηκε στο {email} (δες spam)','{n} δευτ.','Αποστολή ξανά','Σφάλμα δικτύου, δεν στάλθηκε','Πάτησε «Αποστολή κωδικού» και γράψε τα 6 ψηφία','Γράψε τους 4 χαρακτήρες της εικόνας','Κάτι πήγε στραβά',
+      'Η εγγραφή έγινε, η σύνδεση όχι','Σφάλμα δικτύου','Ο λογαριασμός και οι πόντοι θα διαγραφούν για πάντα. Σίγουρα;','Γράψε τον κωδικό για επιβεβαίωση:','Ο λογαριασμός διαγράφηκε. Ευχαριστούμε που έπαιξες!','Η διαγραφή απέτυχε','Σφάλμα δικτύου, δεν διαγράφηκε','Δεν υποστηρίζεται αυτόματη περιστροφή, γύρνα το κινητό','Πόντοι {n}','Σε σύνδεση {n}',
+      'Καθυστέρηση {n}ms'
+    ],
+    'tr': [
+      '🐍 Çok oyunculu yılan','Kayıt ol → Lobi → Oda oluştur veya katıl','Giriş','Kayıt ol','Kullanıcı adı','Şifre (4-32 karakter)','E-posta (kayıt için gerekli)','6 haneli kod','Kod gönder','Kayıt olmak için resimdeki 4 karakteri yaz',
+      'Resimdeki 4 karakter','Başka resim','doğrulama resmi','⌨️ Bilgisayar: oklar / WASD, boşluk = yeniden doğ','🍎 Yemek ye ve büyü. Duvar, kendin veya başka yılan = son','Misafir','Rekor {n}','Çıkış','Hesabı sil','🏠 Odalar',
+      'Yenile','➕ Oda oluştur','Oda adı','Şifre (isteğe bağlı)','Oluştur ve katıl','🤖 Tek kişi (Doubao’ya karşı)','💬 Lobi sohbeti','Bir şey söyle...','👥 Arkadaşlar','🌐 Tüm oyuncular',
+      'Oyuncu ara...','🏆 Sıralama','Puan 0','Çevrimiçi 0','Gecikme -','Giriş: ','Yavaş','Normal','Hızlı','Turbo',
+      'Odaya gir','Öldün 💀','Bu turun puanı:','Yeniden doğ','👥 Oyuncular','Odadan çık','💬 Oda sohbeti','Sohbet (Göndermek için Enter)','⚙️ Ayarlar','Özel sohbet',
+      'Kapat','Mesaj (Göndermek için Enter)','Gönder','Oda şifresi:','Önce oda adını yaz','🔒 Kilitli','Kurucu {name} · {n}/{max}','Henüz oda yok. Bir tane oluştur!','🙋 {name} arkadaşın olmak istiyor','🤝 Sen ve {name} artık arkadaşsınız',
+      '💬 {name}: {text}','Kabul et','Reddet','Sohbet','İstek gönderildi','Arkadaş ekle','Henüz arkadaş yok. Aşağıdan birini ekle','Bu isimde oyuncu yok','Henüz başka oyuncu yok','İstek gönderildi',
+      'İstek başarısız','Yükleniyor…','Yükleme başarısız','Henüz mesaj yok. Selam ver!','Ben',' (sen)','Bağlantı koptu, yeniden bağlanıyor…','Oda dolu','Önce e-postanı yaz','E-posta abc@example.com gibi olmalı',
+      'Kayıt için e-posta gerekli','Gönderiliyor…','Gönderilemedi','Kod {email} adresine gönderildi (spama bak)','{n} sn','Tekrar gönder','Ağ hatası, kod gönderilmedi','“Kod gönder”e bas ve 6 haneyi yaz','Resimdeki 4 karakteri yaz','Bir şeyler ters gitti',
+      'Kayıt oldu ama giriş başarısız','Ağ hatası','Hesap ve puanlar kalıcı olarak silinecek. Emin misin?','Onaylamak için şifreyi yaz:','Hesap silindi. Oynadığın için teşekkürler!','Silme başarısız','Ağ hatası, silinmedi','Otomatik döndürme desteklenmiyor, telefonu çevir','Puan {n}','Çevrimiçi {n}',
+      'Gecikme {n}ms'
+    ],
+    'no': [
+      '🐍 Flerspiller-slange','Registrer → Lobby → Lag eller bli med i et rom','Logg inn','Registrer','Brukernavn','Passord (4-32 tegn)','E-post (kreves for registrering)','6-sifret kode','Send kode','Skriv de 4 tegnene i bildet for å registrere deg',
+      '4 tegn i bildet','Nytt bilde','bekreftelsesbilde','⌨️ Datamaskin: piler / WASD, mellomrom = gjenoppstå','🍎 Spis for å vokse. Vegg, deg selv eller en annen slange = slutt','Gjest','Rekord {n}','Logg ut','Slett konto','🏠 Rom',
+      'Oppdater','➕ Lag rom','Romnavn','Passord (valgfritt)','Lag og bli med','🤖 Alene (mot Doubao)','💬 Lobbyprat','Si noe...','👥 Venner','🌐 Alle spillere',
+      'Søk spillere...','🏆 Rangliste','Poeng 0','Pålogget 0','Ping -','Bli med: ','Treg','Normal','Rask','Turbo',
+      'Gå inn i rommet','Du døde 💀','Poeng denne runden:','Gjenoppstå','👥 Spillere','Forlat rommet','💬 Romprat','Prat (Enter for å sende)','⚙️ Innstillinger','Privat prat',
+      'Lukk','Melding (Enter for å sende)','Send','Rompassord:','Skriv et romnavn først','🔒 Låst','Vert {name} · {n}/{max}','Ingen rom ennå. Lag ett!','🙋 {name} vil være vennen din','🤝 Du og {name} er venner nå',
+      '💬 {name}: {text}','Godta','Avslå','Prat','Forespurt','Legg til venn','Ingen venner ennå. Legg til en nedenfor','Ingen spiller med det navnet','Ingen andre spillere ennå','Forespørsel sendt',
+      'Forespørsel feilet','Laster…','Lasting feilet','Ingen meldinger ennå. Si hei!','Meg',' (deg)','Frakoblet, kobler til igjen…','Rommet er fullt','Skriv e-posten din først','E-post må se ut som abc@example.com',
+      'E-post kreves for registrering','Sender…','Kunne ikke sende','Kode sendt til {email} (sjekk spam)','{n} s','Send igjen','Nettverksfeil, kode ikke sendt','Trykk «Send kode» og skriv de 6 sifrene','Skriv de 4 tegnene fra bildet','Noe gikk galt',
+      'Registrering ok, innlogging feilet','Nettverksfeil','Konto og poeng slettes for alltid. Sikker?','Skriv passord for å bekrefte:','Konto slettet. Takk for spillet!','Sletting feilet','Nettverksfeil, ikke slettet','Auto-rotasjon støttes ikke, snu telefonen','Poeng {n}','Pålogget {n}',
+      'Ping {n} ms'
+    ],
+    'ro': [
+      '🐍 Șarpe multiplayer','Înregistrează-te → Lobby → Creează sau intră într-o cameră','Conectare','Înregistrare','Nume de utilizator','Parolă (4-32 caractere)','Email (obligatoriu la înregistrare)','Cod din 6 cifre','Trimite codul','Scrie cele 4 caractere din imagine ca să te înregistrezi',
+      '4 caractere din imagine','Altă imagine','imagine de verificare','⌨️ Calculator: săgeți / WASD, spațiu = renaștere','🍎 Mănâncă să crești. Perete, tu sau alt șarpe = sfârșit','Oaspete','Record {n}','Deconectare','Șterge contul','🏠 Camere',
+      'Reîncarcă','➕ Creează cameră','Numele camerei','Parolă (opțional)','Creează și intră','🤖 Singur (contra Doubao)','💬 Chat lobby','Spune ceva...','👥 Prieteni','🌐 Toți jucătorii',
+      'Caută jucători...','🏆 Clasament','Puncte 0','Online 0','Ping -','Intră: ','Lent','Normal','Rapid','Turbo',
+      'Intră în cameră','Ai murit 💀','Puncte runda asta:','Renaște','👥 Jucători','Ieși din cameră','💬 Chat cameră','Chat (Enter pentru trimitere)','⚙️ Setări','Chat privat',
+      'Închide','Mesaj (Enter pentru trimitere)','Trimite','Parola camerei:','Scrie mai întâi numele camerei','🔒 Cu parolă','Gazdă {name} · {n}/{max}','Încă nicio cameră. Creează una!','🙋 {name} vrea să-ți fie prieten','🤝 Tu și {name} sunteți prieteni acum',
+      '💬 {name}: {text}','Acceptă','Refuză','Chat','Trimis','Adaugă prieten','Încă niciun prieten. Adaugă unul mai jos','Nu există jucător cu acest nume','Încă niciun alt jucător','Cerere trimisă',
+      'Cererea a eșuat','Se încarcă…','Încărcarea a eșuat','Încă niciun mesaj. Salută!','Eu',' (tu)','Deconectat, se reconectează…','Camera este plină','Scrie mai întâi emailul','Emailul trebuie să fie ca abc@example.com',
+      'Emailul e necesar la înregistrare','Se trimite…','Nu s-a putut trimite','Cod trimis la {email} (verifică spam)','{n} s','Trimite din nou','Eroare de rețea, codul nu a fost trimis','Apasă „Trimite codul” și scrie cele 6 cifre','Scrie cele 4 caractere din imagine','Ceva a mers greșit',
+      'Înregistrare reușită, dar conectarea a eșuat','Eroare de rețea','Contul și punctele vor fi șterse definitiv. Sigur?','Scrie parola pentru confirmare:','Cont șters. Mulțumim că ai jucat!','Ștergerea a eșuat','Eroare de rețea, nu s-a șters','Rotirea automată nu e acceptată, rotește telefonul','Puncte {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'ka': [
+      '🐍 მრავალმოთამაშიანი გველი','რეგისტრაცია → ლობი → შექმენი ან შეუერთდი ოთახს','შესვლა','რეგისტრაცია','მომხმარებლის სახელი','პაროლი (4-32 სიმბოლო)','ელფოსტა (საჭიროა რეგისტრაციისთვის)','6-ნიშნა კოდი','კოდის გაგზავნა','ჩაწერე სურათის 4 სიმბოლო რეგისტრაციისთვის',
+      '4 სიმბოლო სურათზე','სხვა სურათი','ვერიფიკაციის სურათი','⌨️ კომპიუტერი: ისრები / WASD, space = აღდგომა','🍎 ჭამე და გაიზარდე. კედელი, შენ თვითონ ან სხვა გველი = დასასრული','სტუმარი','რეკორდი {n}','გასვლა','ანგარიშის წაშლა','🏠 ოთახები',
+      'განახლება','➕ ოთახის შექმნა','ოთახის სახელი','პაროლი (არასავალდებულო)','შექმნა და შესვლა','🤖 მარტო (დუბაოს წინააღმდეგ)','💬 ლობის ჩატი','თქვი რამე...','👥 მეგობრები','🌐 ყველა მოთამაშე',
+      'მოთამაშეების ძებნა...','🏆 რეიტინგი','ქულები 0','ონლაინ 0','პინგი -','შესვლა: ','ნელა','ჩვეულებრივი','სწრაფად','ძალიან სწრაფად',
+      'ოთახში შესვლა','მოკვდი 💀','ამ რაუნდის ქულები:','აღდგომა','👥 მოთამაშეები','ოთახიდან გასვლა','💬 ოთახის ჩატი','ჩატი (Enter გაგზავნა)','⚙️ პარამეტრები','პირადი ჩატი',
+      'დახურვა','შეტყობინება (Enter გაგზავნა)','გაგზავნა','ოთახის პაროლი:','ჯერ ოთახის სახელი ჩაწერე','🔒 ჩაკეტილი','მასპინძელი {name} · {n}/{max}','ჯერ არცერთი ოთახი. შექმენი ერთი!','🙋 {name} შენი მეგობარი უნდა იყოს','🤝 შენ და {name} ახლა მეგობრები ხართ',
+      '💬 {name}: {text}','მიღება','უარი','ჩატი','გაგზავნილია','მეგობრის დამატება','ჯერ მეგობრები არ გყავს. დაამატე ქვემოთ','ასეთი სახელის მოთამაშე არ არის','ჯერ სხვა მოთამაშეები არ არიან','მოთხოვნა გაგზავნილია',
+      'მოთხოვნა ვერ გაიგზავნა','იტვირთება…','ჩატვირთვა ვერ მოხდა','ჯერ შეტყობინებები არ არის. მიესალმე!','მე',' (შენ)','კავშირი გაწყდა, ხელახლა ვუკავშირდები…','ოთახი სავსეა','ჯერ ელფოსტა ჩაწერე','ელფოსტა უნდა იყოს როგორც abc@example.com',
+      'რეგისტრაციისთვის ელფოსტა საჭიროა','იგზავნება…','ვერ გაიგზავნა','კოდი გაიგზავნა {email}-ზე (შეამოწმე სპამი)','{n} წმ','ხელახლა გაგზავნა','ქსელის შეცდომა, კოდი არ გაიგზავნა','დააჭირე „კოდის გაგზავნა“ და ჩაწერე 6 ციფრი','ჩაწერე სურათის 4 სიმბოლო','რაღაც არასწორად წავიდა',
+      'რეგისტრაცია შესრულდა, შესვლა ვერ მოხდა','ქსელის შეცდომა','ანგარიში და ქულები სამუდამოდ წაიშლება. დარწმუნებული ხარ?','დასადასტურებლად ჩაწერე პაროლი:','ანგარიში წაშლილია. მადლობა თამაშისთვის!','წაშლა ვერ მოხდა','ქსელის შეცდომა, არ წაიშალა','ავტომატური ბრუნვა არ არის მხარდაჭერილი, მოატრიალე ტელეფონი','ქულები {n}','ონლაინ {n}',
+      'პინგი {n}მმ'
+    ],
+    'af': [
+      '🐍 Multiplayer-slang','Registreer → Lobby → Skep of sluit by ’n kamer aan','Teken in','Registreer','Gebruikersnaam','Wagwoord (4-32 karakters)','E-pos (nodig om te registreer)','6-syferkode','Stuur kode','Tik die 4 karakters in die prent om te registreer',
+      '4 karakters in die prent','Nuwe prent','verifikasieprent','⌨️ Rekenaar: pyle / WASD, spasie = herleef','🍎 Eet om te groei. Muur, jy self of ’n ander slang = einde','Gas','Rekord {n}','Teken uit','Vee rekening uit','🏠 Kamers',
+      'Verfris','➕ Skep kamer','Kamernaam','Wagwoord (opsioneel)','Skep en sluit aan','🤖 Alleen (teen Doubao)','💬 Lobbygesprek','Sê iets...','👥 Vriende','🌐 Alle spelers',
+      'Soek spelers...','🏆 Ranglys','Punte 0','Aanlyn 0','Ping -','Betree: ','Stadig','Normaal','Vinnig','Turbo',
+      'Gaan kamer in','Jy het gesterf 💀','Punte hierdie ronde:','Herleef','👥 Spelers','Verlaat kamer','💬 Kamergesprek','Gesprek (Enter om te stuur)','⚙️ Instellings','Privaat gesprek',
+      'Maak toe','Boodskap (Enter om te stuur)','Stuur','Kamerwagwoord:','Tik eers ’n kamernaam','🔒 Gesluit','Gasheer {name} · {n}/{max}','Nog geen kamers. Skep een!','🙋 {name} wil jou vriend wees','🤝 Jy en {name} is nou vriende',
+      '💬 {name}: {text}','Aanvaar','Weier','Gesprek','Aangevra','Voeg vriend by','Nog geen vriende. Voeg een hieronder by','Geen speler met daardie naam nie','Nog geen ander spelers nie','Versoek gestuur',
+      'Versoek misluk','Laai…','Laai misluk','Nog geen boodskappe. Sê hallo!','Ek',' (jy)','Verbinding verloor, herverbind…','Kamer is vol','Tik eers jou e-pos','E-pos moet soos abc@example.com lyk',
+      'E-pos is nodig om te registreer','Stuur…','Kon nie stuur nie','Kode gestuur na {email} (kyk gemorspos)','{n} s','Stuur weer','Netwerkfout, kode nie gestuur nie','Druk “Stuur kode” en tik die 6 syfers','Tik die 4 karakters uit die prent','Iets het verkeerd gegaan',
+      'Registrasie reg, maar inteken misluk','Netwerkfout','Rekening en punte word vir altyd uitgevee. Seker?','Tik wagwoord om te bevestig:','Rekening uitgevee. Dankie vir speel!','Uitvee misluk','Netwerkfout, niks uitgevee nie','Outo-draai nie ondersteun nie, draai jou foon','Punte {n}','Aanlyn {n}',
+      'Ping {n} ms'
+    ],
+    'sq': [
+      '🐍 Gjarpri shumëlojtarësh','Regjistrohu → Lobi → Krijo ose hyr në dhomë','Hyr','Regjistrohu','Emri i përdoruesit','Fjalëkalimi (4-32 karaktere)','Email (i detyrueshëm për regjistrim)','Kod 6-shifror','Dërgo kodin','Shkruaj 4 karakteret në foto për t’u regjistruar',
+      '4 karakteret në foto','Foto tjetër','foto verifikimi','⌨️ Kompjuter: shigjetat / WASD, hapësira = ringjallje','🍎 Ha ushqim për t’u rritur. Muri, ti vetë ose gjarpër tjetër = fund','Mysafir','Rekordi {n}','Dil','Fshi llogarinë','🏠 Dhomat',
+      'Rifresko','➕ Krijo dhomë','Emri i dhomës','Fjalëkalimi (opsional)','Krijo dhe hyr','🤖 Vetëm (kundër Doubao)','💬 Biseda e lobit','Thuaj diçka...','👥 Miqtë','🌐 Të gjithë lojtarët',
+      'Kërko lojtarë...','🏆 Renditja','Pikët 0','Online 0','Ping -','Hyr: ','Ngadalë','Normal','Shpejt','Turbo',
+      'Hyr në dhomë','Ke vdekur 💀','Pikët e këtij raundi:','Ringjallu','👥 Lojtarët','Dil nga dhoma','💬 Biseda e dhomës','Bisedë (Enter për të dërguar)','⚙️ Cilësimet','Bisedë private',
+      'Mbyll','Mesazh (Enter për të dërguar)','Dërgo','Fjalëkalimi i dhomës:','Shkruaj fillimisht emrin e dhomës','🔒 Me fjalëkalim','Pritësi {name} · {n}/{max}','Nuk ka dhoma. Krijo një!','🙋 {name} dëshiron të jetë miku yt','🤝 Ti dhe {name} jeni miq tani',
+      '💬 {name}: {text}','Prano','Refuzo','Bisedë','Kërkuar','Shto mik','Nuk ke miq. Shto një më poshtë','Nuk ka lojtar me atë emër','Nuk ka lojtarë të tjerë','Kërkesa u dërgua',
+      'Kërkesa dështoi','Duke u ngarkuar…','Ngarkimi dështoi','Nuk ka mesazhe. Përshëndet!','Unë',' (ti)','U shkëput, po rilidhet…','Dhoma është plot','Shkruaj emailin më parë','Emaili duhet si abc@example.com',
+      'Emaili kërkohet për regjistrim','Duke dërguar…','Nuk u dërgua','Kodi u dërgua në {email} (kontrollo spam)','{n} s','Dërgo përsëri','Gabim rrjeti, kodi nuk u dërgua','Shtyp “Dërgo kodin” dhe shkruaj 6 shifrat','Shkruaj 4 karakteret e fotos','Diçka shkoi keq',
+      'Regjistrimi u krye, hyrja dështoi','Gabim rrjeti','Llogaria dhe pikët do të fshihen përgjithmonë. Je i sigurt?','Shkruaj fjalëkalimin për konfirmim:','Llogaria u fshi. Faleminderit që luajte!','Fshirja dështoi','Gabim rrjeti, nuk u fshi','Rrotullimi automatik nuk mbështetet, rrotullo telefonin','Pikët {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'am': [
+      '🐍 ባለብዙ ተጫዋች እባብ','ይመዝገቡ → ሎቢ → ክፍል ይፍጠሩ ወይም ይቀላቀሉ','ግባ','ይመዝገቡ','የተጠቃሚ ስም','የይለፍ ቃል (4-32 ፊደሎች)','ኢሜይል (ለምዝገባ ያስፈልጋል)','ባለ6 አሃዝ ኮድ','ኮድ ላክ','ለመመዝገብ በምስሉ ያሉትን 4 ፊደሎች ይጻፉ',
+      'በምስሉ ያሉ 4 ፊደሎች','ሌላ ምስል','የማረጋገጫ ምስል','⌨️ ኮምፒውተር፦ ቀስቶች / WASD፣ ስፔስ = እንደገና መኖር','🍎 ለማደግ ይብሉ። ግድግዳ፣ እራስዎ ወይም ሌላ እባብ = መጨረሻ','እንግዳ','ከፍተኛ {n}','ውጣ','መለያ ሰርዝ','🏠 ክፍሎች',
+      'አድስ','➕ ክፍል ፍጠር','የክፍሉ ስም','የይለፍ ቃል (አማራጭ)','ፍጠር እና ተቀላቀል','🤖 ብቻዬን (ከዱባኦ ጋር)','💬 የሎቢ ውይይት','የሆነ ተናገር...','👥 ጓደኞች','🌐 ሁሉም ተጫዋቾች',
+      'ተጫዋቾችን ፈልግ...','🏆 ደረጃ ሰንጠረዥ','ነጥብ 0','በመስመር 0','ፒንግ -','ግባ፦ ','ቀስ','መደበኛ','ፈጣን','በጣም ፈጣን',
+      'ክፍል ግባ','ሞተሃል 💀','የዚህ ዙር ነጥብ፦','እንደገና ተነሳ','👥 ተጫዋቾች','ክፍሉን ልቀቅ','💬 የክፍል ውይይት','ውይይት (Enter ለመላክ)','⚙️ ቅንብሮች','የግል ውይይት',
+      'ዝጋ','መልእክት (Enter ለመላክ)','ላክ','የክፍል የይለፍ ቃል፦','መጀመሪያ የክፍል ስም ይጻፉ','🔒 ተቆልፏል','አስተናጋጅ {name} · {n}/{max}','እስካሁን ክፍል የለም። አንዱን ፍጠር!','🙋 {name} ጓደኛዎ መሆን ይፈልጋል','🤝 አንተና {name} አሁን ጓደኞች ናችሁ',
+      '💬 {name}: {text}','ተቀበል','አትቀበል','ውይይት','ተጠይቋል','ጓደኛ ጨምር','እስካሁን ጓደኛ የለም። ከታች አንዱን ጨምር','በዚህ ስም ተጫዋች የለም','እስካሁን ሌሎች ተጫዋቾች የሉም','ጥያቄ ተልኳል',
+      'ጥያቄ አልተሳካም','በመጫን ላይ…','መጫን አልተሳካም','እስካሁን መልእክት የለም። ሰላም በል!','እኔ',' (አንተ)','ግንኙነት ተቋርጧል፣ በድጋሚ በመገናኘት ላይ…','ክፍሉ ሙሉ ነው','መጀመሪያ ኢሜይልዎን ይጻፉ','ኢሜይል እንደ abc@example.com መሆን አለበት',
+      'ለመመዝገብ ኢሜይል ያስፈልጋል','በመላክ ላይ…','መላክ አልተቻለም','ኮድ ወደ {email} ተልኳል (ስፓምን ተመልከት)','{n} ሰከንድ','እንደገና ላክ','የኔትወርክ ስህተት፣ ኮድ አልተላከም','“ኮድ ላክ” ን ተጭነህ 6 አሃዞችን ጻፍ','በምስሉ ያሉትን 4 ፊደሎች ጻፍ','የሆነ ችግር ተፈጥሯል',
+      'ተመዝግበዋል ግን መግባት አልተሳካም','የኔትወርክ ስህተት','መለያውና ነጥቦቹ ለዘላለም ይሰረዛሉ። እርግጠኛ ነህ?','ለማረጋገጥ የይለፍ ቃል ጻፍ፦','መለያ ተሰርዟል። ስለተጫወትክ አመሰግናለሁ!','መሰረዝ አልተሳካም','የኔትወርክ ስህተት፣ አልተሰረዘም','ራስሰር ማሽከርከር አይደገፍም፣ ስልኩን አዙር','ነጥብ {n}','በመስመር {n}',
+      'ፒንግ {n} ሚሴ'
+    ],
+    'az': [
+      '🐍 Çoxoyunçulu ilan','Qeydiyyat → Lobi → Otaq yarat və ya qoşul','Daxil ol','Qeydiyyat','İstifadəçi adı','Şifrə (4-32 simvol)','E-poçt (qeydiyyat üçün lazımdır)','6 rəqəmli kod','Kodu göndər','Qeydiyyat üçün şəkildəki 4 simvolu yaz',
+      'Şəkildəki 4 simvol','Başqa şəkil','təsdiq şəkli','⌨️ Kompüter: oxlar / WASD, boşluq = yenidən doğul','🍎 Yemək ye və böyü. Divar, özün və ya başqa ilan = son','Qonaq','Rekord {n}','Çıxış','Hesabı sil','🏠 Otaqlar',
+      'Yenilə','➕ Otaq yarat','Otağın adı','Şifrə (istəyə bağlı)','Yarat və qoşul','🤖 Tək (Doubao ilə)','💬 Lobi söhbəti','Nəsə de...','👥 Dostlar','🌐 Bütün oyunçular',
+      'Oyunçu axtar...','🏆 Liderlər lövhəsi','Xal 0','Onlayn 0','Ping -','Daxil ol: ','Yavaş','Normal','Sürətli','Turbo',
+      'Otağa gir','Öldün 💀','Bu raundun xalı:','Yenidən doğul','👥 Oyunçular','Otaqdan çıx','💬 Otaq söhbəti','Söhbət (Göndərmək üçün Enter)','⚙️ Ayarlar','Şəxsi söhbət',
+      'Bağla','Mesaj (Göndərmək üçün Enter)','Göndər','Otaq şifrəsi:','Əvvəlcə otaq adı yaz','🔒 Kilidli','Ev sahibi {name} · {n}/{max}','Hələ otaq yoxdur. Birini yarat!','🙋 {name} dostun olmaq istəyir','🤝 Sən və {name} artıq dostsunuz',
+      '💬 {name}: {text}','Qəbul et','Rədd et','Söhbət','Sorğu göndərildi','Dost əlavə et','Hələ dostun yoxdur. Aşağıdan birini əlavə et','Bu adda oyunçu yoxdur','Hələ başqa oyunçu yoxdur','Sorğu göndərildi',
+      'Sorğu alınmadı','Yüklənir…','Yükləmə alınmadı','Hələ mesaj yoxdur. Salam de!','Mən',' (sən)','Əlaqə kəsildi, yenidən qoşuluram…','Otaq doludur','Əvvəlcə e-poçtunu yaz','E-poçt abc@example.com kimi olmalıdır',
+      'Qeydiyyat üçün e-poçt lazımdır','Göndərilir…','Göndərilə bilmədi','Kod {email} ünvanına göndərildi (spama bax)','{n} san','Yenidən göndər','Şəbəkə xətası, kod göndərilmədi','“Kodu göndər” düyməsini bas və 6 rəqəmi yaz','Şəkildəki 4 simvolu yaz','Nəsə səhv getdi',
+      'Qeydiyyat oldu, giriş alınmadı','Şəbəkə xətası','Hesab və xallar birdəfəlik silinəcək. Əminsən?','Təsdiq üçün şifrəni yaz:','Hesab silindi. Oynadığın üçün təşəkkürlər!','Silinmə alınmadı','Şəbəkə xətası, silinmədi','Avtomatik fırlanma dəstəklənmir, telefonu çevir','Xal {n}','Onlayn {n}',
+      'Ping {n} ms'
+    ],
+    'be': [
+      '🐍 Шматкарыстальніцкая змейка','Рэгістрацыя → Лобі → Ствары або далучыся да пакоя','Увайсці','Рэгістрацыя','Імя карыстальніка','Пароль (4-32 сімвалы)','Пошта (патрэбна для рэгістрацыі)','Код з 6 лічбаў','Адправіць код','Увядзі 4 сімвалы з карцінкі, каб зарэгістравацца',
+      '4 сімвалы з карцінкі','Іншая карцінка','карцінка-капча','⌨️ Камп’ютар: стрэлкі / WASD, прабел — адраджэнне','🍎 Еш ежу, каб расці. Сцяна, ты сам або іншая змейка = канец','Госць','Рэкорд {n}','Выйсці','Выдаліць акаўнт','🏠 Пакой',
+      'Абнавіць','➕ Стварыць пакой','Назва пакоя','Пароль (неабавязкова)','Стварыць і ўвайсці','🤖 Адзін (супраць Дубао)','💬 Чат лобі','Напішы што-небудзь...','👥 Сябры','🌐 Усе гульцы',
+      'Пошук гульцоў...','🏆 Рэйтынг','Ачкі 0','Анлайн 0','Пінг -','Уваход: ','Павольна','Звычайна','Хутка','Вельмі хутка',
+      'Увайсці ў пакой','Ты загінуў 💀','Ачкі за гульню:','Адрадзіцца','👥 Гульцы','Выйсці з пакоя','💬 Чат пакоя','Чат (Enter — адправіць)','⚙️ Налады','Асабісты чат',
+      'Закрыць','Паведамленне (Enter — адправіць)','Адправіць','Пароль пакоя:','Спачатку ўвядзі назву пакоя','🔒 З паролем','Гаспадар {name} · {n}/{max}','Пакояў пакуль няма. Ствары адзін!','🙋 {name} хоча дадаць цябе ў сябры','🤝 Цяпер вы з {name} сябры',
+      '💬 {name}: {text}','Прыняць','Адхіліць','Чат','Запыт адпраўлены','Дадаць сябра','Сяброў пакуль няма. Дадай кагосьці ніжэй','Гульца з такім імем не знойдзена','Іншых гульцоў пакуль няма','Запыт адпраўлены',
+      'Запыт не ўдаўся','Загрузка…','Не ўдалося загрузіць','Паведамленняў пакуль няма. Павітайся!','Я',' (ты)','Сувязь страчана, падключаемся…','Пакой запоўнены','Спачатку ўвядзі пошту','Пошта павінна быць як abc@example.com',
+      'Для рэгістрацыі патрэбна пошта','Адпраўляем…','Не ўдалося адправіць','Код адпраўлены на {email} (правер спам)','{n} с','Адправіць зноў','Памылка сеткі, код не адпраўлены','Націсні «Адправіць код» і ўвядзі 6 лічбаў','Увядзі 4 сімвалы з карцінкі','Нешта пайшло не так',
+      'Рэгістрацыя прайшла, але ўваход не ўдаўся','Памылка сеткі','Акаўнт і рэкорды выдаляцца назаўсёды. Дакладна?','Увядзі пароль для пацверджання:','Акаўнт выдалены. Дзякуй за гульню!','Не ўдалося выдаліць','Памылка сеткі, не выдалена','Аўтапаварот не падтрымліваецца, павярні тэлефон','Ачкі {n}','Анлайн {n}',
+      'Пінг {n} мс'
+    ],
+    'bn': [
+      '🐍 মাল্টিপ্লেয়ার সাপ','সাইন আপ → লবি → রুম বানাও বা যোগ দাও','লগ ইন','সাইন আপ','ইউজারনেম','পাসওয়ার্ড (৪-৩২ অক্ষর)','ইমেল (সাইন আপে দরকার)','৬ সংখ্যার কোড','কোড পাঠাও','সাইন আপ করতে ছবির ৪টি অক্ষর লেখো',
+      'ছবির ৪টি অক্ষর','অন্য ছবি','যাচাইয়ের ছবি','⌨️ কম্পিউটার: তীর / WASD, স্পেস = আবার জন্ম','🍎 খাও এবং বড় হও। দেয়াল, নিজে বা অন্য সাপ = শেষ','অতিথি','সেরা {n}','লগ আউট','অ্যাকাউন্ট মুছো','🏠 রুম',
+      'রিফ্রেশ','➕ রুম বানাও','রুমের নাম','পাসওয়ার্ড (ঐচ্ছিক)','বানাও ও যোগ দাও','🤖 একা (দোবাওয়ের সাথে)','💬 লবি চ্যাট','কিছু বলো...','👥 বন্ধু','🌐 সব খেলোয়াড়',
+      'খেলোয়াড় খোঁজো...','🏆 লিডারবোর্ড','স্কোর ০','অনলাইন ০','পিং -','প্রবেশ: ','ধীর','স্বাভাবিক','দ্রুত','খুব দ্রুত',
+      'রুমে ঢুকো','তুমি মরে গেছো 💀','এই রাউন্ডের স্কোর:','আবার জন্ম','👥 খেলোয়াড়','রুম ছাড়ো','💬 রুম চ্যাট','চ্যাট (Enter পাঠাতে)','⚙️ সেটিংস','ব্যক্তিগত চ্যাট',
+      'বন্ধ','বার্তা (Enter পাঠাতে)','পাঠাও','রুমের পাসওয়ার্ড:','আগে রুমের নাম লেখো','🔒 লক করা','হোস্ট {name} · {n}/{max}','এখনো রুম নেই। একটা বানাও!','🙋 {name} তোমার বন্ধু হতে চায়','🤝 তুমি আর {name} এখন বন্ধু',
+      '💬 {name}: {text}','গ্রহণ','প্রত্যাখ্যান','চ্যাট','অনুরোধ পাঠানো','বন্ধু যোগ করো','এখনো বন্ধু নেই। নিচে একজনকে যোগ করো','এই নামে কোনো খেলোয়াড় নেই','এখনো অন্য খেলোয়াড় নেই','অনুরোধ পাঠানো হয়েছে',
+      'অনুরোধ ব্যর্থ','লোড হচ্ছে…','লোড ব্যর্থ','এখনো কোনো বার্তা নেই। হাই বলো!','আমি',' (তুমি)','সংযোগ কেটে গেছে, আবার যুক্ত হচ্ছে…','রুম ভরা','আগে ইমেল লেখো','ইমেল abc@example.com এর মতো হতে হবে',
+      'সাইন আপে ইমেল দরকার','পাঠানো হচ্ছে…','পাঠানো যায়নি','{email} এ কোড পাঠানো হয়েছে (স্প্যাম দেখো)','{n} সেকেন্ড','আবার পাঠাও','নেটওয়ার্ক সমস্যা, কোড পাঠানো হয়নি','“কোড পাঠাও” চেপে ৬টি সংখ্যা লেখো','ছবির ৪টি অক্ষর লেখো','কিছু ভুল হয়েছে',
+      'সাইন আপ হয়েছে, লগ ইন ব্যর্থ','নেটওয়ার্ক সমস্যা','অ্যাকাউন্ট ও স্কোর চিরতরে মুছে যাবে। নিশ্চিত?','নিশ্চিত করতে পাসওয়ার্ড লেখো:','অ্যাকাউন্ট মুছে গেছে। খেলার জন্য ধন্যবাদ!','মোছা ব্যর্থ','নেটওয়ার্ক সমস্যা, মোছা হয়নি','অটো-ঘোরানো সমর্থিত নয়, ফোন ঘোরাও','স্কোর {n}','অনলাইন {n}',
+      'পিং {n}ms'
+    ],
+    'bs': [
+      '🐍 Višeigračka zmija','Registruj se → Lobby → Napravi ili se pridruži sobi','Prijava','Registracija','Korisničko ime','Lozinka (4-32 znaka)','Email (obavezan za registraciju)','Šestocifreni kod','Pošalji kod','Upiši 4 znaka sa slike da se registruješ',
+      '4 znaka sa slike','Druga slika','slika za provjeru','⌨️ Računar: strelice / WASD, razmak = oživljavanje','🍎 Jedi da rasteš. Zid, ti ili druga zmija = kraj','Gost','Rekord {n}','Odjava','Izbriši račun','🏠 Sobe',
+      'Osvježi','➕ Napravi sobu','Naziv sobe','Lozinka (opcionalno)','Napravi i pridruži se','🤖 Sam (protiv Doubaoa)','💬 Chat u lobbyju','Reci nešto...','👥 Prijatelji','🌐 Svi igrači',
+      'Traži igrače...','🏆 Rang lista','Bodovi 0','Online 0','Ping -','Ulaz: ','Sporo','Normalno','Brzo','Turbo',
+      'Uđi u sobu','Umro si 💀','Bodovi ove runde:','Oživi','👥 Igrači','Napusti sobu','💬 Chat sobe','Chat (Enter za slanje)','⚙️ Postavke','Privatni chat',
+      'Zatvori','Poruka (Enter za slanje)','Pošalji','Lozinka sobe:','Prvo upiši naziv sobe','🔒 Sa lozinkom','Domaćin {name} · {n}/{max}','Još nema soba. Napravi jednu!','🙋 {name} želi biti tvoj prijatelj','🤝 Ti i {name} ste sada prijatelji',
+      '💬 {name}: {text}','Prihvati','Odbij','Chat','Poslano','Dodaj prijatelja','Još nemaš prijatelja. Dodaj nekoga ispod','Nema igrača s tim imenom','Još nema drugih igrača','Zahtjev poslan',
+      'Zahtjev nije uspio','Učitavanje…','Učitavanje nije uspjelo','Još nema poruka. Reci zdravo!','Ja',' (ti)','Veza prekinuta, ponovno povezivanje…','Soba je puna','Prvo upiši svoj email','Email treba izgledati kao abc@example.com',
+      'Email je potreban za registraciju','Šaljem…','Slanje nije uspjelo','Kod poslan na {email} (provjeri spam)','{n} s','Pošalji ponovo','Mrežna greška, kod nije poslan','Klikni „Pošalji kod“ pa upiši 6 cifara','Upiši 4 znaka sa slike','Nešto je pošlo po zlu',
+      'Registracija uspjela, prijava nije','Mrežna greška','Račun i bodovi bit će trajno izbrisani. Sigurno?','Upiši lozinku za potvrdu:','Račun izbrisan. Hvala što si igrao!','Brisanje nije uspjelo','Mrežna greška, nije izbrisano','Automatsko rotiranje nije podržano, okreni telefon','Bodovi {n}','Online {n}',
+      'Ping {n} ms'
+    ],
+    'bg': [
+      '🐍 Многопотребителска змия','Регистрация → Лоби → Създай или влез в стая','Вход','Регистрация','Потребителско име','Парола (4-32 знака)','Имейл (нужен за регистрация)','6-цифрен код','Изпрати код','Въведи 4 символа от картинката, за да се регистрираш',
+      '4 символа от картинката','Друга картинка','картинка за проверка','⌨️ Компютър: стрелки / WASD, интервал = прераждане','🍎 Яж, за да растеш. Стена, ти или друга змия = край','Гост','Рекорд {n}','Изход','Изтрий профил','🏠 Стаи',
+      'Обнови','➕ Създай стая','Име на стаята','Парола (по избор)','Създай и влез','🤖 Сам (срещу Doubao)','💬 Чат в лобито','Кажи нещо...','👥 Приятели','🌐 Всички играчи',
+      'Търси играчи...','🏆 Класация','Точки 0','Онлайн 0','Пинг -','Вход: ','Бавно','Нормално','Бързо','Турбо',
+      'Влез в стаята','Умря 💀','Точки от този рунд:','Прероди се','👥 Играчи','Излез от стаята','💬 Чат на стаята','Чат (Enter за изпращане)','⚙️ Настройки','Личен чат',
+      'Затвори','Съобщение (Enter за изпращане)','Изпрати','Парола на стаята:','Първо въведи име на стая','🔒 Заключена','Домакин {name} · {n}/{max}','Още няма стаи. Създай една!','🙋 {name} иска да ти е приятел','🤝 Ти и {name} вече сте приятели',
+      '💬 {name}: {text}','Приеми','Откажи','Чат','Изпратено','Добави приятел','Още нямаш приятели. Добави някого отдолу','Няма играч с това име','Още няма други играчи','Заявката е изпратена',
+      'Заявката не успя','Зареждане…','Зареждането не успя','Още няма съобщения. Поздрави!','Аз',' (ти)','Връзката прекъсна, свързваме отново…','Стаята е пълна','Първо въведи имейла си','Имейлът трябва да е като abc@example.com',
+      'За регистрация е нужен имейл','Изпращаме…','Неуспешно изпращане','Кодът е изпратен на {email} (провери спам)','{n} сек','Изпрати отново','Мрежова грешка, кодът не е изпратен','Натисни „Изпрати код“ и въведи 6-те цифри','Въведи 4-те символа от картинката','Нещо се обърка',
+      'Регистрацията мина, но входът не','Мрежова грешка','Профилът и точките ще бъдат изтрити завинаги. Сигурен ли си?','Въведи парола за потвърждение:','Профилът е изтрит. Благодарим за играта!','Изтриването не успя','Мрежова грешка, не е изтрито','Автоматичното завъртане не се поддържа, завърти телефона','Точки {n}','Онлайн {n}',
+      'Пинг {n} мс'
+    ],
+    'ca': [
+      '🐍 Serp multijugador','Registra’t → Sala → Crea o uneix-te a una partida','Entra','Registra’t','Nom d’usuari','Contrasenya (4-32 caràcters)','Correu (obligatori per registrar-se)','Codi de 6 xifres','Envia el codi','Escriu els 4 caràcters de la imatge per registrar-te',
+      '4 caràcters de la imatge','Una altra imatge','imatge de verificació','⌨️ Ordinador: fletxes / WASD, espai per renéixer','🍎 Menja per créixer. Paret, tu mateix o una altra serp = fi','Convidat','Rècord {n}','Surt','Esborra el compte','🏠 Sales',
+      'Actualitza','➕ Crea una sala','Nom de la sala','Contrasenya (opcional)','Crea i uneix-te','🤖 Sol (contra Doubao)','💬 Xat de la sala','Digues alguna cosa...','👥 Amics','🌐 Tots els jugadors',
+      'Cerca jugadors...','🏆 Classificació','Punts 0','En línia 0','Ping -','Entra: ','Lent','Normal','Ràpid','Turbo',
+      'Entra a la sala','Has mort 💀','Punts d’aquesta ronda:','Renéixer','👥 Jugadors','Surt de la sala','💬 Xat de la sala','Xat (Enter per enviar)','⚙️ Ajustos','Xat privat',
+      'Tanca','Missatge (Enter per enviar)','Envia','Contrasenya de la sala:','Escriu primer el nom de la sala','🔒 Amb contrasenya','Amfitrió {name} · {n}/{max}','Encara no hi ha sales. Crea’n una!','🙋 {name} vol ser el teu amic','🤝 Tu i {name} ja sou amics',
+      '💬 {name}: {text}','Accepta','Rebutja','Xat','Sol·licitat','Afegeix un amic','Encara no tens amics. Afegeix-ne un a sota','No hi ha cap jugador amb aquest nom','Encara no hi ha altres jugadors','Sol·licitud enviada',
+      'La sol·licitud ha fallat','Carregant…','No s’ha pogut carregar','Encara no hi ha missatges. Saluda!','Jo',' (tu)','Desconnectat, reconnectant…','La sala és plena','Escriu primer el teu correu','El correu ha de ser com abc@example.com',
+      'Cal correu per registrar-se','Enviant…','No s’ha pogut enviar','Codi enviat a {email} (revisa l’spam)','{n} s','Envia de nou','Error de xarxa, codi no enviat','Prem “Envia el codi” i escriu les 6 xifres','Escriu els 4 caràcters de la imatge','Alguna cosa ha fallat',
+      'Registre fet, però l’accés ha fallat','Error de xarxa','El compte i els punts s’esborraran per sempre. Segur?','Escriu la contrasenya per confirmar:','Compte esborrat. Gràcies per jugar!','No s’ha pogut esborrar','Error de xarxa, no s’ha esborrat','Rotació automàtica no suportada, gira el mòbil','Punts {n}','En línia {n}',
+      'Ping {n} ms'
+    ],
+    'cy': [
+      '🐍 Neidr aml-chwaraewr','Cofrestra → Lobi → Crëa neu ymuno ag ystafell','Mewngofnodi','Cofrestra','Enw defnyddiwr','Cyfrinair (4-32 nod)','E-bost (angen i gofrestru)','Cod 6 digid','Anfon cod','Teipia’r 4 nodyn yn y llun i gofrestru',
+      '4 nodyn yn y llun','Llun arall','llun dilysu','⌨️ Cyfrifiadur: saethau / WASD, bwlch = adfywio','🍎 Bwyta i dyfu. Wal, ti dy hun neu neidr arall = diwedd','Gwestai','Record {n}','Allgofnodi','Dileu cyfrif','🏠 Ystafelloedd',
+      'Adnewyddu','➕ Crëa ystafell','Enw ystafell','Cyfrinair (dewisol)','Crëa ac ymuno','🤖 Ar fy mhen fy hun (yn erbyn Doubao)','💬 Sgwrs y lobi','Dwed rywbeth...','👥 Ffrindiau','🌐 Pob chwaraewr',
+      'Chwilio chwaraewyr...','🏆 Bwrdd arwain','Sgôr 0','Ar-lein 0','Ping -','Mynediad: ','Araf','Normal','Cyflym','Cyflym iawn',
+      'Mynd i’r ystafell','Wyt wedi marw 💀','Sgôr y rownd hon:','Adfywio','👥 Chwaraewyr','Gadael yr ystafell','💬 Sgwrs yr ystafell','Sgwrs (Enter i anfon)','⚙️ Gosodiadau','Sgwrs breifat',
+      'Cau','Neges (Enter i anfon)','Anfon','Cyfrinair yr ystafell:','Teipia enw ystafell yn gyntaf','🔒 Wedi cloi','Gwesteiwr {name} · {n}/{max}','Nid oes ystafelloedd eto. Crëa un!','🙋 Mae {name} eisiau bod yn ffrind i ti','🤝 Rwyt ti a {name} yn ffrindiau nawr',
+      '💬 {name}: {text}','Derbyn','Gwrthod','Sgwrs','Wedi gofyn','Ychwanegu ffrind','Nid oes ffrindiau eto. Ychwanega un isod','Nid oes chwaraewr â’r enw hwnnw','Nid oes chwaraewyr eraill eto','Cais wedi’i anfon',
+      'Methodd y cais','Wrthi’n llwytho…','Methodd llwytho','Nid oes negeseuon eto. Dwed helo!','Fi',' (ti)','Cysylltiad wedi torri, ailgysylltu…','Mae’r ystafell yn llawn','Teipia dy e-bost yn gyntaf','Dylai’r e-bost fod fel abc@example.com',
+      'Mae angen e-bost i gofrestru','Wrthi’n anfon…','Methu anfon','Cod wedi’i anfon i {email} (gwêl sbam)','{n} e','Anfon eto','Gwall rhwydwaith, cod heb ei anfon','Pwysa “Anfon cod” a theipio’r 6 digid','Teipia’r 4 nodyn o’r llun','Aeth rhywbeth o’i le',
+      'Cofrestru’n iawn, mewngofnodi’n methu','Gwall rhwydwaith','Bydd y cyfrif a’r sgorau’n cael eu dileu am byth. Siŵr?','Teipia gyfrinair i gadarnhau:','Cyfrif wedi’i ddileu. Diolch am chwarae!','Methu dileu','Gwall rhwydwaith, heb ddileu','Nid yw troi awtomatig yn cael ei gefnogi, trow dy ffôn','Sgôr {n}','Ar-lein {n}',
+      'Ping {n} ms'
+    ],
+    'et': [
+      '🐍 Mitmikmängu uss','Registreeru → Fuajee → Loo või liitu ruumiga','Logi sisse','Registreeru','Kasutajanimi','Parool (4-32 tähemärki)','E-post (registreerimiseks vajalik)','6-kohaline kood','Saada kood','Registreerumiseks kirjuta pildil olevad 4 tähemärki',
+      'Pildil olevad 4 tähemärki','Teine pilt','kontrollpilt','⌨️ Arvuti: nooled / WASD, tühik = taassünd','🍎 Söö, et kasvada. Sein, sina ise või teine uss = lõpp','Külaline','Rekord {n}','Logi välja','Kustuta konto','🏠 Ruumid',
+      'Värskenda','➕ Loo ruum','Ruumi nimi','Parool (valikuline)','Loo ja liitu','🤖 Üksi (Doubao vastu)','💬 Fuajee vestlus','Ütle midagi...','👥 Sõbrad','🌐 Kõik mängijad',
+      'Otsi mängijaid...','🏆 Edetabel','Punktid 0','Võrgus 0','Ping -','Sisene: ','Aeglane','Tavaline','Kiire','Turbo',
+      'Sisene ruumi','Sa surid 💀','Selle vooru punktid:','Taassünd','👥 Mängijad','Lahku ruumist','💬 Ruumi vestlus','Vestlus (Enter saadab)','⚙️ Seaded','Privaatvestlus',
+      'Sulge','Sõnum (Enter saadab)','Saada','Ruumi parool:','Kirjuta esmalt ruumi nimi','🔒 Lukustatud','Võõrustaja {name} · {n}/{max}','Ruumid puuduvad. Loo üks!','🙋 {name} tahab sinu sõber olla','🤝 Sina ja {name} olete nüüd sõbrad',
+      '💬 {name}: {text}','Nõustu','Keeldu','Vestlus','Küsitud','Lisa sõber','Sõpru veel pole. Lisa keegi allpool','Sellise nimega mängijat pole','Teisi mängijaid veel pole','Taotlus saadetud',
+      'Taotlus ebaõnnestus','Laadimine…','Laadimine ebaõnnestus','Sõnumeid veel pole. Ütle tere!','Mina',' (sina)','Ühendus katkes, ühendan uuesti…','Ruum on täis','Kirjuta esmalt oma e-post','E-post peaks olema nagu abc@example.com',
+      'Registreerimiseks on e-post vajalik','Saadan…','Ei saanud saata','Kood saadetud aadressile {email} (kontrolli rämpsposti)','{n} s','Saada uuesti','Võrguviga, koodi ei saadetud','Vajuta „Saada kood“ ja kirjuta 6 numbrit','Kirjuta pildilt 4 tähemärki','Midagi läks valesti',
+      'Registreerimine õnnestus, sisselogimine mitte','Võrguviga','Konto ja punktid kustutatakse jäädavalt. Kindel?','Kirjuta kinnitamiseks parool:','Konto kustutatud. Aitäh mängimast!','Kustutamine ebaõnnestus','Võrguviga, ei kustutatud','Automaatpööramine pole toetatud, pööra telefoni','Punktid {n}','Võrgus {n}',
+      'Ping {n} ms'
+    ],
+    'eu': [
+      '🐍 Suge jokalari anitzekoa','Erregistratu → Lobby → Sortu edo sartu gela batean','Hasi saioa','Erregistratu','Erabiltzaile-izena','Pasahitza (4-32 karaktere)','Posta (erregistratzeko beharrezkoa)','6 digituko kodea','Bidali kodea','Idatzi irudiko 4 karaktereak erregistratzeko',
+      'Irudiaren 4 karaktereak','Beste irudi bat','egiaztapen-irudia','⌨️ Ordenagailua: geziak / WASD, zuriunea = berpiztu','🍎 Jan hazteko. Horma, zu zeu edo beste suge bat = amaiera','Gonbidatua','Errekorra {n}','Atera','Ezabatu kontua','🏠 Gelak',
+      'Freskatu','➕ Sortu gela','Gelaren izena','Pasahitza (aukerakoa)','Sortu eta sartu','🤖 Bakarrik (Doubaoren aurka)','💬 Lobby txata','Esan zerbait...','👥 Lagunak','🌐 Jokalari guztiak',
+      'Bilatu jokalariak...','🏆 Sailkapena','Puntuak 0','Linean 0','Ping -','Sartu: ','Motel','Normala','Azkar','Oso azkar',
+      'Sartu gelan','Hil zara 💀','Txanda honetako puntuak:','Berpiztu','👥 Jokalariak','Irten gelatik','💬 Gelako txata','Txata (Enter bidaltzeko)','⚙️ Ezarpenak','Txat pribatua',
+      'Itxi','Mezua (Enter bidaltzeko)','Bidali','Gelaren pasahitza:','Idatzi gela-izena lehenago','🔒 Giltzapetuta','Ostalaria {name} · {n}/{max}','Oraindik ez dago gelarik. Sortu bat!','🙋 {name} zure laguna izan nahi du','🤝 Zu eta {name} orain lagunak zarete',
+      '💬 {name}: {text}','Onartu','Ukatu','Txata','Eskatuta','Gehitu laguna','Oraindik ez duzu lagunik. Gehitu bat behean','Ez dago izen horretako jokalariarik','Oraindik ez dago beste jokalaririk','Eskaera bidalita',
+      'Eskaerak huts egin du','Kargatzen…','Kargatzeak huts egin du','Oraindik ez dago mezurik. Esan kaixo!','Ni',' (zu)','Deskonektatuta, berriro konektatzen…','Gela beteta dago','Idatzi zure posta lehenago','Postak abc@example.com itxura izan behar du',
+      'Erregistratzeko posta behar da','Bidaltzen…','Ezin izan da bidali','Kodea {email} helbidera bidali da (begiratu spam-a)','{n} s','Bidali berriro','Sare-errorea, kodea ez da bidali','Sakatu “Bidali kodea” eta idatzi 6 digituek','Idatzi irudiko 4 karaktereak','Zerbait gaizki joan da',
+      'Erregistroa ondo, saio-hasiera huts','Sare-errorea','Kontua eta puntuak betiko ezabatuko dira. Ziur?','Idatzi pasahitza berresteko:','Kontua ezabatuta. Eskerrik asko jokatzeagatik!','Ezabaketak huts egin du','Sare-errorea, ez da ezabatu','Biraketa automatikoa ez dago onartuta, biratu telefonoa','Puntuak {n}','Linean {n}',
+      'Ping {n} ms'
+    ],
+    'ga': [
+      '🐍 Nathair ilimreoirí','Cláraigh → Stocsheomra → Cruthaigh nó téigh isteach i seomra','Logáil isteach','Cláraigh','Ainm úsáideora','Pasfhocal (4-32 carachtar)','Ríomhphost (riachtanach chun clárú)','Cód 6 dhigit','Seol cód','Clóscríobh na 4 charachtar sa phictiúr chun clárú',
+      '4 charachtar sa phictiúr','Pictiúr nua','pictiúr fíoraithe','⌨️ Ríomhaire: saigheada / WASD, spás chun athbheochan','🍎 Ith bia chun fás. Balla, tú féin nó nathair eile = deireadh','Aoi','Ardscór {n}','Logáil amach','Scrios cuntas','🏠 Seomraí',
+      'Athnuaigh','➕ Cruthaigh seomra','Ainm seomra','Pasfhocal (roghnach)','Cruthaigh agus téigh isteach','🤖 Aonair (i gcoinne Doubao)','💬 Comhrá an stocsheomra','Abair rud éigin...','👥 Cairde','🌐 Gach imreoir',
+      'Cuardaigh imreoirí...','🏆 Clár na mbuaiteoirí','Scór 0','Ar líne 0','Ping -','Isteach: ','Mall','Gnáth','Tapa','Ró-thapa',
+      'Téigh isteach sa seomra','Fuair tú bás 💀','Scór an bhabhta seo:','Athbheoigh','👥 Imreoirí','Fág an seomra','💬 Comhrá an tseomra','Comhrá (Enter chun seoladh)','⚙️ Socruithe','Comhrá príobháideach',
+      'Dún','Teachtaireacht (Enter chun seoladh)','Seol','Pasfhocal an tseomra:','Iontráil ainm seomra ar dtús','🔒 Faoi ghlas','Óstach {name} · {n}/{max}','Níl aon seomra ann fós. Cruthaigh ceann!','🙋 Teastaíonn ó {name} a bheith ina chara agat','🤝 Tá tú féin agus {name} in bhur gcairde anois',
+      '💬 {name}: {text}','Glac','Diúltaigh','Comhrá','Iarrtha','Cuir cara leis','Níl aon chairde agat fós. Cuir ceann leis thíos','Níor aimsíodh imreoir leis an ainm sin','Níl aon imreoir eile ann fós','Iarratas seolta',
+      'Theip ar an iarratas','Ag lódáil…','Theip ar an lódáil','Níl aon teachtaireacht fós. Abair hé!','Mé',' (tú)','Dícheangailte, ag athcheangal…','Tá an seomra lán','Iontráil do ríomhphost ar dtús','Ba chóir an ríomhphost a bheith cosúil le abc@example.com',
+      'Tá ríomhphost ag teastáil chun clárú','Ag seoladh…','Theip ar sheoladh','Cód seolta chuig {email} (seiceáil spam)','{n} s','Seol arís','Earráid líonra, níor seoladh an cód','Brúigh “Seol cód” agus iontráil na 6 dhigit','Clóscríobh na 4 charachtar ón bpictiúr','Chuaigh rud éigin mícheart',
+      'Cláraíodh go maith, ach theip ar logáil isteach','Earráid líonra','Scriosfar do chuntas agus do scóir go deo. An bhfuil tú cinnte?','Iontráil pasfhocal le deimhniú:','Scriosadh an cuntas. Go raibh maith agat as imirt!','Theip ar scriosadh','Earráid líonra, níor scriosadh','Ní thacaítear le rothlú uathoibríoch, rothlaigh an fón','Scór {n}','Ar líne {n}',
+      'Ping {n}ms'
+    ],
+    'gl': [
+      '🐍 Serpe multixogador','Rexístrate → Vestíbulo → Crea ou únete a unha sala','Iniciar sesión','Rexístrate','Nome de usuario','Contrasinal (4-32 caracteres)','Correo (obrigatorio para rexistrarse)','Código de 6 díxitos','Enviar código','Escribe os 4 caracteres da imaxe para rexistrarte',
+      '4 caracteres da imaxe','Nova imaxe','imaxe de verificación','⌨️ Ordenador: frechas / WASD, espazo para revivir','🍎 Come para medrar. Parede, ti mesmo ou outra serpe = fin','Convidado','Récord {n}','Saír','Borrar conta','🏠 Salas',
+      'Actualizar','➕ Crear sala','Nome da sala','Contrasinal (opcional)','Crear e entrar','🤖 Solo (contra Doubao)','💬 Chat do vestíbulo','Di algo...','👥 Amigos','🌐 Todos os xogadores',
+      'Buscar xogadores...','🏆 Clasificación','Puntos 0','En liña 0','Ping -','Entrar: ','Lento','Normal','Rápido','Turbo',
+      'Entrar na sala','Morriches 💀','Puntos desta rolda:','Revivir','👥 Xogadores','Saír da sala','💬 Chat da sala','Chat (Enter para enviar)','⚙️ Axustes','Chat privado',
+      'Pechar','Mensaxe (Enter para enviar)','Enviar','Contrasinal da sala:','Escribe primeiro o nome da sala','🔒 Pechada','Anfitrión {name} · {n}/{max}','Aínda non hai salas. Crea unha!','🙋 {name} quere ser o teu amigo','🤝 {name} e ti xa sodes amigos',
+      '💬 {name}: {text}','Aceptar','Rexeitar','Chat','Solicitado','Engadir amigo','Aínda non tes amigos. Engade un abaixo','Non hai ningún xogador con ese nome','Aínda non hai outros xogadores','Solicitude enviada',
+      'A solicitude fallou','Cargando…','Erro ao cargar','Aínda non hai mensaxes. Di ola!','Eu',' (ti)','Desconectado, reconectando…','A sala está chea','Escribe primeiro o correo','O correo debe ser como abc@example.com',
+      'O correo é obrigatorio para rexistrarse','Enviando…','Non se puido enviar','Código enviado a {email} (mira o spam)','{n} s','Enviar de novo','Erro de rede, código non enviado','Preme “Enviar código” e escribe os 6 díxitos','Escribe os 4 caracteres da imaxe','Algo saíu mal',
+      'Rexistrado, pero o acceso fallou','Erro de rede','Isto borra a túa conta e os puntos para sempre. Seguro?','Escribe o contrasinal para confirmar:','Conta borrada. Grazas por xogar!','Erro ao borrar','Erro de rede, non se borrou','Non se admite xiro automático, xira o teléfono','Puntos {n}','En liña {n}',
+      'Ping {n}ms'
+    ],
+    'hr': [
+      '🐍 Zmija za više igrača','Registriraj se → Predvorje → Stvori ili se pridruži sobi','Prijava','Registracija','Korisničko ime','Lozinka (4-32 znaka)','E-pošta (obavezna za registraciju)','6-znamenkasti kod','Pošalji kod','Upiši 4 znaka sa slike da se registriraš',
+      '4 znaka sa slike','Nova slika','slika za provjeru','⌨️ Računalo: strelice / WASD, razmak za oživljavanje','🍎 Jedi hranu da rasteš. Zid, ti sam ili druga zmija = kraj','Gost','Rekord {n}','Odjava','Izbriši račun','🏠 Sobe',
+      'Osvježi','➕ Stvori sobu','Naziv sobe','Lozinka (neobavezno)','Stvori i pridruži se','🤖 Samostalno (protiv Doubaoa)','💬 Chat predvorja','Reci nešto...','👥 Prijatelji','🌐 Svi igrači',
+      'Traži igrače...','🏆 Ljestvica','Bodovi 0','Online 0','Ping -','Ulaz: ','Sporo','Normalno','Brzo','Turbo',
+      'Uđi u sobu','Umro si 💀','Bodovi ovog kruga:','Oživi','👥 Igrači','Napusti sobu','💬 Chat sobe','Chat (Enter za slanje)','⚙️ Postavke','Privatni chat',
+      'Zatvori','Poruka (Enter za slanje)','Pošalji','Lozinka sobe:','Prvo upiši naziv sobe','🔒 Zaključano','Domaćin {name} · {n}/{max}','Još nema soba. Stvori jednu!','🙋 {name} želi biti tvoj prijatelj','🤝 Ti i {name} ste sada prijatelji',
+      '💬 {name}: {text}','Prihvati','Odbij','Chat','Poslano','Dodaj prijatelja','Još nemaš prijatelja. Dodaj nekoga ispod','Nema igrača s tim imenom','Još nema drugih igrača','Zahtjev poslan',
+      'Zahtjev nije uspio','Učitavanje…','Učitavanje nije uspjelo','Još nema poruka. Reci bok!','Ja',' (ti)','Veza prekinuta, ponovno spajanje…','Soba je puna','Prvo upiši e-poštu','E-pošta treba izgledati kao abc@example.com',
+      'E-pošta je obavezna za registraciju','Slanje…','Slanje nije uspjelo','Kod poslan na {email} (provjeri spam)','{n} s','Pošalji ponovno','Mrežna greška, kod nije poslan','Klikni “Pošalji kod” pa upiši 6 znamenki','Upiši 4 znaka sa slike','Nešto je pošlo po zlu',
+      'Registracija uspješna, prijava nije','Mrežna greška','Ovo trajno briše račun i bodove. Sigurno?','Upiši lozinku za potvrdu:','Račun izbrisan. Hvala na igri!','Brisanje nije uspjelo','Mrežna greška, nije izbrisano','Automatsko zakretanje nije podržano, okreni telefon','Bodovi {n}','Online {n}',
+      'Ping {n}ms'
+    ],
+    'is': [
+      '🐍 Fjölspilara snákur','Skráðu þig → Anddyri → Búðu til eða farðu í herbergi','Innskráning','Nýskráning','Notandanafn','Lykilorð (4-32 stafir)','Netfang (nauðsynlegt við nýskráningu)','6 stafa kóði','Senda kóða','Skrifaðu 4 stafina á myndinni til að skrá þig',
+      '4 stafir á myndinni','Ný mynd','staðfestingarmynd','⌨️ Tölva: örvar / WASD, bil = endurfæðing','🍎 Borðaðu til að stækka. Veggur, þú sjálfur eða annar snákur = búið','Gestur','Met {n}','Útskráning','Eyða reikningi','🏠 Herbergi',
+      'Endurhlaða','➕ Búa til herbergi','Nafn herbergis','Lykilorð (valfrjálst)','Búa til og fara inn','🤖 Einn (gegn Doubao)','💬 Spjall í anddyri','Segðu eitthvað...','👥 Vinir','🌐 Allir leikmenn',
+      'Leita að leikmönnum...','🏆 Stigatafla','Stig 0','Á netinu 0','Ping -','Inn: ','Hægt','Venjulegt','Hratt','Ofurhratt',
+      'Fara í herbergi','Þú dóst 💀','Stig í þessari umferð:','Endurfæðast','👥 Leikmenn','Fara úr herbergi','💬 Spjall herbergis','Spjall (Enter til að senda)','⚙️ Stillingar','Einkaspjall',
+      'Loka','Skilaboð (Enter til að senda)','Senda','Lykilorð herbergis:','Skrifaðu fyrst nafn herbergis','🔒 Læst','Gestgjafi {name} · {n}/{max}','Engin herbergi enn. Búðu til eitt!','🙋 {name} vill vera vinur þinn','🤝 Þú og {name} eruð nú vinir',
+      '💬 {name}: {text}','Samþykkja','Hafna','Spjall','Beðið','Bæta við vini','Engir vinir enn. Bættu við einum fyrir neðan','Enginn leikmaður með þetta nafn','Engir aðrir leikmenn enn','Beiðni send',
+      'Beiðni mistókst','Hleð…','Hleðsla mistókst','Engin skilaboð enn. Segðu hæ!','Ég',' (þú)','Tenging rofin, endurtengi…','Herbergið er fullt','Skrifaðu fyrst netfang','Netfang ætti að vera eins og abc@example.com',
+      'Netfang er nauðsynlegt við nýskráningu','Sendi…','Tókst ekki að senda','Kóði sendur á {email} (athugaðu ruslpóst)','{n} s','Senda aftur','Netvilla, kóði ekki sendur','Ýttu á “Senda kóða” og skrifaðu 6 tölustafi','Skrifaðu 4 stafina af myndinni','Eitthvað fór úrskeiðis',
+      'Nýskráning tókst, innskráning ekki','Netvilla','Þetta eyðir reikningnum og stigum varanlega. Viss?','Skrifaðu lykilorð til að staðfesta:','Reikningi eytt. Takk fyrir leikinn!','Eyðing mistókst','Netvilla, ekki eytt','Sjálfvirk snúningur ekki studdur, snúaðu símanum','Stig {n}','Á netinu {n}',
+      'Ping {n}ms'
+    ],
+    'he': [
+      '🐍 נחש רב-משתתפים','הרשמה → לובי → צור חדר או הצטרף','התחברות','הרשמה','שם משתמש','סיסמה (4-32 תווים)','אימייל (חובה להרשמה)','קוד בן 6 ספרות','שלח קוד','הקלד 4 תווים מהתמונה כדי להירשם',
+      '4 תווים בתמונה','תמונה אחרת','תמונת אימות','⌨️ מחשב: חצים / WASD, רווח לתחייה','🍎 אכול כדי לגדול. קיר, עצמך או נחש אחר = סוף','אורח','שיא {n}','התנתק','מחק חשבון','🏠 חדרים',
+      'רענן','➕ צור חדר','שם החדר','סיסמה (אופציונלי)','צור והצטרף','🤖 לבד (נגד דובאו)','💬 צ׳אט בלובי','תגיד משהו...','👥 חברים','🌐 כל השחקנים',
+      'חפש שחקנים...','🏆 טבלת מובילים','ניקוד 0','מקוון 0','פינג -','כניסה: ','איטי','רגיל','מהיר','מהיר מאוד',
+      'היכנס לחדר','מתת 💀','ניקוד הסיבוב:','תחייה','👥 שחקנים','צא מהחדר','💬 צ׳אט החדר','צ׳אט (Enter לשליחה)','⚙️ הגדרות','צ׳אט פרטי',
+      'סגור','הודעה (Enter לשליחה)','שלח','סיסמת החדר:','קודם כל כתוב שם חדר','🔒 נעול','מארח {name} · {n}/{max}','אין חדרים עדיין. צור אחד!','🙋 {name} רוצה להיות חבר שלך','🤝 אתה ו{name} עכשיו חברים',
+      '💬 {name}: {text}','אשר','דחה','צ׳אט','נשלחה בקשה','הוסף חבר','אין חברים עדיין. הוסף אחד למטה','אין שחקן בשם הזה','אין עדיין שחקנים אחרים','הבקשה נשלחה',
+      'הבקשה נכשלה','טוען…','הטעינה נכשלה','אין הודעות עדיין. תגיד שלום!','אני',' (אתה)','החיבור נותק, מתחבר מחדש…','החדר מלא','כתוב קודם אימייל','האימייל צריך להיראות כמו abc@example.com',
+      'חובה אימייל כדי להירשם','שולח…','לא הצלחתי לשלוח','קוד נשלח ל-{email} (בדוק ספאם)','{n} שנ׳','שלח שוב','שגיאת רשת, הקוד לא נשלח','לחץ “שלח קוד” והקלד 6 ספרות','הקלד 4 תווים מהתמונה','משהו השתבש',
+      'נרשמת, אבל ההתחברות נכשלה','שגיאת רשת','זה ימחק את החשבון והניקוד לתמיד. בטוח?','הקלד סיסמה לאישור:','החשבון נמחק. תודה ששיחקת!','המחיקה נכשלה','שגיאת רשת, לא נמחק','סיבוב אוטומטי לא נתמך, סובב את הטלפון','ניקוד {n}','מקוון {n}',
+      'פינג {n}ms'
+    ],
+    'hi': [
+      '🐍 मल्टीप्लेयर साँप','साइन अप → लॉबी → कमरा बनाएँ या जॉइन करें','लॉग इन','साइन अप','यूज़रनेम','पासवर्ड (4-32 अक्षर)','ईमेल (साइन अप के लिए ज़रूरी)','6 अंकों का कोड','कोड भेजें','साइन अप करने के लिए तस्वीर के 4 अक्षर लिखें',
+      'तस्वीर के 4 अक्षर','दूसरी तस्वीर','सत्यापन तस्वीर','⌨️ कंप्यूटर: तीर / WASD, स्पेस से फिर जिएँ','🍎 खाओ और बढ़ो। दीवार, खुद या दूसरा साँप = खेल खत्म','मेहमान','सर्वश्रेष्ठ {n}','लॉग आउट','खाता हटाएँ','🏠 कमरे',
+      'रिफ़्रेश','➕ कमरा बनाएँ','कमरे का नाम','पासवर्ड (वैकल्पिक)','बनाएँ और जॉइन करें','🤖 अकेले (Doubao के साथ)','💬 लॉबी चैट','कुछ कहें...','👥 दोस्त','🌐 सभी खिलाड़ी',
+      'खिलाड़ी खोजें...','🏆 लीडरबोर्ड','स्कोर 0','ऑनलाइन 0','पिंग -','इन: ','धीमा','सामान्य','तेज़','बहुत तेज़',
+      'कमरे में जाएँ','तुम मर गए 💀','इस राउंड का स्कोर:','फिर जिएँ','👥 खिलाड़ी','कमरा छोड़ें','💬 कमरे की चैट','चैट (भेजने के लिए Enter)','⚙️ सेटिंग','निजी चैट',
+      'बंद करें','संदेश (भेजने के लिए Enter)','भेजें','कमरे का पासवर्ड:','पहले कमरे का नाम लिखें','🔒 लॉक','होस्ट {name} · {n}/{max}','अभी कोई कमरा नहीं। एक बनाएँ!','🙋 {name} तुम्हारा दोस्त बनना चाहता है','🤝 तुम और {name} अब दोस्त हो',
+      '💬 {name}: {text}','स्वीकार','मना करें','चैट','भेजा गया','दोस्त जोड़ें','अभी कोई दोस्त नहीं। नीचे एक जोड़ें','इस नाम का कोई खिलाड़ी नहीं','अभी कोई दूसरा खिलाड़ी नहीं','अनुरोध भेजा गया',
+      'अनुरोध असफल','लोड हो रहा है…','लोड असफल','अभी कोई संदेश नहीं। नमस्ते कहें!','मैं',' (तुम)','कनेक्शन टूटा, फिर जुड़ रहे हैं…','कमरा भर गया','पहले ईमेल लिखें','ईमेल abc@example.com जैसा होना चाहिए',
+      'साइन अप के लिए ईमेल ज़रूरी है','भेज रहे हैं…','भेजा नहीं जा सका','कोड {email} पर भेजा गया (स्पैम देखें)','{n} से','फिर भेजें','नेटवर्क गड़बड़ी, कोड नहीं गया','“कोड भेजें” दबाएँ और 6 अंक लिखें','तस्वीर के 4 अक्षर लिखें','कुछ गड़बड़ हो गई',
+      'साइन अप हुआ, लॉगिन नहीं','नेटवर्क गड़बड़ी','इससे खाता और स्कोर हमेशा के लिए मिट जाएँगे। पक्का?','पुष्टि के लिए पासवर्ड लिखें:','खाता मिट गया। खेलने के लिए शुक्रिया!','हटाया नहीं जा सका','नेटवर्क गड़बड़ी, नहीं हटा','ऑटो-रोटेट समर्थित नहीं, फ़ोन घुमाएँ','स्कोर {n}','ऑनलाइन {n}',
+      'पिंग {n}ms'
+    ],
+    'hy': [
+      '🐍 Բազմախաղացող օձ','Գրանցում → Նախասրահ → Ստեղծիր կամ միացիր սենյակին','Մուտք','Գրանցում','Օգտանուն','Գաղտնաբառ (4-32 նիշ)','Էլ. փոստ (պարտադիր գրանցման համար)','6-նիշ կոդ','Ուղարկել կոդ','Գրանցվելու համար գրիր նկարի 4 նիշերը',
+      'Նկարի 4 նիշերը','Նոր նկար','հաստատման նկար','⌨️ Համակարգիչ՝ սլաքներ / WASD, բացատ՝ վերակենդանանալ','🍎 Կեր, որ մեծանաս։ Պատ, դու կամ ուրիշ օձ = վերջ','Հյուր','Ռեկորդ {n}','Դուրս գալ','Ջնջել հաշիվը','🏠 Սենյակներ',
+      'Թարմացնել','➕ Ստեղծել սենյակ','Սենյակի անուն','Գաղտնաբառ (ըստ ցանկության)','Ստեղծել և միանալ','🤖 Մենակ (Դուբաոյի դեմ)','💬 Նախասրահի չատ','Մի բան ասա...','👥 Ընկերներ','🌐 Բոլոր խաղացողները',
+      'Փնտրել խաղացողներ...','🏆 Առաջատարներ','Միավոր 0','Առցանց 0','Պինգ -','Մուտք՝ ','Դանդաղ','Սովորական','Արագ','Գերբարձր',
+      'Մտնել սենյակ','Դու մեռար 💀','Այս փուլի միավորները՝','Վերակենդանանալ','👥 Խաղացողներ','Լքել սենյակը','💬 Սենյակի չատ','Չատ (Enter՝ ուղարկել)','⚙️ Կարգավորումներ','Անձնական չատ',
+      'Փակել','Հաղորդագրություն (Enter՝ ուղարկել)','Ուղարկել','Սենյակի գաղտնաբառը՝','Նախ գրիր սենյակի անունը','🔒 Փակ','Հյուրընկալող {name} · {n}/{max}','Դեռ սենյակներ չկան։ Ստեղծիր մեկը։','🙋 {name}-ը ուզում է ընկերանալ քեզ հետ','🤝 Դու և {name}-ը հիմա ընկերներ եք',
+      '💬 {name}՝ {text}','Ընդունել','Մերժել','Չատ','Ուղարկված','Ավելացնել ընկեր','Դեռ ընկերներ չունես։ Ավելացրու մեկին ներքևում','Այդ անունով խաղացող չկա','Դեռ ուրիշ խաղացողներ չկան','Հարցումն ուղարկված է',
+      'Հարցումը ձախողվեց','Բեռնում…','Բեռնումը ձախողվեց','Դեռ հաղորդագրություններ չկան։ Ողջունիր։','Ես',' (դու)','Կապը կտրվեց, վերամիանում ենք…','Սենյակը լրիվ է','Նախ գրիր էլ. փոստը','Էլ. փոստը պետք է լինի ինչպես abc@example.com',
+      'Գրանցման համար էլ. փոստ է պետք','Ուղարկում…','Չհաջողվեց ուղարկել','Կոդն ուղարկվեց {email}-ին (ստուգիր սպամը)','{n} վրկ','Ուղարկել նորից','Ցանցի սխալ, կոդը չուղարկվեց','Սեղմիր «Ուղարկել կոդ» և գրիր 6 թվանշանները','Գրիր նկարի 4 նիշերը','Ինչ-որ բան սխալ գնաց',
+      'Գրանցումը եղավ, մուտքը՝ ոչ','Ցանցի սխալ','Սա ընդմիշտ կջնջի հաշիվդ և միավորներդ։ Վստա՞հ ես։','Հաստատելու համար գրիր գաղտնաբառը՝','Հաշիվը ջնջված է։ Շնորհակալություն խաղալու համար։','Ջնջումը ձախողվեց','Ցանցի սխալ, չջնջվեց','Ինքնապտույտը չի աջակցվում, պտտիր հեռախոսը','Միավոր {n}','Առցանց {n}',
+      'Պինգ {n}ms'
+    ],
+    'km': [
+      '🐍 ពស់ពហុអ្នកលេង','ចុះឈ្មោះ → កន្លែងរង់ចាំ → បង្កើត ឬចូលបន្ទប់','ចូល','ចុះឈ្មោះ','ឈ្មោះអ្នកប្រើ','ពាក្យសម្ងាត់ (4-32 តួ)','អ៊ីមែល (ត្រូវការដើម្បីចុះឈ្មោះ)','លេខកូដ 6 ខ្ទង់','ផ្ញើកូដ','វាយ 4 តួអក្សរក្នុងរូបដើម្បីចុះឈ្មោះ',
+      '4 តួអក្សរក្នុងរូប','រូបថ្មី','រូបផ្ទៀងផ្ទាត់','⌨️ កុំព្យូទ័រ៖ សញ្ញាព្រួញ / WASD ចន្លោះដើម្បីរស់ឡើងវិញ','🍎 ញ៉ាំដើម្បីធំឡើង។ ជញ្ជាំង ខ្លួនឯង ឬពស់ផ្សេង = ចប់','ភ្ញៀវ','កំណត់ត្រា {n}','ចាកចេញ','លុបគណនី','🏠 បន្ទប់',
+      'ផ្ទុកឡើងវិញ','➕ បង្កើតបន្ទប់','ឈ្មោះបន្ទប់','ពាក្យសម្ងាត់ (ស្រេចចិត្ត)','បង្កើត និងចូល','🤖 លេងម្នាក់ឯង (ប្រឆាំង Doubao)','💬 ជជែកកន្លែងរង់ចាំ','និយាយអ្វីមួយ...','👥 មិត្តភក្តិ','🌐 អ្នកលេងទាំងអស់',
+      'ស្វែងរកអ្នកលេង...','🏆 តារាងពិន្ទុ','ពិន្ទុ 0','អនឡាញ 0','Ping -','ចូល៖ ','យឺត','ធម្មតា','លឿន','លឿនបំផុត',
+      'ចូលបន្ទប់','អ្នកស្លាប់ 💀','ពិន្ទុវិនេះ៖','រស់ឡើងវិញ','👥 អ្នកលេង','ចាកចេញពីបន្ទប់','💬 ជជែកក្នុងបន្ទប់','ជជែក (Enter ដើម្បីផ្ញើ)','⚙️ ការកំណត់','ជជែកឯកជន',
+      'បិទ','សារ (Enter ដើម្បីផ្ញើ)','ផ្ញើ','ពាក្យសម្ងាត់បន្ទប់៖','សរសេរឈ្មោះបន្ទប់មុន','🔒 ចាក់សោ','ម្ចាស់ {name} · {n}/{max}','មិនទាន់មានបន្ទប់។ បង្កើតមួយ!','🙋 {name} ចង់ក្លាយជាមិត្តរបស់អ្នក','🤝 អ្នក និង {name} ឥឡូវជាមិត្តគ្នា',
+      '💬 {name}៖ {text}','យល់ព្រម','បដិសេធ','ជជែក','បានស្នើ','បន្ថែមមិត្ត','មិនទាន់មានមិត្ត។ បន្ថែមមួយខាងក្រោម','រកមិនឃើញអ្នកលេងឈ្មោះនេះ','មិនទាន់មានអ្នកលេងផ្សេង','បានផ្ញើសំណើ',
+      'សំណើបរាជ័យ','កំពុងផ្ទុក…','ផ្ទុកបរាជ័យ','មិនទាន់មានសារ។ សូមស្វាគមន៍!','ខ្ញុំ',' (អ្នក)','ការតភ្ជាប់ដាច់ កំពុងភ្ជាប់ឡើងវិញ…','បន្ទប់ពេញ','សរសេរអ៊ីមែលមុន','អ៊ីមែលគួរដូច abc@example.com',
+      'ត្រូវការអ៊ីមែលដើម្បីចុះឈ្មោះ','កំពុងផ្ញើ…','ផ្ញើបរាជ័យ','បានផ្ញើកូដទៅ {email} (ពិនិត្យ spam)','{n} វិ','ផ្ញើម្តងទៀត','បណ្តាញខុស កូដមិនបានផ្ញើ','ចុច “ផ្ញើកូដ” រួចវាយ 6 ខ្ទង់','វាយ 4 តួអក្សរពីរូប','មានអ្វីខុស',
+      'ចុះឈ្មោះបាន តែចូលមិនបាន','បណ្តាញខុស','នេះនឹងលុបគណនី និងពិន្ទុជារៀងរហូត។ ប្រាកដ?','វាយពាក្យសម្ងាត់ដើម្បីបញ្ជាក់៖','គណនីត្រូវបានលុប។ អរគុណសម្រាប់ការលេង!','លុបបរាជ័យ','បណ្តាញខុស មិនបានលុប','មិនគាំទ្រការបង្វិលស្វ័យប្រវត្តិ សូមបង្វិលទូរស័ព្ទ','ពិន្ទុ {n}','អនឡាញ {n}',
+      'Ping {n}ms'
+    ],
+    'kk': [
+      '🐍 Көпойыншық жылан','Тіркелу → Лобби → Бөлме құру немесе кіру','Кіру','Тіркелу','Пайдаланушы аты','Құпия сөз (4-32 таңба)','Эл. пошта (тіркелуге міндетті)','6 таңбалы код','Код жіберу','Тіркелу үшін суреттегі 4 таңбаны жаз',
+      'Суреттегі 4 таңба','Басқа сурет','тексеру суреті','⌨️ Компьютер: бағыттауыштар / WASD, бос орын — қайта тірілу','🍎 Өсу үшін же. Қабырға, өзің немесе басқа жылан = ойын бітті','Қонақ','Рекорд {n}','Шығу','Аккаунтты жою','🏠 Бөлмелер',
+      'Жаңарту','➕ Бөлме құру','Бөлме аты','Құпия сөз (міндетті емес)','Құру және кіру','🤖 Жалғыз (Doubao-ға қарсы)','💬 Лобби чаты','Бірдеңе жаз...','👥 Достар','🌐 Барлық ойыншылар',
+      'Ойыншыларды іздеу...','🏆 Көшбасшылар','Ұпай 0','Желіде 0','Ping -','Кіру: ','Баяу','Қалыпты','Жылдам','Өте жылдам',
+      'Бөлмеге кіру','Сен өлдің 💀','Осы раундтағы ұпай:','Қайта тірілу','👥 Ойыншылар','Бөлмеден шығу','💬 Бөлме чаты','Чат (Enter — жіберу)','⚙️ Параметрлер','Жеке чат',
+      'Жабу','Хабарлама (Enter — жіберу)','Жіберу','Бөлме құпия сөзі:','Алдымен бөлме атын жаз','🔒 Құлыпталған','Қожайын {name} · {n}/{max}','Әзірге бөлме жоқ. Біреуін құр!','🙋 {name} сенің досың болғысы келеді','🤝 Сен және {name} енді доссыңдар',
+      '💬 {name}: {text}','Қабылдау','Бас тарту','Чат','Сұраныс жіберілді','Дос қосу','Әзірге дос жоқ. Төменнен біреуін қос','Бұл атпен ойыншы жоқ','Әзірге басқа ойыншы жоқ','Сұраныс жіберілді',
+      'Сұраныс сәтсіз','Жүктелуде…','Жүктеу сәтсіз','Әзірге хабарлама жоқ. Сәлем де!','Мен',' (сен)','Байланыс үзілді, қайта қосылуда…','Бөлме толы','Алдымен поштаны жаз','Пошта abc@example.com тәрізді болуы керек',
+      'Тіркелу үшін пошта міндетті','Жіберілуде…','Жіберу сәтсіз','Код {email} мекенжайына жіберілді (спамды тексер)','{n} сек','Қайта жіберу','Желі қатесі, код жіберілмеді','“Код жіберу” басып, 6 цифрды жаз','Суреттегі 4 таңбаны жаз','Бірдеңе дұрыс болмады',
+      'Тіркелу сәтті, кіру сәтсіз','Желі қатесі','Бұл аккаунт пен ұпайларды мәңгі жояды. Сенімдісің бе?','Растау үшін құпия сөзді жаз:','Аккаунт жойылды. Ойнағаның үшін рахмет!','Жою сәтсіз','Желі қатесі, жойылмады','Автошалану қолдаусыз, телефонды бұр','Ұпай {n}','Желіде {n}',
+      'Ping {n}ms'
+    ],
+    'ky': [
+      '🐍 Көп оюнчу жылан','Каттоо → Лобби → Бөлмө түзүү же кирүү','Кирүү','Каттоо','Колдонуучу аты','Сырсөз (4-32 белги)','Эл. почта (каттоо үчүн милдеттүү)','6 сандан турган код','Код жөнөтүү','Каттоо үчүн сүрөттөгү 4 белгини жаз',
+      'Сүрөттөгү 4 белги','Башка сүрөт','текшерүү сүрөтү','⌨️ Компьютер: багыттоолор / WASD, боштук — кайра тирилүү','🍎 Өсүү үчүн же. Дубал, өзүң же башка жылан = оюн бүттү','Конок','Рекорд {n}','Чыгуу','Аккаунтту өчүрүү','🏠 Бөлмөлөр',
+      'Жаңыртуу','➕ Бөлмө түзүү','Бөлмө аты','Сырсөз (милдеттүү эмес)','Түзүү жана кирүү','🤖 Жалгыз (Doubao-го каршы)','💬 Лобби чаты','Бир нерсе жаз...','👥 Достар','🌐 Бардык оюнчулар',
+      'Оюнчуларды издөө...','🏆 Лидерлер','Упай 0','Тармакта 0','Ping -','Кирүү: ','Жай','Кадимки','Тез','Өтө тез',
+      'Бөлмөгө кирүү','Сен өлдүң 💀','Бул раунддагы упай:','Кайра тирилүү','👥 Оюнчулар','Бөлмөдөн чыгуу','💬 Бөлмө чаты','Чат (Enter — жөнөтүү)','⚙️ Жөндөөлөр','Жеке чат',
+      'Жабуу','Билдирүү (Enter — жөнөтүү)','Жөнөтүү','Бөлмөнүн сырсөзү:','Алгач бөлмө атын жаз','🔒 Кулпуланган','Ээси {name} · {n}/{max}','Азырынча бөлмө жок. Бирөөнү түз!','🙋 {name} сенин досуң болгусу келет','🤝 Сен жана {name} эми доссуңар',
+      '💬 {name}: {text}','Кабыл алуу','Баш тартуу','Чат','Сурам жөнөтүлдү','Дос кошуу','Азырынча дос жок. Төмөндөн бирөөнү кош','Бул аттагы оюнчу жок','Азырынча башка оюнчу жок','Сурам жөнөтүлдү',
+      'Сурам ишке ашпады','Жүктөлүүдө…','Жүктөө ишке ашпады','Азырынча билдирүү жок. Салам де!','Мен',' (сен)','Байланыш үзүлдү, кайра туташууда…','Бөлмө толду','Алгач почтаны жаз','Почта abc@example.com сыяктуу болушу керек',
+      'Каттоо үчүн почта милдеттүү','Жөнөтүлүүдө…','Жөнөтүү ишке ашпады','Код {email} дарегине жөнөтүлдү (спамды текшер)','{n} сек','Кайра жөнөтүү','Тармак катасы, код жөнөтүлгөн жок','“Код жөнөтүү” басып, 6 цифраны жаз','Сүрөттөгү 4 белгини жаз','Бир нерсе туура эмес болду',
+      'Каттоо ийгиликтүү, кирүү ийгиликсиз','Тармак катасы','Бул аккаунт менен упайларды түбөлүк өчүрөт. Ишенесиңби?','Ырастоо үчүн сырсөздү жаз:','Аккаунт өчүрүлдү. Ойногонуң үчүн ыракмат!','Өчүрүү ишке ашпады','Тармак катасы, өчүрүлгөн жок','Автоайландыруу колдоого алынбайт, телефонду бура','Упай {n}','Тармакта {n}',
+      'Ping {n}ms'
+    ],
+    'lo': [
+      '🐍 ງູຫຼາຍຜູ້ຫຼິ້ນ','ລົງທະບຽນ → ຫ້ອງໂຖງ → ສ້າງ ຫຼື ເຂົ້າຫ້ອງ','ເຂົ້າສູ່ລະບົບ','ລົງທະບຽນ','ຊື່ຜູ້ໃຊ້','ລະຫັດຜ່ານ (4-32 ຕົວ)','ອີເມວ (ຕ້ອງມີເພື່ອລົງທະບຽນ)','ລະຫັດ 6 ໂຕເລກ','ສົ່ງລະຫັດ','ພິມ 4 ຕົວອັກສອນໃນຮູບເພື່ອລົງທະບຽນ',
+      '4 ຕົວອັກສອນໃນຮູບ','ຮູບໃໝ່','ຮູບຢືນຢັນ','⌨️ ຄອມພິວເຕີ: ລູກສອນ / WASD, ຊ່ອງວ່າງເພື່ອຟື້ນຄືນ','🍎 ກິນເພື່ອໃຫຍ່ຂຶ້ນ. ກຳແພງ, ຕົວເອງ ຫຼື ງູອື່ນ = ຈົບ','ແຂກ','ສະຖິຕິ {n}','ອອກ','ລຶບບັນຊີ','🏠 ຫ້ອງ',
+      'ໂຫຼດຄືນ','➕ ສ້າງຫ້ອງ','ຊື່ຫ້ອງ','ລະຫັດຜ່ານ (ບໍ່ບັງຄັບ)','ສ້າງແລ້ວເຂົ້າ','🤖 ຜູ້ດຽວ (ຕໍ່ Doubao)','💬 ແຊັດຫ້ອງໂຖງ','ເວົ້າຫຍັງສັກຢ່າງ...','👥 ໝູ່','🌐 ຜູ້ຫຼິ້ນທັງໝົດ',
+      'ຄົ້ນຫາຜູ້ຫຼິ້ນ...','🏆 ຕາຕະລາງຄະແນນ','ຄະແນນ 0','ອອນໄລນ໌ 0','Ping -','ເຂົ້າ: ','ຊ້າ','ປົກກະຕິ','ໄວ','ໄວທີ່ສຸດ',
+      'ເຂົ້າຫ້ອງ','ເຈົ້າຕາຍ 💀','ຄະແນນຮອບນີ້:','ຟື້ນຄືນ','👥 ຜູ້ຫຼິ້ນ','ອອກຈາກຫ້ອງ','💬 ແຊັດໃນຫ້ອງ','ແຊັດ (Enter ເພື່ອສົ່ງ)','⚙️ ການຕັ້ງຄ່າ','ແຊັດສ່ວນຕົວ',
+      'ປິດ','ຂໍ້ຄວາມ (Enter ເພື່ອສົ່ງ)','ສົ່ງ','ລະຫັດຜ່ານຫ້ອງ:','ພິມຊື່ຫ້ອງກ່ອນ','🔒 ລັອກ','ເຈົ້າຂອງ {name} · {n}/{max}','ຍັງບໍ່ມີຫ້ອງ. ສ້າງສັກຫ້ອງ!','🙋 {name} ຢາກເປັນໝູ່ເຈົ້າ','🤝 ເຈົ້າ ແລະ {name} ເປັນໝູ່ກັນແລ້ວ',
+      '💬 {name}: {text}','ຍອມຮັບ','ປະຕິເສດ','ແຊັດ','ສົ່ງຄຳຂໍແລ້ວ','ເພີ່ມໝູ່','ຍັງບໍ່ມີໝູ່. ເພີ່ມຄົນໜຶ່ງລຸ່ມນີ້','ບໍ່ພົບຜູ້ຫຼິ້ນຊື່ນີ້','ຍັງບໍ່ມີຜູ້ຫຼິ້ນອື່ນ','ສົ່ງຄຳຂໍແລ້ວ',
+      'ຄຳຂໍລົ້ມເຫຼວ','ກຳລັງໂຫຼດ…','ໂຫຼດລົ້ມເຫຼວ','ຍັງບໍ່ມີຂໍ້ຄວາມ. ທັກທາຍ!','ຂ້ອຍ',' (ເຈົ້າ)','ການເຊື່ອມຕໍ່ຂາດ, ກຳລັງເຊື່ອມຄືນ…','ຫ້ອງເຕັມ','ພິມອີເມວກ່ອນ','ອີເມວຄວນຄື abc@example.com',
+      'ຕ້ອງມີອີເມວເພື່ອລົງທະບຽນ','ກຳລັງສົ່ງ…','ສົ່ງບໍ່ໄດ້','ສົ່ງລະຫັດໄປ {email} ແລ້ວ (ເບິ່ງ spam)','{n} ວິ','ສົ່ງຄືນ','ເຄືອຂ່າຍຜິດ, ລະຫັດບໍ່ຖືກສົ່ງ','ກົດ “ສົ່ງລະຫັດ” ແລ້ວພິມ 6 ໂຕເລກ','ພິມ 4 ຕົວອັກສອນຈາກຮູບ','ມີບາງຢ່າງຜິດພາດ',
+      'ລົງທະບຽນໄດ້ ແຕ່ເຂົ້າບໍ່ໄດ້','ເຄືອຂ່າຍຜິດ','ສິ່ງນີ້ຈະລຶບບັນຊີ ແລະ ຄະແນນຕະຫຼອດໄປ. ແນ່ໃຈບໍ່?','ພິມລະຫັດຜ່ານເພື່ອຢືນຢັນ:','ລຶບບັນຊີແລ້ວ. ຂອບໃຈທີ່ຫຼິ້ນ!','ລຶບລົ້ມເຫຼວ','ເຄືອຂ່າຍຜິດ, ບໍ່ໄດ້ລຶບ','ບໍ່ຮອງຮັບການໝຸນອັດຕະໂນມັດ, ໝຸນໂທລະສັບ','ຄະແນນ {n}','ອອນໄລນ໌ {n}',
+      'Ping {n}ms'
+    ],
+    'lt': [
+      '🐍 Daugelio žaidėjų gyvatė','Registruokis → Laukiamasis → Sukurk arba prisijunk prie kambario','Prisijungti','Registruotis','Vartotojo vardas','Slaptažodis (4-32 simboliai)','El. paštas (būtinas registracijai)','6 skaitmenų kodas','Siųsti kodą','Įvesk 4 paveikslėlio simbolius, kad užsiregistruotum',
+      '4 simboliai paveikslėlyje','Kitas paveikslėlis','patikros paveikslėlis','⌨️ Kompiuteris: rodyklės / WASD, tarpas – atgimti','🍎 Valgyk ir augk. Siena, tu pats ar kita gyvatė = pabaiga','Svečias','Rekordas {n}','Atsijungti','Ištrinti paskyrą','🏠 Kambariai',
+      'Atnaujinti','➕ Sukurti kambarį','Kambario pavadinimas','Slaptažodis (neprivalomas)','Sukurti ir prisijungti','🤖 Vienas (prieš Doubao)','💬 Laukiamojo pokalbis','Pasakyk ką nors...','👥 Draugai','🌐 Visi žaidėjai',
+      'Ieškoti žaidėjų...','🏆 Lyderių lentelė','Taškai 0','Prisijungę 0','Ping -','Įeiti: ','Lėtai','Įprastai','Greitai','Labai greitai',
+      'Įeiti į kambarį','Tu mirėsi 💀','Šio raundo taškai:','Atgimti','👥 Žaidėjai','Išeiti iš kambario','💬 Kambario pokalbis','Pokalbis (Enter – siųsti)','⚙️ Nustatymai','Privatus pokalbis',
+      'Uždaryti','Žinutė (Enter – siųsti)','Siųsti','Kambario slaptažodis:','Pirmiausia įvesk kambario pavadinimą','🔒 Užrakinta','Šeimininkas {name} · {n}/{max}','Kambarių dar nėra. Sukurk vieną!','🙋 {name} nori būti tavo draugas','🤝 Tu ir {name} dabar draugai',
+      '💬 {name}: {text}','Priimti','Atmesti','Pokalbis','Išsiųsta','Pridėti draugą','Draugų dar nėra. Pridėk vieną žemiau','Nėra žaidėjo tokiu vardu','Kitų žaidėjų dar nėra','Užklausa išsiųsta',
+      'Užklausa nepavyko','Įkeliama…','Įkelti nepavyko','Žinučių dar nėra. Pasakyk labas!','Aš',' (tu)','Ryšys nutrūko, jungiamasi iš naujo…','Kambarys pilnas','Pirmiausia įvesk el. paštą','El. paštas turi atrodyti kaip abc@example.com',
+      'Registracijai būtinas el. paštas','Siunčiama…','Nepavyko išsiųsti','Kodas išsiųstas į {email} (patikrink šlamštą)','{n} s','Siųsti dar kartą','Tinklo klaida, kodas neišsiųstas','Spausk „Siųsti kodą“ ir įvesk 6 skaitmenis','Įvesk 4 simbolius iš paveikslėlio','Kažkas nepavyko',
+      'Registracija pavyko, prisijungti nepavyko','Tinklo klaida','Tai visam laikui ištrins paskyrą ir taškus. Tikrai?','Įvesk slaptažodį patvirtinimui:','Paskyra ištrinta. Ačiū, kad žaidei!','Ištrinti nepavyko','Tinklo klaida, neištrinta','Automatinis pasukimas nepalaikomas, pasuk telefoną','Taškai {n}','Prisijungę {n}',
+      'Ping {n}ms'
+    ],
+    'lv': [
+      '🐍 Vairāku spēlētāju čūska','Reģistrējies → Uzgaidāmā → Izveido vai pievienojies istabai','Pieteikties','Reģistrēties','Lietotājvārds','Parole (4-32 rakstzīmes)','E-pasts (obligāts reģistrācijai)','6 ciparu kods','Nosūtīt kodu','Ievadi 4 attēla rakstzīmes, lai reģistrētos',
+      '4 rakstzīmes attēlā','Cits attēls','verifikācijas attēls','⌨️ Dators: bultiņas / WASD, atstarpe – atdzimt','🍎 Ēd, lai augtu. Siena, tu pats vai cita čūska = beigas','Viesis','Rekords {n}','Iziet','Dzēst kontu','🏠 Istabas',
+      'Atsvaidzināt','➕ Izveidot istabu','Istabas nosaukums','Parole (neobligāta)','Izveidot un pievienoties','🤖 Viens (pret Doubao)','💬 Uzgaidāmās tērzēšana','Pasaki kaut ko...','👥 Draugi','🌐 Visi spēlētāji',
+      'Meklēt spēlētājus...','🏆 Līderu saraksts','Punkti 0','Tiešsaistē 0','Ping -','Ieeja: ','Lēni','Parasti','Ātri','Ļoti ātri',
+      'Ieiet istabā','Tu nomiri 💀','Šīs kārtas punkti:','Atdzimt','👥 Spēlētāji','Iziet no istabas','💬 Istabas tērzēšana','Tērzēšana (Enter – nosūtīt)','⚙️ Iestatījumi','Privātā tērzēšana',
+      'Aizvērt','Ziņa (Enter – nosūtīt)','Nosūtīt','Istabas parole:','Vispirms ieraksti istabas nosaukumu','🔒 Aizslēgta','Saimnieks {name} · {n}/{max}','Istabu vēl nav. Izveido vienu!','🙋 {name} grib būt tavs draugs','🤝 Tu un {name} tagad esat draugi',
+      '💬 {name}: {text}','Pieņemt','Noraidīt','Tērzēšana','Nosūtīts','Pievienot draugu','Draugu vēl nav. Pievieno kādu zemāk','Nav spēlētāja ar šādu vārdu','Citu spēlētāju vēl nav','Pieprasījums nosūtīts',
+      'Pieprasījums neizdevās','Ielādē…','Ielāde neizdevās','Ziņu vēl nav. Pasaki sveiki!','Es',' (tu)','Savienojums pārtrūka, pievienojas no jauna…','Istaba ir pilna','Vispirms ieraksti e-pastu','E-pastam jāizskatās kā abc@example.com',
+      'Reģistrācijai nepieciešams e-pasts','Sūta…','Neizdevās nosūtīt','Kods nosūtīts uz {email} (pārbaudi surogātpastu)','{n} s','Nosūtīt vēlreiz','Tīkla kļūda, kods nav nosūtīts','Spied “Nosūtīt kodu” un ievadi 6 ciparus','Ievadi 4 rakstzīmes no attēla','Kaut kas nogāja greizi',
+      'Reģistrācija izdevās, pieteikšanās ne','Tīkla kļūda','Tas neatgriezeniski dzēsīs kontu un punktus. Droši?','Ievadi paroli, lai apstiprinātu:','Konts dzēsts. Paldies par spēli!','Dzēšana neizdevās','Tīkla kļūda, nav dzēsts','Automātiskā pagriešana nav atbalstīta, pagriez telefonu','Punkti {n}','Tiešsaistē {n}',
+      'Ping {n}ms'
+    ],
+    'mk': [
+      '🐍 Змија за повеќе играчи','Регистрирај се → Лоби → Создај или влези во соба','Најава','Регистрација','Корисничко име','Лозинка (4-32 знаци)','Е-пошта (задолжителна за регистрација)','Код од 6 цифри','Испрати код','Впиши ги 4 знаци од сликата за да се регистрираш',
+      '4 знаци од сликата','Нова слика','слика за проверка','⌨️ Компјутер: стрелки / WASD, празно место за оживување','🍎 Јади за да растеш. Ѕид, ти самиот или друга змија = крај','Гостин','Рекорд {n}','Одјава','Избриши сметка','🏠 Соби',
+      'Освежи','➕ Создај соба','Име на соба','Лозинка (незадолжително)','Создај и влези','🤖 Сам (против Doubao)','💬 Чат во лоби','Кажи нешто...','👥 Пријатели','🌐 Сите играчи',
+      'Пребарај играчи...','🏆 Ранг-листа','Поени 0','Онлајн 0','Ping -','Влез: ','Бавно','Нормално','Брзо','Многу брзо',
+      'Влези во соба','Загина 💀','Поени во оваа рунда:','Оживеј','👥 Играчи','Напушти соба','💬 Чат во соба','Чат (Enter за испраќање)','⚙️ Поставки','Приватен чат',
+      'Затвори','Порака (Enter за испраќање)','Испрати','Лозинка на собата:','Прво впиши име на соба','🔒 Заклучена','Домаќин {name} · {n}/{max}','Сè уште нема соби. Создај една!','🙋 {name} сака да биде твој пријател','🤝 Ти и {name} сега сте пријатели',
+      '💬 {name}: {text}','Прифати','Одбиј','Чат','Испратено','Додај пријател','Сè уште немаш пријатели. Додај некого подолу','Нема играч со тоа име','Сè уште нема други играчи','Барањето е испратено',
+      'Барањето не успеа','Вчитување…','Вчитувањето не успеа','Сè уште нема пораки. Кажи здраво!','Јас',' (ти)','Врската прекина, повторно поврзување…','Собата е полна','Прво впиши е-пошта','Е-поштата треба да изгледа како abc@example.com',
+      'Е-поштата е задолжителна за регистрација','Испраќање…','Не успеа испраќањето','Кодот е испратен на {email} (провери спам)','{n} сек','Испрати повторно','Мрежна грешка, кодот не е испратен','Кликни „Испрати код“ и впиши 6 цифри','Впиши ги 4 знаци од сликата','Нешто тргна наопаку',
+      'Регистрацијата успеа, најавата не','Мрежна грешка','Ова трајно ќе ја избрише сметката и поените. Сигурно?','Впиши лозинка за потврда:','Сметката е избришана. Благодариме за играта!','Бришењето не успеа','Мрежна грешка, не е избришано','Автоматското ротирање не е поддржано, заврти го телефонот','Поени {n}','Онлајн {n}',
+      'Ping {n}ms'
+    ],
+    'mt': [
+      '🐍 Serp b’ħafna plejers','Irreġistra → Lobby → Oħloq jew ingħaqad ma’ kamra','Idħol','Irreġistra','Isem tal-utent','Password (4-32 karattru)','Email (meħtieġ biex tirreġistra)','Kodiċi ta’ 6 ċifri','Ibgħat il-kodiċi','Ikteb l-4 karattri fl-istampa biex tirreġistra',
+      '4 karattri fl-istampa','Stampa oħra','stampa tal-verifika','⌨️ Kompjuter: vleġeġ / WASD, spazju biex tirxoxta','🍎 Ikel biex tikber. Ħajt, int stess jew serp ieħor = tmiem','Mistieden','L-aħjar {n}','Oħroġ','Ħassar il-kont','🏠 Kmamar',
+      'Aġġorna','➕ Oħloq kamra','Isem il-kamra','Password (mhux obbligatorju)','Oħloq u ingħaqad','🤖 Waħdi (kontra Doubao)','💬 Chat tal-lobby','Għid xi ħaġa...','👥 Ħbieb','🌐 Il-plejers kollha',
+      'Fittex plejers...','🏆 Klassifika','Punti 0','Onlajn 0','Ping -','Idħol: ','Bil-mod','Normali','Mgħaġġel','Ħafna mgħaġġel',
+      'Idħol fil-kamra','Mint 💀','Punti ta’ dan ir-round:','Erġa’ ħaj','👥 Plejers','Ħalli l-kamra','💬 Chat tal-kamra','Chat (Enter biex tibgħat)','⚙️ Settings','Chat privat',
+      'Agħlaq','Messaġġ (Enter biex tibgħat)','Ibgħat','Password tal-kamra:','Ikteb l-isem tal-kamra l-ewwel','🔒 Msakkra','Ospitu {name} · {n}/{max}','Għad m’hemmx kmamar. Oħloq waħda!','🙋 {name} irid ikun ħabib tiegħek','🤝 Int u {name} issa ħbieb',
+      '💬 {name}: {text}','Aċċetta','Irrifjuta','Chat','Mibgħut','Żid ħabib','Għad m’għandekx ħbieb. Żid wieħed hawn taħt','M’hemmx plejer b’dan l-isem','Għad m’hemmx plejers oħra','It-talba ntbagħtet',
+      'It-talba falliet','Qed jitgħabba…','It-tagħbija falliet','Għad m’hemmx messaġġi. Għid bonjour!','Jien',' (int)','Il-konnessjoni nqatgħet, qed nerġa’ nqabbad…','Il-kamra mimlija','Ikteb l-email l-ewwel','L-email għandha tkun bħal abc@example.com',
+      'L-email hija meħtieġa biex tirreġistra','Qed jibgħat…','Ma ntbagħatx','Kodiċi mibgħut lil {email} (iċċekkja l-ispam)','{n} s','Ibgħat mill-ġdid','Żball tan-netwerk, il-kodiċi ma ntbagħatx','Agħfas “Ibgħat il-kodiċi” u ikteb 6 ċifri','Ikteb l-4 karattri mill-istampa','Xi ħaġa marret ħażin',
+      'Irreġistrajt, imma d-dħul falla','Żball tan-netwerk','Dan iħassar il-kont u l-punti għal dejjem. Żgur?','Ikteb il-password biex tikkonferma:','Il-kont tħassar. Grazzi talli lgħabt!','Il-ħassir falla','Żball tan-netwerk, ma tħassarx','Rotazzjoni awtomatika mhix appoġġjata, dawwar il-mowbajl','Punti {n}','Onlajn {n}',
+      'Ping {n}ms'
+    ],
+    'mn': [
+      '🐍 Олон тоглогчийн могой','Бүртгүүлэх → Лобби → Өрөө үүсгэх эсвэл нэгдэх','Нэвтрэх','Бүртгүүлэх','Хэрэглэгчийн нэр','Нууц үг (4-32 тэмдэгт)','Имэйл (бүртгүүлэхэд заавал)','6 оронтой код','Код илгээх','Бүртгүүлэхийн тулд зураг дээрх 4 тэмдэгтийг бич',
+      'Зураг дээрх 4 тэмдэгт','Өөр зураг','баталгаажуулах зураг','⌨️ Компьютер: сумнууд / WASD, зай — дахин амилах','🍎 Өсөхийн тулд ид. Хана, өөрөө эсвэл өөр могой = тоглоом дууслаа','Зочин','Дээд {n}','Гарах','Бүртгэл устгах','🏠 Өрөөнүүд',
+      'Сэргээх','➕ Өрөө үүсгэх','Өрөөний нэр','Нууц үг (заавал биш)','Үүсгэж нэгдэх','🤖 Ганцаараа (Doubao-той)','💬 Лобби чат','Ямар нэгэн зүйл хэл...','👥 Найзууд','🌐 Бүх тоглогчид',
+      'Тоглогч хайх...','🏆 Тэргүүлэгчид','Оноо 0','Онлайн 0','Ping -','Орох: ','Удаан','Хэвийн','Хурдан','Маш хурдан',
+      'Өрөөнд орох','Чи үхлээ 💀','Энэ тойргийн оноо:','Дахин амилах','👥 Тоглогчид','Өрөөнөөс гарах','💬 Өрөөний чат','Чат (Enter — илгээх)','⚙️ Тохиргоо','Хувийн чат',
+      'Хаах','Мессеж (Enter — илгээх)','Илгээх','Өрөөний нууц үг:','Эхлээд өрөөний нэрийг бич','🔒 Цоожтой','Эзэн {name} · {n}/{max}','Одоохондоо өрөө байхгүй. Нэгийг үүсгэ!','🙋 {name} чиний найз болохыг хүсэж байна','🤝 Чи болон {name} одоо найзууд',
+      '💬 {name}: {text}','Хүлээн авах','Татгалзах','Чат','Илгээсэн','Найз нэмэх','Одоохондоо найз байхгүй. Доороос нэгийг нэм','Ийм нэртэй тоглогч байхгүй','Одоохондоо өөр тоглогч байхгүй','Хүсэлт илгээгдлээ',
+      'Хүсэлт амжилтгүй','Ачаалж байна…','Ачаалал амжилтгүй','Одоохондоо мессеж байхгүй. Сайн уу гэж хэл!','Би',' (чи)','Холболт тасарлаа, дахин холбогдож байна…','Өрөө дүүрсэн','Эхлээд имэйлээ бич','Имэйл abc@example.com шиг байх ёстой',
+      'Бүртгүүлэхэд имэйл заавал','Илгээж байна…','Илгээж чадсангүй','Код {email} руу илгээгдлээ (спам шалга)','{n} сек','Дахин илгээх','Сүлжээний алдаа, код илгээгдсэнгүй','“Код илгээх” дараад 6 орон бич','Зураг дээрх 4 тэмдэгтийг бич','Ямар нэгэн зүйл буруу болсон',
+      'Бүртгэгдлээ, гэхдээ нэвтэрч чадсангүй','Сүлжээний алдаа','Энэ бүртгэл болон оноог бүрмөсөн устана. Итгэлтэй байна уу?','Баталгаажуулах нууц үгээ бич:','Бүртгэл устлаа. Тоглосонд баярлалаа!','Устгаж чадсангүй','Сүлжээний алдаа, устаагүй','Автомат эргэлт дэмжигдэхгүй, утсаа эргүүл','Оноо {n}','Онлайн {n}',
+      'Ping {n}ms'
+    ],
+    'my': [
+      '🐍 မြွေဂိမ်း (အများသုံး)','စာရင်းသွင်း → ဧည့်ခန်း → အခန်းဖန်တီး သို့မဟုတ် ဝင်ရောက်','အကောင့်ဝင်ရန်','စာရင်းသွင်းရန်','အသုံးပြုသူအမည်','စကားဝှက် (4-32 လုံး)','အီးမေးလ် (စာရင်းသွင်းရန် လိုအပ်)','ဂဏန်း 6 လုံး ကုဒ်','ကုဒ်ပို့ရန်','စာရင်းသွင်းရန် ပုံထဲမှ စာလုံး 4 လုံး ရိုက်ထည့်',
+      'ပုံထဲမှ စာလုံး 4 လုံး','ပုံအသစ်','အတည်ပြုပုံ','⌨️ ကွန်ပျူတာ: မြှားများ / WASD၊ ကွက်လပ်ဖြင့် ပြန်ရှင်သန်','🍎 စားပြီး ကြီးထွား။ နံရံ၊ မိမိ သို့မဟုတ် အခြားမြွေ = ပြီးဆုံး','ဧည့်သည်','စံချိန် {n}','ထွက်ရန်','အကောင့်ဖျက်ရန်','🏠 အခန်းများ',
+      'ပြန်လည်စတင်ရန်','➕ အခန်းဖန်တီးရန်','အခန်းအမည်','စကားဝှက် (မလိုအပ်)','ဖန်တီးပြီး ဝင်ရန်','🤖 တစ်ယောက်တည်း (Doubao နှင့်)','💬 ဧည့်ခန်း ချတ်','တစ်ခုခု ပြော...','👥 မိတ်ဆွေများ','🌐 ကစားသမားအားလုံး',
+      'ကစားသမား ရှာရန်...','🏆 ထိပ်တန်းစာရင်း','အမှတ် 0','အွန်လိုင်း 0','Ping -','ဝင်ရန်: ','နှေး','ပုံမှန်','မြန်','အလွန်မြန်',
+      'အခန်းထဲ ဝင်ရန်','သင်သေသွားပြီ 💀','ဒီပတ် အမှတ်:','ပြန်ရှင်သန်ရန်','👥 ကစားသမားများ','အခန်းမှ ထွက်ရန်','💬 အခန်းချတ်','ချတ် (ပို့ရန် Enter)','⚙️ ဆက်တင်','ကိုယ်ပိုင် ချတ်',
+      'ပိတ်ရန်','စာ (ပို့ရန် Enter)','ပို့ရန်','အခန်း စကားဝှက်:','အခန်းအမည် အရင်ရိုက်ပါ','🔒 သော့ခတ်ထား','အိမ်ရှင် {name} · {n}/{max}','အခန်း မရှိသေးပါ။ တစ်ခု ဖန်တီး!','🙋 {name} သင့်မိတ်ဆွေ ဖြစ်ချင်သည်','🤝 သင် နှင့် {name} ယခု မိတ်ဆွေ ဖြစ်ပြီ',
+      '💬 {name}: {text}','လက်ခံရန်','ငြင်းပယ်ရန်','ချတ်','တောင်းဆိုပြီး','မိတ်ဆွေ ထည့်ရန်','မိတ်ဆွေ မရှိသေးပါ။ အောက်တွင် တစ်ခု ထည့်ပါ','ဒီအမည်နှင့် ကစားသမား မရှိ','အခြား ကစားသမား မရှိသေးပါ','တောင်းဆိုမှု ပို့ပြီး',
+      'တောင်းဆိုမှု မအောင်မြင်','ဖွင့်နေသည်…','ဖွင့်၍ မရပါ','စာ မရှိသေးပါ။ မင်္ဂလာပါ ပြောပါ!','ကျွန်ုပ်',' (သင်)','ချိတ်ဆက်မှု ပြတ်သွား၊ ပြန်ချိတ်နေသည်…','အခန်း ပြည့်နေသည်','အီးမေးလ် အရင်ရိုက်ပါ','အီးမေးလ်က abc@example.com ကဲ့သို့ ဖြစ်ရမည်',
+      'စာရင်းသွင်းရန် အီးမေးလ် လိုအပ်','ပို့နေသည်…','ပို့၍ မရပါ','ကုဒ်ကို {email} သို့ ပို့ပြီး (spam စစ်ပါ)','{n} စက္ကန့်','ပြန်ပို့ရန်','ကွန်ရက် အမှား၊ ကုဒ် မပို့ရသေး','“ကုဒ်ပို့ရန်” နှိပ်ပြီး ဂဏန်း 6 လုံး ရိုက်ပါ','ပုံထဲမှ စာလုံး 4 လုံး ရိုက်ပါ','တစ်ခုခု မှားသွားသည်',
+      'စာရင်းသွင်းပြီး၊ ဝင်၍ မရပါ','ကွန်ရက် အမှား','ဤသည် အကောင့်နှင့် အမှတ်များကို အပြီးအပိုင် ဖျက်မည်။ သေချာလား?','အတည်ပြုရန် စကားဝှက် ရိုက်ပါ:','အကောင့် ဖျက်ပြီး။ ကစားပေးသည့်အတွက် ကျေးဇူးတင်ပါ!','ဖျက်၍ မရပါ','ကွန်ရက် အမှား၊ မဖျက်ရသေး','အလိုအလျောက် လှည့်ခြင်း မပံ့ပိုးပါ၊ ဖုန်းကို လှည့်ပါ','အမှတ် {n}','အွန်လိုင်း {n}',
+      'Ping {n}ms'
+    ],
+    'ne': [
+      '🐍 बहुखेलाडी सर्प','दर्ता → लबी → कोठा बनाऊ वा सामेल हौ','लग इन','दर्ता','प्रयोगकर्ता नाम','पासवर्ड (4-32 अक्षर)','इमेल (दर्ताका लागि अनिवार्य)','६ अंकको कोड','कोड पठाऊ','दर्ता गर्न तस्बिरका ४ अक्षर लेख',
+      'तस्बिरका ४ अक्षर','अर्को तस्बिर','प्रमाणीकरण तस्बिर','⌨️ कम्प्युटर: तीर / WASD, स्पेसले पुनर्जीवन','🍎 खाएर बढ। भित्ता, आफै वा अर्को सर्प = खेल सकियो','पाहुना','उत्कृष्ट {n}','लग आउट','खाता मेटाऊ','🏠 कोठाहरू',
+      'रिफ्रेस','➕ कोठा बनाऊ','कोठाको नाम','पासवर्ड (वैकल्पिक)','बनाऊ र सामेल हौ','🤖 एक्लै (Doubao सँग)','💬 लबी च्याट','केही भन...','👥 साथीहरू','🌐 सबै खेलाडी',
+      'खेलाडी खोज...','🏆 लिडरबोर्ड','स्कोर ०','अनलाइन ०','Ping -','प्रवेश: ','ढिलो','सामान्य','छिटो','धेरै छिटो',
+      'कोठामा जाऊ','तिमी मर्‍यौ 💀','यो राउन्डको स्कोर:','पुनर्जीवन','👥 खेलाडी','कोठा छोड','💬 कोठाको च्याट','च्याट (पठाउन Enter)','⚙️ सेटिङ','निजी च्याट',
+      'बन्द','सन्देश (पठाउन Enter)','पठाऊ','कोठाको पासवर्ड:','पहिले कोठाको नाम लेख','🔒 ताला लगाइएको','होस्ट {name} · {n}/{max}','अझै कोठा छैन। एउटा बनाऊ!','🙋 {name} तिम्रो साथी बन्न चाहन्छ','🤝 तिमी र {name} अब साथी भए',
+      '💬 {name}: {text}','स्वीकार','अस्वीकार','च्याट','अनुरोध गरियो','साथी थप','अझै साथी छैन। तल एउटा थप','यो नामको खेलाडी छैन','अझै अरू खेलाडी छैन','अनुरोध पठाइयो',
+      'अनुरोध असफल','लोड हुँदै…','लोड असफल','अझै सन्देश छैन। नमस्ते भन!','म',' (तिमी)','जडान टुट्यो, पुनः जोडिँदै…','कोठा भरियो','पहिले इमेल लेख','इमेल abc@example.com जस्तो हुनुपर्छ',
+      'दर्ताका लागि इमेल अनिवार्य','पठाउँदै…','पठाउन सकिएन','कोड {email} मा पठाइयो (स्प्याम हेर)','{n} से','फेरि पठाऊ','नेटवर्क गडबड, कोड गएन','“कोड पठाऊ” थिच र ६ अंक लेख','तस्बिरका ४ अक्षर लेख','केही गडबड भयो',
+      'दर्ता भयो, लगइन भएन','नेटवर्क गडबड','यसले खाता र स्कोर सधैंका लागि मेटाउनेछ। पक्का?','पुष्टि गर्न पासवर्ड लेख:','खाता मेटियो। खेलेकोमा धन्यवाद!','मेटाउन सकिएन','नेटवर्क गडबड, मेटिएन','स्वतः घुमाउने समर्थित छैन, फोन घुमाऊ','स्कोर {n}','अनलाइन {n}',
+      'Ping {n}ms'
+    ],
+    'nb': [
+      '🐍 Flerspiller-slange','Registrer deg → Lobby → Lag eller bli med i et rom','Logg inn','Registrer deg','Brukernavn','Passord (4-32 tegn)','E-post (påkrevd for registrering)','6-sifret kode','Send kode','Skriv de 4 tegnene i bildet for å registrere deg',
+      '4 tegn i bildet','Nytt bilde','bekreftelsesbilde','⌨️ Datamaskin: piltaster / WASD, mellomrom for å gjenoppstå','🍎 Spis for å vokse. Vegg, deg selv eller en annen slange = slutt','Gjest','Beste {n}','Logg ut','Slett konto','🏠 Rom',
+      'Oppdater','➕ Lag rom','Romnavn','Passord (valgfritt)','Lag og bli med','🤖 Alene (mot Doubao)','💬 Lobbychat','Si noe...','👥 Venner','🌐 Alle spillere',
+      'Søk spillere...','🏆 Ledertavle','Poeng 0','Online 0','Ping -','Inn: ','Treg','Normal','Rask','Turbo',
+      'Gå inn i rommet','Du døde 💀','Poeng denne runden:','Gjenoppstå','👥 Spillere','Forlat rommet','💬 Romchat','Chat (Enter for å sende)','⚙️ Innstillinger','Privat chat',
+      'Lukk','Melding (Enter for å sende)','Send','Rompassord:','Skriv romnavn først','🔒 Låst','Vert {name} · {n}/{max}','Ingen rom ennå. Lag ett!','🙋 {name} vil være vennen din','🤝 Du og {name} er venner nå',
+      '💬 {name}: {text}','Godta','Avslå','Chat','Forespurt','Legg til venn','Ingen venner ennå. Legg til en nedenfor','Ingen spiller med det navnet','Ingen andre spillere ennå','Forespørsel sendt',
+      'Forespørselen mislyktes','Laster…','Kunne ikke laste','Ingen meldinger ennå. Si hei!','Meg',' (deg)','Tilkoblingen brøt, kobler til på nytt…','Rommet er fullt','Skriv e-post først','E-posten skal se ut som abc@example.com',
+      'E-post er påkrevd for registrering','Sender…','Kunne ikke sende','Kode sendt til {email} (sjekk søppelpost)','{n} s','Send på nytt','Nettverksfeil, koden ble ikke sendt','Trykk «Send kode» og skriv 6 sifre','Skriv de 4 tegnene fra bildet','Noe gikk galt',
+      'Registrert, men innlogging mislyktes','Nettverksfeil','Dette sletter kontoen og poengene for alltid. Sikker?','Skriv passord for å bekrefte:','Kontoen er slettet. Takk for at du spilte!','Sletting mislyktes','Nettverksfeil, ikke slettet','Autorotasjon støttes ikke, roter telefonen','Poeng {n}','Online {n}',
+      'Ping {n}ms'
+    ],
+    'nn': [
+      '🐍 Fleirspelar-slange','Registrer deg → Lobby → Lag eller bli med i eit rom','Logg inn','Registrer deg','Brukarnamn','Passord (4-32 teikn)','E-post (påkravd for registrering)','6-sifra kode','Send kode','Skriv dei 4 teikna i biletet for å registrere deg',
+      '4 teikn i biletet','Nytt bilete','stadfestingsbilete','⌨️ Datamaskin: piltastar / WASD, mellomrom for å gjenoppstå','🍎 Et for å vekse. Vegg, deg sjølv eller ein annan slange = slutt','Gjest','Beste {n}','Logg ut','Slett konto','🏠 Rom',
+      'Oppdater','➕ Lag rom','Romnamn','Passord (valfritt)','Lag og bli med','🤖 Åleine (mot Doubao)','💬 Lobbyprat','Sei noko...','👥 Venner','🌐 Alle spelarar',
+      'Søk spelarar...','🏆 Leiertavle','Poeng 0','På nett 0','Ping -','Inn: ','Sakte','Normal','Rask','Turbo',
+      'Gå inn i rommet','Du døydde 💀','Poeng denne runden:','Gjenoppstå','👥 Spelarar','Forlat rommet','💬 Romprat','Prat (Enter for å sende)','⚙️ Innstillingar','Privat prat',
+      'Lukk','Melding (Enter for å sende)','Send','Rompassord:','Skriv romnamn først','🔒 Låst','Vert {name} · {n}/{max}','Ingen rom enno. Lag eitt!','🙋 {name} vil vere venen din','🤝 Du og {name} er venner no',
+      '💬 {name}: {text}','Godta','Avslå','Prat','Forespurt','Legg til ven','Ingen venner enno. Legg til ein nedanfor','Ingen spelar med det namnet','Ingen andre spelarar enno','Førespurnaden er send',
+      'Førespurnaden mislukkast','Lastar…','Kunne ikkje laste','Ingen meldingar enno. Sei hei!','Meg',' (deg)','Tilkoplinga braut, koplar til på nytt…','Rommet er fullt','Skriv e-post først','E-posten skal sjå ut som abc@example.com',
+      'E-post er påkravd for registrering','Sender…','Kunne ikkje sende','Kode send til {email} (sjekk søppelpost)','{n} s','Send på nytt','Nettverksfeil, koden vart ikkje send','Trykk «Send kode» og skriv 6 siffer','Skriv dei 4 teikna frå biletet','Noko gjekk gale',
+      'Registrert, men innlogging mislukkast','Nettverksfeil','Dette slettar kontoen og poenga for alltid. Sikker?','Skriv passord for å stadfeste:','Kontoen er sletta. Takk for at du spelte!','Sletting mislukkast','Nettverksfeil, ikkje sletta','Autorotasjon er ikkje støtta, roter telefonen','Poeng {n}','På nett {n}',
+      'Ping {n}ms'
+    ],
+    'uz': [
+      '🐍 Ko‘p o‘yinchi ilon','Ro‘yxatdan o‘t → Lobbi → Xona yarat yoki qo‘shil','Kirish','Ro‘yxatdan o‘tish','Foydalanuvchi nomi','Parol (4-32 belgi)','Email (ro‘yxatdan o‘tish uchun shart)','6 xonali kod','Kod yuborish','Ro‘yxatdan o‘tish uchun rasmdagi 4 belgini yoz',
+      'Rasmdagi 4 belgi','Boshqa rasm','tekshirish rasmi','⌨️ Kompyuter: strelkalar / WASD, bo‘sh joy — qayta tirilish','🍎 O‘sish uchun ye. Devor, o‘zing yoki boshqa ilon = o‘yin tugadi','Mehmon','Rekord {n}','Chiqish','Hisobni o‘chirish','🏠 Xonalar',
+      'Yangilash','➕ Xona yaratish','Xona nomi','Parol (ixtiyoriy)','Yarat va qo‘shil','🤖 Yolg‘iz (Doubaoga qarshi)','💬 Lobbi chati','Nimadir yoz...','👥 Do‘stlar','🌐 Barcha o‘yinchilar',
+      'O‘yinchilarni qidirish...','🏆 Peshlavhalar','Ball 0','Onlayn 0','Ping -','Kirish: ','Sekin','Oddiy','Tez','Juda tez',
+      'Xonaga kirish','Sen o‘lding 💀','Bu raunddagi ball:','Qayta tirilish','👥 O‘yinchilar','Xonadan chiqish','💬 Xona chati','Chat (yuborish uchun Enter)','⚙️ Sozlamalar','Shaxsiy chat',
+      'Yopish','Xabar (yuborish uchun Enter)','Yuborish','Xona paroli:','Avval xona nomini yoz','🔒 Qulflangan','Egasi {name} · {n}/{max}','Hali xonalar yo‘q. Bittasini yarat!','🙋 {name} sening do‘sting bo‘lishni xohlaydi','🤝 Sen va {name} endi do‘stsiz',
+      '💬 {name}: {text}','Qabul qilish','Rad etish','Chat','So‘rov yuborildi','Do‘st qo‘shish','Hali do‘stlar yo‘q. Quyidan bittasini qo‘sh','Bu nomdagi o‘yinchi yo‘q','Hali boshqa o‘yinchilar yo‘q','So‘rov yuborildi',
+      'So‘rov muvaffaqiyatsiz','Yuklanmoqda…','Yuklash muvaffaqiyatsiz','Hali xabarlar yo‘q. Salom de!','Men',' (sen)','Aloqa uzildi, qayta ulanmoqda…','Xona to‘la','Avval emailni yoz','Email abc@example.com kabi bo‘lishi kerak',
+      'Ro‘yxatdan o‘tish uchun email shart','Yuborilmoqda…','Yuborib bo‘lmadi','Kod {email} manziliga yuborildi (spamni tekshir)','{n} son','Qayta yuborish','Tarmoq xatosi, kod yuborilmadi','“Kod yuborish” ni bos va 6 raqamni yoz','Rasmdagi 4 belgini yoz','Nimadir xato ketdi',
+      'Ro‘yxatdan o‘tding, lekin kirib bo‘lmadi','Tarmoq xatosi','Bu hisob va ballarni butunlay o‘chiradi. Ishonchingiz komilmi?','Tasdiqlash uchun parolni yoz:','Hisob o‘chirildi. O‘ynaganingiz uchun rahmat!','O‘chirib bo‘lmadi','Tarmoq xatosi, o‘chirilmadi','Avtomatik burish qo‘llanmaydi, telefonni bur','Ball {n}','Onlayn {n}',
+      'Ping {n}ms'
+    ],
+    'pa': [
+      '🐍 ਮਲਟੀਪਲੇਅਰ ਸੱਪ','ਸਾਈਨ ਅੱਪ → ਲਾਬੀ → ਕਮਰਾ ਬਣਾਓ ਜਾਂ ਜੁੜੋ','ਲੌਗ ਇਨ','ਸਾਈਨ ਅੱਪ','ਯੂਜ਼ਰਨੇਮ','ਪਾਸਵਰਡ (4-32 ਅੱਖਰ)','ਈਮੇਲ (ਸਾਈਨ ਅੱਪ ਲਈ ਲਾਜ਼ਮੀ)','6 ਅੰਕਾਂ ਦਾ ਕੋਡ','ਕੋਡ ਭੇਜੋ','ਸਾਈਨ ਅੱਪ ਲਈ ਤਸਵੀਰ ਦੇ 4 ਅੱਖਰ ਲਿਖੋ',
+      'ਤਸਵੀਰ ਦੇ 4 ਅੱਖਰ','ਹੋਰ ਤਸਵੀਰ','ਤਸਦੀਕ ਤਸਵੀਰ','⌨️ ਕੰਪਿਊਟਰ: ਤੀਰ / WASD, ਸਪੇਸ ਨਾਲ ਦੁਬਾਰਾ ਜੀਓ','🍎 ਖਾਓ ਤੇ ਵਧੋ। ਕੰਧ, ਆਪਣੇ ਆਪ ਜਾਂ ਹੋਰ ਸੱਪ = ਖੇਡ ਖਤਮ','ਮਹਿਮਾਨ','ਸਭ ਤੋਂ ਵਧੀਆ {n}','ਲੌਗ ਆਉਟ','ਖਾਤਾ ਮਿਟਾਓ','🏠 ਕਮਰੇ',
+      'ਰਿਫ਼ਰੈਸ਼','➕ ਕਮਰਾ ਬਣਾਓ','ਕਮਰੇ ਦਾ ਨਾਮ','ਪਾਸਵਰਡ (ਚੋਣਵਾਂ)','ਬਣਾਓ ਤੇ ਜੁੜੋ','🤖 ਇਕੱਲਾ (Doubao ਨਾਲ)','💬 ਲਾਬੀ ਚੈਟ','ਕੁਝ ਕਹੋ...','👥 ਦੋਸਤ','🌐 ਸਾਰੇ ਖਿਡਾਰੀ',
+      'ਖਿਡਾਰੀ ਲੱਭੋ...','🏆 ਲੀਡਰਬੋਰਡ','ਸਕੋਰ 0','ਆਨਲਾਈਨ 0','Ping -','ਵੜੋ: ','ਹੌਲੀ','ਆਮ','ਤੇਜ਼','ਬਹੁਤ ਤੇਜ਼',
+      'ਕਮਰੇ ਵਿੱਚ ਜਾਓ','ਤੂੰ ਮਰ ਗਿਆ 💀','ਇਸ ਰਾਊਂਡ ਦਾ ਸਕੋਰ:','ਦੁਬਾਰਾ ਜੀਓ','👥 ਖਿਡਾਰੀ','ਕਮਰਾ ਛੱਡੋ','💬 ਕਮਰੇ ਦੀ ਚੈਟ','ਚੈਟ (ਭੇਜਣ ਲਈ Enter)','⚙️ ਸੈਟਿੰਗਾਂ','ਨਿੱਜੀ ਚੈਟ',
+      'ਬੰਦ ਕਰੋ','ਸੁਨੇਹਾ (ਭੇਜਣ ਲਈ Enter)','ਭੇਜੋ','ਕਮਰੇ ਦਾ ਪਾਸਵਰਡ:','ਪਹਿਲਾਂ ਕਮਰੇ ਦਾ ਨਾਮ ਲਿਖੋ','🔒 ਤਾਲਾ','ਮੇਜ਼ਬਾਨ {name} · {n}/{max}','ਹਾਲੇ ਕੋਈ ਕਮਰਾ ਨਹੀਂ। ਇੱਕ ਬਣਾਓ!','🙋 {name} ਤੇਰਾ ਦੋਸਤ ਬਣਨਾ ਚਾਹੁੰਦਾ ਹੈ','🤝 ਤੂੰ ਅਤੇ {name} ਹੁਣ ਦੋਸਤ ਹੋ',
+      '💬 {name}: {text}','ਸਵੀਕਾਰ','ਇਨਕਾਰ','ਚੈਟ','ਭੇਜਿਆ','ਦੋਸਤ ਜੋੜੋ','ਹਾਲੇ ਕੋਈ ਦੋਸਤ ਨਹੀਂ। ਹੇਠਾਂ ਇੱਕ ਜੋੜੋ','ਇਸ ਨਾਮ ਦਾ ਕੋਈ ਖਿਡਾਰੀ ਨਹੀਂ','ਹਾਲੇ ਹੋਰ ਖਿਡਾਰੀ ਨਹੀਂ','ਬੇਨਤੀ ਭੇਜੀ',
+      'ਬੇਨਤੀ ਅਸਫਲ','ਲੋਡ ਹੋ ਰਿਹਾ…','ਲੋਡ ਅਸਫਲ','ਹਾਲੇ ਕੋਈ ਸੁਨੇਹਾ ਨਹੀਂ। ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ!','ਮੈਂ',' (ਤੂੰ)','ਕਨੈਕਸ਼ਨ ਟੁੱਟਾ, ਦੁਬਾਰਾ ਜੁੜ ਰਿਹਾ…','ਕਮਰਾ ਭਰ ਗਿਆ','ਪਹਿਲਾਂ ਈਮੇਲ ਲਿਖੋ','ਈਮੇਲ abc@example.com ਵਰਗੀ ਹੋਣੀ ਚਾਹੀਦੀ ਹੈ',
+      'ਸਾਈਨ ਅੱਪ ਲਈ ਈਮੇਲ ਲਾਜ਼ਮੀ','ਭੇਜ ਰਿਹਾ…','ਭੇਜ ਨਹੀਂ ਸਕੇ','ਕੋਡ {email} ਨੂੰ ਭੇਜਿਆ (ਸਪੈਮ ਵੇਖੋ)','{n} ਸਕਿੰਟ','ਦੁਬਾਰਾ ਭੇਜੋ','ਨੈੱਟਵਰਕ ਗੜਬੜ, ਕੋਡ ਨਹੀਂ ਗਿਆ','“ਕੋਡ ਭੇਜੋ” ਦਬਾਓ ਤੇ 6 ਅੰਕ ਲਿਖੋ','ਤਸਵੀਰ ਦੇ 4 ਅੱਖਰ ਲਿਖੋ','ਕੁਝ ਗੜਬੜ ਹੋ ਗਈ',
+      'ਸਾਈਨ ਅੱਪ ਹੋਇਆ, ਲੌਗਇਨ ਨਹੀਂ','ਨੈੱਟਵਰਕ ਗੜਬੜ','ਇਹ ਖਾਤਾ ਤੇ ਸਕੋਰ ਹਮੇਸ਼ਾ ਲਈ ਮਿਟਾ ਦੇਵੇਗਾ। ਪੱਕਾ?','ਪੁਸ਼ਟੀ ਲਈ ਪਾਸਵਰਡ ਲਿਖੋ:','ਖਾਤਾ ਮਿਟ ਗਿਆ। ਖੇਡਣ ਲਈ ਧੰਨਵਾਦ!','ਮਿਟਾ ਨਹੀਂ ਸਕੇ','ਨੈੱਟਵਰਕ ਗੜਬੜ, ਨਹੀਂ ਮਿਟਿਆ','ਆਟੋ-ਰੋਟੇਟ ਸਮਰਥਿਤ ਨਹੀਂ, ਫ਼ੋਨ ਘੁਮਾਓ','ਸਕੋਰ {n}','ਆਨਲਾਈਨ {n}',
+      'Ping {n}ms'
+    ],
+    'sr': [
+      '🐍 Змија за више играча','Региструј се → Предворје → Направи или се придружи соби','Пријава','Регистрација','Корисничко име','Лозинка (4-32 знака)','Имејл (обавезан за регистрацију)','Код од 6 цифара','Пошаљи код','Упиши 4 знака са слике да се региструјеш',
+      '4 знака са слике','Нова слика','слика за проверу','⌨️ Рачунар: стрелице / WASD, размак за оживљавање','🍎 Једи да растеш. Зид, ти сам или друга змија = крај','Гост','Рекорд {n}','Одјава','Избриши налог','🏠 Собе',
+      'Освежи','➕ Направи собу','Назив собе','Лозинка (није обавезна)','Направи и придружи се','🤖 Сам (против Doubao)','💬 Ћаскање у предворју','Реци нешто...','👥 Пријатељи','🌐 Сви играчи',
+      'Тражи играче...','🏆 Ранг листа','Поени 0','Онлајн 0','Ping -','Улаз: ','Споро','Нормално','Брзо','Турбо',
+      'Уђи у собу','Умро си 💀','Поени ове рунде:','Оживи','👥 Играчи','Напусти собу','💬 Ћаскање у соби','Ћаскање (Enter за слање)','⚙️ Подешавања','Приватно ћаскање',
+      'Затвори','Порука (Enter за слање)','Пошаљи','Лозинка собе:','Прво упиши назив собе','🔒 Закључана','Домаћин {name} · {n}/{max}','Још нема соба. Направи једну!','🙋 {name} жели да буде твој пријатељ','🤝 Ти и {name} сте сада пријатељи',
+      '💬 {name}: {text}','Прихвати','Одбиј','Ћаскање','Послато','Додај пријатеља','Још немаш пријатеље. Додај неког испод','Нема играча с тим именом','Још нема других играча','Захтев је послат',
+      'Захтев није успео','Учитавање…','Учитавање није успело','Још нема порука. Реци здраво!','Ја',' (ти)','Веза прекинута, поновно повезивање…','Соба је пуна','Прво упиши имејл','Имејл треба да изгледа као abc@example.com',
+      'Имејл је обавезан за регистрацију','Шаље се…','Слање није успело','Код послат на {email} (провери спам)','{n} сек','Пошаљи поново','Грешка мреже, код није послат','Кликни „Пошаљи код“ и упиши 6 цифара','Упиши 4 знака са слике','Нешто је пошло наопако',
+      'Регистрација успела, пријава није','Грешка мреже','Ово трајно брише налог и поене. Сигурно?','Упиши лозинку за потврду:','Налог је избрисан. Хвала на игри!','Брисање није успело','Грешка мреже, није избрисано','Аутоматско окретање није подржано, окрени телефон','Поени {n}','Онлајн {n}',
+      'Ping {n}ms'
+    ],
+    'si': [
+      '🐍 බහු ක්‍රීඩක සර්පයා','ලියාපදිංචි වන්න → ලොබි → කාමරයක් සාදන්න හෝ එකතු වන්න','පිවිසෙන්න','ලියාපදිංචි වන්න','පරිශීලක නම','මුරපදය (4-32 අක්ෂර)','ඊමේල් (ලියාපදිංචියට අවශ්‍ය)','ඉලක්කම් 6 කේතය','කේතය යවන්න','ලියාපදිංචි වීමට පින්තූරයේ අක්ෂර 4 ලියන්න',
+      'පින්තූරයේ අක්ෂර 4','වෙනත් පින්තූරයක්','සත්‍යාපන පින්තූරය','⌨️ පරිගණකය: ඊතල / WASD, හිස් අවකාශයෙන් නැවත ජීවත් වන්න','🍎 කන්න, ලොකු වන්න. බිත්තිය, ඔබ හෝ වෙනත් සර්පයෙක් = අවසානය','අමුත්තා','හොඳම {n}','පිටවන්න','ගිණුම මකන්න','🏠 කාමර',
+      'නැවුම් කරන්න','➕ කාමරයක් සාදන්න','කාමරයේ නම','මුරපදය (අත්‍යවශ්‍ය නැත)','සාදා එකතු වන්න','🤖 තනිව (Doubao සමඟ)','💬 ලොබි චැට්','මොකක් හරි කියන්න...','👥 මිතුරන්','🌐 සියලු ක්‍රීඩකයින්',
+      'ක්‍රීඩකයින් සොයන්න...','🏆 ශ්‍රේණිගත ලැයිස්තුව','ලකුණු 0','ඔන්ලයින් 0','Ping -','ඇතුල් වන්න: ','හෙමින්','සාමාන්‍ය','වේගයෙන්','ඉතා වේගයෙන්',
+      'කාමරයට යන්න','ඔබ මැරුණා 💀','මෙම වටයේ ලකුණු:','නැවත ජීවත් වන්න','👥 ක්‍රීඩකයින්','කාමරයෙන් පිටවන්න','💬 කාමර චැට්','චැට් (යැවීමට Enter)','⚙️ සැකසුම්','පෞද්ගලික චැට්',
+      'වසන්න','පණිවිඩය (යැවීමට Enter)','යවන්න','කාමර මුරපදය:','මුලින්ම කාමරයේ නම ලියන්න','🔒 අගුළු දමා ඇත','සත්කාරක {name} · {n}/{max}','තවම කාමර නැත. එකක් සාදන්න!','🙋 {name} ඔබේ මිතුරා වීමට කැමතියි','🤝 ඔබ සහ {name} දැන් මිතුරන්',
+      '💬 {name}: {text}','පිළිගන්න','ප්‍රතික්ෂේප','චැට්','ඉල්ලා ඇත','මිතුරා එකතු කරන්න','තවම මිතුරන් නැත. පහතින් එකක් එකතු කරන්න','එම නමින් ක්‍රීඩකයෙක් නැත','තවම වෙනත් ක්‍රීඩකයින් නැත','ඉල්ලීම යවා ඇත',
+      'ඉල්ලීම අසාර්ථකයි','පූරණය වෙමින්…','පූරණය අසාර්ථකයි','තවම පණිවිඩ නැත. ආයුබෝවන් කියන්න!','මම',' (ඔබ)','සම්බන්ධතාවය බිඳුණා, නැවත සම්බන්ධ වෙමින්…','කාමරය පිරී ඇත','මුලින්ම ඊමේල් ලියන්න','ඊමේල් abc@example.com වගේ විය යුතුයි',
+      'ලියාපදිංචියට ඊමේල් අවශ්‍යයි','යවමින්…','යැවිය නොහැක','කේතය {email} වෙත යවා ඇත (spam බලන්න)','{n} තත්','නැවත යවන්න','ජාල දෝෂය, කේතය යැවී නැත','“කේතය යවන්න” ඔබා ඉලක්කම් 6 ලියන්න','පින්තූරයේ අක්ෂර 4 ලියන්න','මොකක් හරි වැරදුණා',
+      'ලියාපදිංචි වුණා, පිවිසිය නොහැක','ජාල දෝෂය','මෙය ගිණුම සහ ලකුණු සදාකාලිකව මකයි. විශ්වාසද?','තහවුරු කිරීමට මුරපදය ලියන්න:','ගිණුම මකා ඇත. ක්‍රීඩා කළාට ස්තූතියි!','මැකීම අසාර්ථකයි','ජාල දෝෂය, මකා නැත','ස්වයංක්‍රීය කරකැවීම සහාය නොදක්වයි, දුරකථනය කරකවන්න','ලකුණු {n}','ඔන්ලයින් {n}',
+      'Ping {n}ms'
+    ],
+    'sk': [
+      '🐍 Viacihráčska hadíka','Zaregistruj sa → Lobby → Vytvor alebo sa pridaj do miestnosti','Prihlásiť sa','Registrovať sa','Používateľské meno','Heslo (4-32 znakov)','E-mail (povinný pri registrácii)','6-cifrový kód','Poslať kód','Na registráciu napíš 4 znaky z obrázka',
+      '4 znaky z obrázka','Iný obrázok','overovací obrázok','⌨️ Počítač: šípky / WASD, medzerník na oživenie','🍎 Jedz a rasti. Stena, ty sám alebo iná hadíka = koniec','Hosť','Rekord {n}','Odhlásiť sa','Zmazať účet','🏠 Miestnosti',
+      'Obnoviť','➕ Vytvoriť miestnosť','Názov miestnosti','Heslo (nepovinné)','Vytvoriť a pripojiť','🤖 Sám (proti Doubao)','💬 Lobby chat','Povedz niečo...','👥 Priatelia','🌐 Všetci hráči',
+      'Hľadať hráčov...','🏆 Rebríček','Body 0','Online 0','Ping -','Vstup: ','Pomaly','Normálne','Rýchlo','Turbo',
+      'Vstúpiť do miestnosti','Zomrel si 💀','Body v tomto kole:','Oživnúť','👥 Hráči','Opustiť miestnosť','💬 Chat miestnosti','Chat (Enter na odoslanie)','⚙️ Nastavenia','Súkromný chat',
+      'Zavrieť','Správa (Enter na odoslanie)','Poslať','Heslo miestnosti:','Najprv napíš názov miestnosti','🔒 Zamknuté','Hostiteľ {name} · {n}/{max}','Zatiaľ žiadne miestnosti. Vytvor jednu!','🙋 {name} chce byť tvoj priateľ','🤝 Ty a {name} ste teraz priatelia',
+      '💬 {name}: {text}','Prijať','Odmietnuť','Chat','Odoslané','Pridať priateľa','Zatiaľ žiadni priatelia. Pridaj niekoho nižšie','Žiadny hráč s týmto menom','Zatiaľ žiadni ďalší hráči','Žiadosť odoslaná',
+      'Žiadosť zlyhala','Načítava sa…','Načítanie zlyhalo','Zatiaľ žiadne správy. Pozdrav!','Ja',' (ty)','Pripojenie prerušené, opätovné pripájanie…','Miestnosť je plná','Najprv napíš e-mail','E-mail má vyzerať ako abc@example.com',
+      'Na registráciu je potrebný e-mail','Odosiela sa…','Nepodarilo sa odoslať','Kód odoslaný na {email} (pozri spam)','{n} s','Poslať znova','Chyba siete, kód nebol odoslaný','Stlač „Poslať kód“ a napíš 6 číslic','Napíš 4 znaky z obrázka','Niečo sa pokazilo',
+      'Registrácia prebehla, prihlásenie nie','Chyba siete','Toto natrvalo zmaže účet a body. Isté?','Napíš heslo na potvrdenie:','Účet zmazaný. Ďakujeme za hru!','Mazanie zlyhalo','Chyba siete, nezmazané','Automatické otáčanie nie je podporované, otoč telefón','Body {n}','Online {n}',
+      'Ping {n}ms'
+    ],
+    'sl': [
+      '🐍 Kača za več igralcev','Registriraj se → Preddverje → Ustvari ali se pridruži sobi','Prijava','Registracija','Uporabniško ime','Geslo (4-32 znakov)','E-pošta (obvezna za registracijo)','6-mestna koda','Pošlji kodo','Za registracijo vpiši 4 znake s slike',
+      '4 znaki na sliki','Nova slika','potrditvena slika','⌨️ Računalnik: puščice / WASD, presledek za oživitev','🍎 Jej in rasti. Stena, ti sam ali druga kača = konec','Gost','Rekord {n}','Odjava','Izbriši račun','🏠 Sobe',
+      'Osveži','➕ Ustvari sobo','Ime sobe','Geslo (neobvezno)','Ustvari in se pridruži','🤖 Sam (proti Doubao)','💬 Klepet v preddverju','Reci kaj...','👥 Prijatelji','🌐 Vsi igralci',
+      'Išči igralce...','🏆 Lestvica','Točke 0','Na spletu 0','Ping -','Vstop: ','Počasi','Normalno','Hitro','Turbo',
+      'Vstopi v sobo','Umrl si 💀','Točke te runde:','Oživi','👥 Igralci','Zapusti sobo','💬 Klepet sobe','Klepet (Enter za pošiljanje)','⚙️ Nastavitve','Zasebni klepet',
+      'Zapri','Sporočilo (Enter za pošiljanje)','Pošlji','Geslo sobe:','Najprej vpiši ime sobe','🔒 Zaklenjeno','Gostitelj {name} · {n}/{max}','Sob še ni. Ustvari eno!','🙋 {name} želi biti tvoj prijatelj','🤝 Ti in {name} sta zdaj prijatelja',
+      '💬 {name}: {text}','Sprejmi','Zavrni','Klepet','Poslano','Dodaj prijatelja','Prijateljev še ni. Dodaj koga spodaj','Ni igralca s tem imenom','Drugih igralcev še ni','Zahteva poslana',
+      'Zahteva ni uspela','Nalaganje…','Nalaganje ni uspelo','Sporočil še ni. Reci zdravo!','Jaz',' (ti)','Povezava prekinjena, ponovno povezovanje…','Soba je polna','Najprej vpiši e-pošto','E-pošta mora izgledati kot abc@example.com',
+      'Za registracijo je potrebna e-pošta','Pošiljanje…','Ni bilo mogoče poslati','Koda poslana na {email} (preveri neželeno pošto)','{n} s','Pošlji znova','Omrežna napaka, koda ni bila poslana','Pritisni »Pošlji kodo« in vpiši 6 številk','Vpiši 4 znake s slike','Nekaj je šlo narobe',
+      'Registracija uspela, prijava ne','Omrežna napaka','To trajno izbriše račun in točke. Prepričan?','Vpiši geslo za potrditev:','Račun izbrisan. Hvala za igro!','Brisanje ni uspelo','Omrežna napaka, ni izbrisano','Samodejno vrtenje ni podprto, obrni telefon','Točke {n}','Na spletu {n}',
+      'Ping {n}ms'
+    ],
+    'sv': [
+      '🐍 Orm för flera spelare','Registrera dig → Lobby → Skapa eller gå med i ett rum','Logga in','Registrera dig','Användarnamn','Lösenord (4-32 tecken)','E-post (krävs för registrering)','6-siffrig kod','Skicka kod','Skriv de 4 tecknen i bilden för att registrera dig',
+      '4 tecken i bilden','Ny bild','verifieringsbild','⌨️ Dator: piltangenter / WASD, mellanslag för att återuppstå','🍎 Ät för att växa. Vägg, du själv eller en annan orm = slut','Gäst','Bästa {n}','Logga ut','Radera konto','🏠 Rum',
+      'Uppdatera','➕ Skapa rum','Rumsnamn','Lösenord (valfritt)','Skapa och gå med','🤖 Själv (mot Doubao)','💬 Lobbychatt','Säg något...','👥 Vänner','🌐 Alla spelare',
+      'Sök spelare...','🏆 Topplista','Poäng 0','Online 0','Ping -','In: ','Långsam','Normal','Snabb','Turbo',
+      'Gå in i rummet','Du dog 💀','Poäng denna runda:','Återuppstå','👥 Spelare','Lämna rummet','💬 Rumchatt','Chatt (Enter för att skicka)','⚙️ Inställningar','Privat chatt',
+      'Stäng','Meddelande (Enter för att skicka)','Skicka','Rumslösenord:','Skriv rumsnamn först','🔒 Låst','Värd {name} · {n}/{max}','Inga rum än. Skapa ett!','🙋 {name} vill vara din vän','🤝 Du och {name} är vänner nu',
+      '💬 {name}: {text}','Acceptera','Avböj','Chatta','Begärt','Lägg till vän','Inga vänner än. Lägg till en nedan','Ingen spelare med det namnet','Inga andra spelare än','Förfrågan skickad',
+      'Förfrågan misslyckades','Laddar…','Laddningen misslyckades','Inga meddelanden än. Säg hej!','Jag',' (du)','Anslutningen bröts, återansluter…','Rummet är fullt','Skriv e-post först','E-posten ska se ut som abc@example.com',
+      'E-post krävs för registrering','Skickar…','Kunde inte skicka','Kod skickad till {email} (kolla skräppost)','{n} s','Skicka igen','Nätverksfel, koden skickades inte','Tryck ”Skicka kod” och skriv 6 siffror','Skriv de 4 tecknen från bilden','Något gick fel',
+      'Registrerad, men inloggningen misslyckades','Nätverksfel','Detta raderar kontot och poängen för alltid. Säker?','Skriv lösenord för att bekräfta:','Kontot raderat. Tack för att du spelade!','Raderingen misslyckades','Nätverksfel, inte raderat','Autorotation stöds inte, rotera telefonen','Poäng {n}','Online {n}',
+      'Ping {n}ms'
+    ],
+    'sw': [
+      '🐍 Nyoka wa wachezaji wengi','Jisajili → Lobby → Unda au jiunge na chumba','Ingia','Jisajili','Jina la mtumiaji','Nenosiri (herufi 4-32)','Barua pepe (lazima kujisajili)','Msimbo wa tarakimu 6','Tuma msimbo','Andika herufi 4 za picha ili ujisajili',
+      'Herufi 4 za picha','Picha nyingine','picha ya uthibitisho','⌨️ Kompyuta: mishale / WASD, nafasi ili ufufuke','🍎 Kula ili ukue. Ukuta, wewe mwenyewe au nyoka mwingine = mwisho','Mgeni','Bora {n}','Toka','Futa akaunti','🏠 Vyumba',
+      'Sasisha','➕ Unda chumba','Jina la chumba','Nenosiri (si lazima)','Unda na ujiunge','🤖 Peke yako (dhidi ya Doubao)','💬 Gumzo la lobby','Sema kitu...','👥 Marafiki','🌐 Wachezaji wote',
+      'Tafuta wachezaji...','🏆 Orodha ya juu','Alama 0','Mtandaoni 0','Ping -','Ingia: ','Polepole','Kawaida','Haraka','Haraka sana',
+      'Ingia chumbani','Umekufa 💀','Alama za raundi hii:','Fufuka','👥 Wachezaji','Ondoka chumbani','💬 Gumzo la chumba','Gumzo (Enter kutuma)','⚙️ Mipangilio','Gumzo la faragha',
+      'Funga','Ujumbe (Enter kutuma)','Tuma','Nenosiri la chumba:','Andika jina la chumba kwanza','🔒 Imefungwa','Mwenyeji {name} · {n}/{max}','Hakuna vyumba bado. Unda kimoja!','🙋 {name} anataka kuwa rafiki yako','🤝 Wewe na {name} ni marafiki sasa',
+      '💬 {name}: {text}','Kubali','Kataa','Gumzo','Imeombwa','Ongeza rafiki','Hakuna marafiki bado. Ongeza mmoja chini','Hakuna mchezaji kwa jina hilo','Hakuna wachezaji wengine bado','Ombi limetumwa',
+      'Ombi limeshindikana','Inapakia…','Upakiaji umeshindikana','Hakuna ujumbe bado. Sema habari!','Mimi',' (wewe)','Muunganisho umekatika, inaunganisha tena…','Chumba kimejaa','Andika barua pepe kwanza','Barua pepe inapaswa kufanana na abc@example.com',
+      'Barua pepe inahitajika kujisajili','Inatuma…','Imeshindwa kutuma','Msimbo umetumwa kwa {email} (angalia spam)','Sekunde {n}','Tuma tena','Hitilafu ya mtandao, msimbo haujatumwa','Bonyeza “Tuma msimbo” kisha andika tarakimu 6','Andika herufi 4 za picha','Kitu kimeenda kombo',
+      'Umejisajili, lakini kuingia kumeshindikana','Hitilafu ya mtandao','Hii itafuta akaunti na alama milele. Una uhakika?','Andika nenosiri kuthibitisha:','Akaunti imefutwa. Asante kwa kucheza!','Ufutaji umeshindikana','Hitilafu ya mtandao, haijafutwa','Mzunguko wa kiotomatiki hautumiki, zungusha simu','Alama {n}','Mtandaoni {n}',
+      'Ping {n}ms'
+    ],
+    'ta': [
+      '🐍 பல வீரர் பாம்பு','பதிவு → லாபி → அறையை உருவாக்கு அல்லது சேர்','உள்நுழை','பதிவு செய்','பயனர் பெயர்','கடவுச்சொல் (4-32 எழுத்துகள்)','மின்னஞ்சல் (பதிவுக்கு அவசியம்)','6 இலக்கக் குறியீடு','குறியீடு அனுப்பு','பதிவு செய்ய படத்தில் உள்ள 4 எழுத்துகளை எழுது',
+      'படத்தில் உள்ள 4 எழுத்துகள்','புதிய படம்','சரிபார்ப்புப் படம்','⌨️ கணினி: அம்புக்குறிகள் / WASD, மறுபிறப்புக்கு Space','🍎 உணவை சாப்பிட்டு வளரு. சுவர், நீ அல்லது மற்ற பாம்பு = முடிவு','விருந்தினர்','சிறந்தது {n}','வெளியேறு','கணக்கை நீக்கு','🏠 அறைகள்',
+      'புதுப்பி','➕ அறை உருவாக்கு','அறைப் பெயர்','கடவுச்சொல் (விருப்பம்)','உருவாக்கி சேர்','🤖 தனியாக (Doubao உடன்)','💬 லாபி அரட்டை','ஏதாவது சொல்...','👥 நண்பர்கள்','🌐 எல்லா வீரர்கள்',
+      'வீரர்களைத் தேடு...','🏆 தரவரிசை','மதிப்பெண் 0','ஆன்லைன் 0','பிங் -','நுழை: ','மெதுவாக','சாதாரணம்','வேகம்','மிக வேகம்',
+      'அறைக்குள் செல்','நீ இறந்தாய் 💀','இந்தச் சுற்றின் மதிப்பெண்:','மீண்டும் பிற','👥 வீரர்கள்','அறையை விட்டு வெளியேறு','💬 அறை அரட்டை','அரட்டை (அனுப்ப Enter)','⚙️ அமைப்புகள்','தனிப்பட்ட அரட்டை',
+      'மூடு','செய்தி (அனுப்ப Enter)','அனுப்பு','அறைக் கடவுச்சொல்:','முதலில் அறைப் பெயரை எழுது','🔒 பூட்டப்பட்டது','உரிமையாளர் {name} · {n}/{max}','அறைகள் இல்லை. ஒன்றை உருவாக்கு!','🙋 {name} உன் நண்பராக விரும்புகிறார்','🤝 நீயும் {name} இப்போது நண்பர்கள்',
+      '💬 {name}: {text}','ஏற்றுக்கொள்','நிராகரி','அரட்டை','கோரப்பட்டது','நண்பரைச் சேர்','நண்பர்கள் இல்லை. கீழே ஒருவரைச் சேர்','அந்தப் பெயரில் வீரர் இல்லை','வேறு வீரர்கள் இன்னும் இல்லை','கோரிக்கை அனுப்பப்பட்டது',
+      'கோரிக்கை தோல்வி','ஏற்றுகிறது…','ஏற்றுதல் தோல்வி','இன்னும் செய்திகள் இல்லை. வணக்கம் சொல்!','நான்',' (நீ)','இணைப்பு துண்டிக்கப்பட்டது, மீண்டும் இணைக்கிறது…','அறை நிரம்பியது','முதலில் மின்னஞ்சலை எழுது','மின்னஞ்சல் abc@example.com போல இருக்க வேண்டும்',
+      'பதிவுக்கு மின்னஞ்சல் அவசியம்','அனுப்புகிறது…','அனுப்ப முடியவில்லை','{email} க்கு குறியீடு அனுப்பப்பட்டது (ஸ்பேம் பார்)','{n} வி','மீண்டும் அனுப்பு','வலைப்பிழை, குறியீடு அனுப்பப்படவில்லை','“குறியீடு அனுப்பு” அழுத்தி 6 இலக்கங்களை எழுது','படத்திலிருந்து 4 எழுத்துகளை எழுது','ஏதோ தவறு நடந்தது',
+      'பதிவு ஆனது, உள்நுழைவு தோல்வி','வலைப்பிழை','இது கணக்கையும் மதிப்பெண்களையும் நிரந்தரமாக நீக்கும். உறுதியா?','உறுதிப்படுத்த கடவுச்சொல்லை எழுது:','கணக்கு நீக்கப்பட்டது. விளையாடியதற்கு நன்றி!','நீக்கம் தோல்வி','வலைப்பிழை, நீக்கப்படவில்லை','தானியங்கி சுழற்சி ஆதரவு இல்லை, போனை சுழற்று','மதிப்பெண் {n}','ஆன்லைன் {n}',
+      'பிங் {n}ms'
+    ],
+    'te': [
+      '🐍 బహుళ ఆటగాళ్ల పాము','నమోదు → లాబీ → గది సృష్టించు లేదా చేరు','లాగిన్','నమోదు','వాడుకరి పేరు','పాస్‌వర్డ్ (4-32 అక్షరాలు)','ఇమెయిల్ (నమోదుకు తప్పనిసరి)','6 అంకెల కోడ్','కోడ్ పంపు','నమోదు కోసం చిత్రంలోని 4 అక్షరాలు రాయి',
+      'చిత్రంలోని 4 అక్షరాలు','కొత్త చిత్రం','ధృవీకరణ చిత్రం','⌨️ కంప్యూటర్: బాణాలు / WASD, పునర్జన్మకు Space','🍎 ఆహారం తిని పెరుగు. గోడ, నువ్వు లేదా ఇతర పాము = ముగింపు','అతిథి','ఉత్తమం {n}','లాగ్ అవుట్','ఖాతా తొలగించు','🏠 గదులు',
+      'రిఫ్రెష్','➕ గది సృష్టించు','గది పేరు','పాస్‌వర్డ్ (ఐచ్ఛికం)','సృష్టించి చేరు','🤖 ఒంటరిగా (Doubao తో)','💬 లాబీ చాట్','ఏదైనా చెప్పు...','👥 స్నేహితులు','🌐 అందరు ఆటగాళ్లు',
+      'ఆటగాళ్లను వెతుకు...','🏆 ర్యాంకింగ్','స్కోరు 0','ఆన్‌లైన్ 0','పింగ్ -','ప్రవేశం: ','నెమ్మది','సాధారణం','వేగం','అతి వేగం',
+      'గదిలోకి వెళ్లు','నువ్వు చనిపోయావు 💀','ఈ రౌండ్ స్కోరు:','తిరిగి జన్మించు','👥 ఆటగాళ్లు','గది విడిచిపెట్టు','💬 గది చాట్','చాట్ (పంపడానికి Enter)','⚙️ సెట్టింగ్‌లు','వ్యక్తిగత చాట్',
+      'మూసివేయి','సందేశం (పంపడానికి Enter)','పంపు','గది పాస్‌వర్డ్:','మొదట గది పేరు రాయి','🔒 లాక్ చేయబడింది','యజమాని {name} · {n}/{max}','ఇంకా గదులు లేవు. ఒకటి సృష్టించు!','🙋 {name} నీ స్నేహితుడు కావాలనుకుంటున్నాడు','🤝 నువ్వు, {name} ఇప్పుడు స్నేహితులు',
+      '💬 {name}: {text}','అంగీకరించు','తిరస్కరించు','చాట్','అభ్యర్థించబడింది','స్నేహితుని జోడించు','ఇంకా స్నేహితులు లేరు. క్రింద ఒకరిని జోడించు','ఆ పేరుతో ఆటగాడు లేడు','ఇంకా ఇతర ఆటగాళ్లు లేరు','అభ్యర్థన పంపబడింది',
+      'అభ్యర్థన విఫలమైంది','లోడ్ అవుతోంది…','లోడ్ విఫలమైంది','ఇంకా సందేశాలు లేవు. హాయ్ చెప్పు!','నేను',' (నువ్వు)','కనెక్షన్ తెగింది, మళ్లీ కనెక్ట్ అవుతోంది…','గది నిండింది','మొదట ఇమెయిల్ రాయి','ఇమెయిల్ abc@example.com లాగా ఉండాలి',
+      'నమోదుకు ఇమెయిల్ తప్పనిసరి','పంపుతోంది…','పంపలేకపోయింది','{email} కు కోడ్ పంపబడింది (స్పామ్ చూడు)','{n} సె','మళ్లీ పంపు','నెట్‌వర్క్ లోపం, కోడ్ పంపబడలేదు','“కోడ్ పంపు” నొక్కి 6 అంకెలు రాయి','చిత్రం నుండి 4 అక్షరాలు రాయి','ఏదో తప్పు జరిగింది',
+      'నమోదు అయింది, లాగిన్ విఫలమైంది','నెట్‌వర్క్ లోపం','ఇది ఖాతాను, స్కోర్లను శాశ్వతంగా తొలగిస్తుంది. ఖచ్చితమా?','నిర్ధారించడానికి పాస్‌వర్డ్ రాయి:','ఖాతా తొలగించబడింది. ఆడినందుకు ధన్యవాదాలు!','తొలగింపు విఫలమైంది','నెట్‌వర్క్ లోపం, తొలగించబడలేదు','ఆటో రొటేట్ మద్దతు లేదు, ఫోన్ తిప్పు','స్కోరు {n}','ఆన్‌లైన్ {n}',
+      'పింగ్ {n}ms'
+    ],
+    'th': [
+      '🐍 งูผู้เล่นหลายคน','สมัคร → ล็อบบี้ → สร้างหรือเข้าห้อง','เข้าสู่ระบบ','สมัคร','ชื่อผู้ใช้','รหัสผ่าน (4-32 ตัว)','อีเมล (จำเป็นตอนสมัคร)','รหัส 6 หลัก','ส่งรหัส','พิมพ์ 4 ตัวอักษรในรูปเพื่อสมัคร',
+      '4 ตัวอักษรในรูป','เปลี่ยนรูป','รูปยืนยัน','⌨️ คอมพิวเตอร์: ลูกศร / WASD, Space เพื่อเกิดใหม่','🍎 กินอาหารเพื่อโต ชนกำแพง ตัวเอง หรืองูอื่น = จบ','ผู้มาเยือน','สถิติ {n}','ออกจากระบบ','ลบบัญชี','🏠 ห้อง',
+      'รีเฟรช','➕ สร้างห้อง','ชื่อห้อง','รหัสผ่าน (ไม่บังคับ)','สร้างและเข้า','🤖 เล่นคนเดียว (กับ Doubao)','💬 แช็ตล็อบบี้','พูดอะไรหน่อย...','👥 เพื่อน','🌐 ผู้เล่นทั้งหมด',
+      'ค้นหาผู้เล่น...','🏆 อันดับ','คะแนน 0','ออนไลน์ 0','ปิง -','เข้า: ','ช้า','ปกติ','เร็ว','เร็วสุด',
+      'เข้าห้อง','คุณตายแล้ว 💀','คะแนนรอบนี้:','เกิดใหม่','👥 ผู้เล่น','ออกจากห้อง','💬 แช็ตห้อง','แช็ต (Enter เพื่อส่ง)','⚙️ ตั้งค่า','แช็ตส่วนตัว',
+      'ปิด','ข้อความ (Enter เพื่อส่ง)','ส่ง','รหัสห้อง:','ใส่ชื่อห้องก่อน','🔒 ล็อก','เจ้าของ {name} · {n}/{max}','ยังไม่มีห้อง สร้างสักห้อง!','🙋 {name} อยากเป็นเพื่อนคุณ','🤝 คุณกับ {name} เป็นเพื่อนกันแล้ว',
+      '💬 {name}: {text}','ยอมรับ','ปฏิเสธ','แช็ต','ส่งคำขอแล้ว','เพิ่มเพื่อน','ยังไม่มีเพื่อน เพิ่มด้านล่าง','ไม่พบผู้เล่นชื่อนี้','ยังไม่มีผู้เล่นอื่น','ส่งคำขอแล้ว',
+      'ส่งคำขอไม่สำเร็จ','กำลังโหลด…','โหลดไม่สำเร็จ','ยังไม่มีข้อความ ทักทายหน่อย!','ฉัน',' (คุณ)','การเชื่อมต่อขาด กำลังเชื่อมใหม่…','ห้องเต็ม','ใส่อีเมลก่อน','อีเมลต้องเป็นแบบ abc@example.com',
+      'ต้องใช้อีเมลตอนสมัคร','กำลังส่ง…','ส่งไม่สำเร็จ','ส่งรหัสไปที่ {email} แล้ว (ดูในสแปมด้วย)','{n} วิ','ส่งอีกครั้ง','เน็ตขัดข้อง ส่งรหัสไม่ได้','กด “ส่งรหัส” แล้วใส่เลข 6 หลัก','พิมพ์ 4 ตัวอักษรจากรูป','มีอะไรผิดพลาด',
+      'สมัครแล้ว แต่เข้าสู่ระบบไม่ได้','เน็ตขัดข้อง','จะลบบัญชีและคะแนนถาวร แน่ใจไหม?','ใส่รหัสผ่านเพื่อยืนยัน:','ลบบัญชีแล้ว ขอบคุณที่เล่น!','ลบไม่สำเร็จ','เน็ตขัดข้อง ลบไม่สำเร็จ','ไม่รองรับการหมุนอัตโนมัติ หมุนมือถือเอง','คะแนน {n}','ออนไลน์ {n}',
+      'ปิง {n}ms'
+    ],
+    'ur': [
+      '🐍 سانپ ملٹی پلیئر','سائن اپ → لابی → کمرہ بنائیں یا شامل ہوں','لاگ ان','سائن اپ','صارف نام','پاس ورڈ (4-32 حروف)','ای میل (سائن اپ کے لیے ضروری)','6 ہندسوں کا کوڈ','کوڈ بھیجیں','سائن اپ کے لیے تصویر کے 4 حروف لکھیں',
+      'تصویر کے 4 حروف','نئی تصویر','تصدیقی تصویر','⌨️ کمپیوٹر: ایرو کیز / WASD، دوبارہ جنم کے لیے Space','🍎 کھانا کھا کر بڑھیں۔ دیوار، خود یا دوسرا سانپ = ختم','مہمان','بہترین {n}','لاگ آؤٹ','اکاؤنٹ حذف کریں','🏠 کمرے',
+      'تازہ کریں','➕ کمرہ بنائیں','کمرے کا نام','پاس ورڈ (اختیاری)','بنائیں اور شامل ہوں','🤖 اکیلا (Doubao کے خلاف)','💬 لابی چیٹ','کچھ کہیں...','👥 دوست','🌐 تمام کھلاڑی',
+      'کھلاڑی تلاش کریں...','🏆 درجہ بندی','اسکور 0','آن لائن 0','پنگ -','داخل: ','آہستہ','عام','تیز','بہت تیز',
+      'کمرے میں داخل ہوں','آپ مر گئے 💀','اس راؤنڈ کا اسکور:','دوبارہ جنم','👥 کھلاڑی','کمرہ چھوڑیں','💬 کمرے کی چیٹ','چیٹ (بھیجنے کے لیے Enter)','⚙️ ترتیبات','نجی چیٹ',
+      'بند کریں','پیغام (بھیجنے کے لیے Enter)','بھیجیں','کمرے کا پاس ورڈ:','پہلے کمرے کا نام لکھیں','🔒 مقفل','میزبان {name} · {n}/{max}','ابھی کوئی کمرہ نہیں۔ ایک بنائیں!','🙋 {name} آپ کا دوست بننا چاہتا ہے','🤝 آپ اور {name} اب دوست ہیں',
+      '💬 {name}: {text}','قبول کریں','مسترد کریں','چیٹ','درخواست بھیجی','دوست شامل کریں','ابھی کوئی دوست نہیں۔ نیچے سے شامل کریں','اس نام کا کوئی کھلاڑی نہیں','ابھی دوسرے کھلاڑی نہیں','درخواست بھیج دی گئی',
+      'درخواست ناکام','لوڈ ہو رہا ہے…','لوڈ ناکام','ابھی کوئی پیغام نہیں۔ سلام کہیں!','میں',' (آپ)','کنکشن ٹوٹ گیا، دوبارہ جوڑ رہے ہیں…','کمرہ بھر گیا','پہلے ای میل لکھیں','ای میل abc@example.com کی طرح ہونی چاہیے',
+      'سائن اپ کے لیے ای میل ضروری ہے','بھیج رہے ہیں…','بھیج نہیں سکے','کوڈ {email} پر بھیج دیا (اسپام دیکھیں)','{n} سیکنڈ','دوبارہ بھیجیں','نیٹ ورک خرابی، کوڈ نہیں گیا','“کوڈ بھیجیں” دبائیں پھر 6 ہندسے لکھیں','تصویر سے 4 حروف لکھیں','کچھ غلط ہو گیا',
+      'سائن اپ ہوا، لاگ ان ناکام','نیٹ ورک خرابی','یہ اکاؤنٹ اور اسکور ہمیشہ کے لیے حذف کر دے گا۔ پکا؟','تصدیق کے لیے پاس ورڈ لکھیں:','اکاؤنٹ حذف ہو گیا۔ کھیلنے کا شکریہ!','حذف ناکام','نیٹ ورک خرابی، حذف نہیں ہوا','خودکار گھومنا سپورٹ نہیں، فون گھمائیں','اسکور {n}','آن لائن {n}',
+      'پنگ {n}ms'
+    ],
+  };
+
+  // 数组 → 对象
+  var TRANSLATIONS = {};
+  for (var code in RAW){
+    if (!Object.prototype.hasOwnProperty.call(RAW, code)) continue;
+    var arr = RAW[code], obj = {};
+    for (var i = 0; i < KEYS.length; i++) obj[KEYS[i]] = arr[i];
+    TRANSLATIONS[code] = obj;
+    if (arr.length !== KEYS.length && typeof console !== 'undefined') {
+      console.warn('[i18n] 语言 ' + code + ' 的条目数不是 ' + KEYS.length + '（实际 ' + arr.length + '）');
+    }
+  }
+
+  var CURRENT = 'en';
+
+  function supported(code){
+    if (!code) return false;
+    for (var i = 0; i < LANG_LIST.length; i++) if (LANG_LIST[i].code === code) return true;
+    return false;
+  }
+
+  function detect(){
+    try {
+      var saved = localStorage.getItem('snakeLang');
+      if (saved && supported(saved)) return saved;
+    } catch (e) {}
+    var nav = '';
+    try {
+      nav = (navigator.languages && navigator.languages[0]) || navigator.language || navigator.userLanguage || '';
+    } catch (e) {}
+    nav = String(nav || '').toLowerCase();
+    if (!nav) return 'en';
+    // 完全匹配
+    for (var i = 0; i < LANG_LIST.length; i++){
+      if (LANG_LIST[i].code.toLowerCase() === nav) return LANG_LIST[i].code;
+    }
+    if (nav === 'zh-tw' || nav === 'zh-hk' || nav === 'zh-mo' || nav === 'zh-hant') return 'zh-TW';
+    var p = nav.split('-')[0];
+    if (p === 'zh') return 'zh-CN';       // 中文浏览器默认简体
+    if (p === 'pt') return 'pt-PT';
+    if (p === 'no') return 'nb';
+    var pref = { nb:'nb', nn:'nn' };
+    if (pref[p]) return pref[p];
+    for (var j = 0; j < LANG_LIST.length; j++){
+      if (LANG_LIST[j].code.toLowerCase().split('-')[0] === p) return LANG_LIST[j].code;
+    }
+    return 'en';
+  }
+
+  function syncSelect(){
+    var sel = document.getElementById('langSel');
+    if (sel && sel.value !== CURRENT) sel.value = CURRENT;
+  }
+
+  function setLang(code){
+    if (!supported(code)){
+      // pt-BR 之外的葡萄牙语变体归到 pt-PT
+      code = 'en';
+    }
+    CURRENT = code;
+    var el = document.documentElement;
+    el.lang = code;
+    el.dir = RTL[code.split('-')[0]] ? 'rtl' : 'ltr';
+    try { localStorage.setItem('snakeLang', code); } catch (e) {}
+    syncSelect();
+    return CURRENT;
+  }
+
+  function getLang(){ return CURRENT; }
+
+  function t(key, vars){
+    var dict = TRANSLATIONS[CURRENT] || {};
+    var s = dict[key];
+    if (s == null || s === '') s = (TRANSLATIONS.en || {})[key];
+    if (s == null) s = key;
+    if (vars && typeof s === 'string'){
+      s = s.replace(/\{(\w+)\}/g, function(m, k){
+        return vars[k] != null ? String(vars[k]) : m;
+      });
+    }
+    return s;
+  }
+
+  function applyI18n(root){
+    root = root || document;
+    var list, i, el;
+    list = root.querySelectorAll('[data-i18n]');
+    for (i = 0; i < list.length; i++){
+      el = list[i];
+      el.textContent = t(el.getAttribute('data-i18n'));
+    }
+    list = root.querySelectorAll('[data-i18n-ph]');
+    for (i = 0; i < list.length; i++){
+      el = list[i];
+      el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph')));
+    }
+    list = root.querySelectorAll('[data-i18n-title]');
+    for (i = 0; i < list.length; i++){
+      el = list[i];
+      el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
+    }
+    document.documentElement.lang = CURRENT;
+    document.documentElement.dir = RTL[CURRENT.split('-')[0]] ? 'rtl' : 'ltr';
+    syncSelect();
+  }
+
+  // 初始化：自动识别语言
+  setLang(detect());
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ applyI18n(document); });
+  } else {
+    applyI18n(document);
+  }
+
+  // 语言下拉框：切换后立即生效，并通知页面刷新动态文案
+  function onSelChange(){
+    setLang(this.value);
+    applyI18n(document);
+    try {
+      window.dispatchEvent(new CustomEvent('snakelangchange', { detail:{ lang: CURRENT } }));
+    } catch (e) {}
+  }
+  var selEl = document.getElementById('langSel');
+  if (selEl) selEl.addEventListener('change', onSelChange);
+  else document.addEventListener('DOMContentLoaded', function(){
+    var s = document.getElementById('langSel');
+    if (s) s.addEventListener('change', onSelChange);
+  });
+
+  global.LANG_LIST = LANG_LIST;
+  global.TRANSLATIONS = TRANSLATIONS;
+  global.setLang = setLang;
+  global.getLang = getLang;
+  global.t = t;
+  global.applyI18n = applyI18n;
+})(window);
