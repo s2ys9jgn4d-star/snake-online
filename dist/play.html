@@ -24,12 +24,14 @@
         <input id="authUser" maxlength="16" placeholder="用户名（字母/数字/中文）" autocomplete="username">
         <input id="authPass" type="password" maxlength="32" placeholder="密码（4-32 位）" autocomplete="current-password">
         <div id="regExtra" class="hidden">
-          <input id="authEmail" type="email" maxlength="100" placeholder="邮箱（收验证码用）" autocomplete="email">
-          <div class="code-row">
-            <input id="authCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
-            <button id="sendCodeBtn" type="button">发送验证码</button>
+          <input id="authEmail" type="email" maxlength="100" placeholder="邮箱（注册必填，用于账号追溯）" autocomplete="email">
+          <div id="mailCodeBox" class="hidden">
+            <div class="code-row">
+              <input id="authCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码">
+              <button id="sendCodeBtn" type="button">发送验证码</button>
+            </div>
+            <p id="codeTip" class="muted"></p>
           </div>
-          <p id="codeTip" class="muted"></p>
         </div>
         <p id="noMailTip" class="muted hidden">照图片里的 4 个字符填写就能注册</p>
         <div id="captchaBox" class="hidden">
@@ -188,6 +190,6 @@
 
 </div>
 
-<script src="game.js?v=20261113a"></script>
+<script src="game.js?v=20261114a"></script>
 </body>
 </html>

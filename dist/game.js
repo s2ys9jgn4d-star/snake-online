@@ -90,7 +90,9 @@ let mailReady = null;
 let captchaId = '';
 function applyRegExtra(){
   const reg = authTab === 'register';
-  $('regExtra').classList.toggle('hidden', !(reg && mailReady !== false));
+  // 邮箱一直是必填（用于封号追溯）；验证码行只在邮件服务真的可用时才出现
+  $('regExtra').classList.toggle('hidden', !reg);
+  $('mailCodeBox').classList.toggle('hidden', !(reg && mailReady === true));
   $('captchaBox').classList.toggle('hidden', !(reg && mailReady === false));
   $('noMailTip').classList.toggle('hidden', !(reg && mailReady === false));
 }
@@ -157,12 +159,10 @@ async function doAuthAction(){
   const code = $('authCode') ? $('authCode').value.trim() : '';
   const captcha = $('captchaInput').value.trim();
   $('authErr').textContent = '';
-  if (authTab === 'register' && mailReady !== false){
-    if (!email) { $('authErr').textContent = '注册要填邮箱'; return; }
-    if (!code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
-  }
-  if (authTab === 'register' && mailReady === false && !captcha){
-    $('authErr').textContent = '照图片填一下 4 个字符'; return;
+  if (authTab === 'register'){
+    if (!email) { $('authErr').textContent = '注册要填邮箱（用于账号追溯）'; return; }
+    if (mailReady === true && !code) { $('authErr').textContent = '先点「发送验证码」，再把收到的 6 位数字填上'; return; }
+    if (mailReady === false && !captcha){ $('authErr').textContent = '照图片填一下 4 个字符'; return; }
   }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {

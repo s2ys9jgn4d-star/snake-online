@@ -43,7 +43,7 @@ let leaderboard = []; // [{u, s}]
 function loadUsers(){
   try {
     const raw = JSON.parse(fs.readFileSync(USERS_FILE,'utf8'));
-    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0, email:a.e||'' }]));
+    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0, email:a.e||'', ip:a.i||'' }]));
   } catch { accounts = new Map(); }
 }
 function loadScores(){
@@ -103,6 +103,7 @@ async function cloudRestore(){
     if (plain.users && (accounts.size === 0 || force)){ fs.writeFileSync(USERS_FILE, plain.users); loadUsers(); }
     if (plain.scores && (leaderboard.length === 0 || force)){ fs.writeFileSync(SCORES_FILE, plain.scores); loadScores(); }
     if (plain.friends && (!fs.existsSync(FRIENDS_FILE) || force)){ fs.writeFileSync(FRIENDS_FILE, plain.friends); loadSocial(); }
+    if (plain.banned && (!fs.existsSync(BANNED_FILE) || force)){ fs.writeFileSync(BANNED_FILE, plain.banned); loadBanned(); }
     console.log('云备份恢复完成：' + accounts.size + ' 个账号，' + leaderboard.length + ' 条分数' + (force ? '（强制恢复）' : ''));
   } catch (e) { console.log('云备份恢复出错：' + e.message); }
 }
@@ -117,7 +118,8 @@ function cloudBackup(){
       const plain = JSON.stringify({
         users: fs.existsSync(USERS_FILE) ? fs.readFileSync(USERS_FILE, 'utf8') : '[]',
         scores: fs.existsSync(SCORES_FILE) ? fs.readFileSync(SCORES_FILE, 'utf8') : '[]',
-        friends: fs.existsSync(FRIENDS_FILE) ? fs.readFileSync(FRIENDS_FILE, 'utf8') : null
+        friends: fs.existsSync(FRIENDS_FILE) ? fs.readFileSync(FRIENDS_FILE, 'utf8') : null,
+        banned: fs.existsSync(BANNED_FILE) ? fs.readFileSync(BANNED_FILE, 'utf8') : null
       });
       const content = Buffer.from(JSON.stringify({ v: 1, data: encryptBackup(plain) })).toString('base64');
       const api = `https://api.github.com/repos/${GH_REPO}/contents/${BACKUP_FILE}`;
@@ -132,7 +134,7 @@ function cloudBackup(){
   }, 5000);
 }
 
-function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0, e:a.email||''}))); cloudBackup(); }
+function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0, e:a.email||'', i:a.ip||''}))); cloudBackup(); }
 function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); cloudBackup(); }
 
 // ============================================================
@@ -229,6 +231,37 @@ function cleanupSocial(u){
   for (const k of Object.keys(social.msgs)) if (k.split('|').includes(u)) delete social.msgs[k];
   saveSocial();
 }
+// ============================================================
+//  黑名单：封号时记下邮箱和注册 IP，禁止再用同一邮箱/IP 注册
+// ============================================================
+const BANNED_FILE = path.join(DATA_DIR, 'banned.json');
+let banned = { emails: [], ips: [] };
+function loadBanned(){
+  try {
+    const raw = JSON.parse(fs.readFileSync(BANNED_FILE, 'utf8'));
+    banned = { emails: raw.emails || [], ips: raw.ips || [] };
+  } catch { banned = { emails: [], ips: [] }; }
+}
+loadBanned();
+function saveBanned(){ try { atomicWrite(BANNED_FILE, banned); } catch (e) { console.log('黑名单保存失败：' + e.message); } }
+// 封号时调用：把该账号的邮箱和注册 IP 拉黑
+function banAccount(a, ip){
+  if (a && a.email && !banned.emails.includes(a.email)) banned.emails.push(a.email);
+  const realIp = ip || (a && a.ip);
+  if (realIp && !banned.ips.includes(realIp)) banned.ips.push(realIp);
+  saveBanned();
+}
+// 注册前检查：命中黑名单就返回提示文字，没命中返回空串
+function bannedHit(email, ip){
+  if (email && banned.emails.includes(email)) return '这个邮箱以前有账号因违规被封，不能再注册了';
+  if (ip && banned.ips.includes(ip)) return '这个网络下有账号因违规被封，换个网络试试，或联系管理员';
+  return '';
+}
+function clientIp(req){
+  const f = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return f || (req.socket && req.socket.remoteAddress) || '';
+}
+
 // 我和某人的关系：friend 好友 / outgoing 我已申请 / incoming 他申请了我 / '' 陌生人
 function relationOf(me, other){
   if (areFriends(me, other)) return 'friend';
@@ -659,6 +692,7 @@ function punishBannedWord(user){
   a.strikes = (a.strikes || 0) + 1;
 
   if (a.strikes >= 3){
+    banAccount(a);           // 拉黑邮箱和注册 IP，防止换个用户名再来
     accounts.delete(user);
     saveUsers();
     cleanupSocial(user);
@@ -724,6 +758,7 @@ async function handleApi(req, res, urlPath){
     if (!EMAIL_RE.test(email)) return sendJSON(res, 400, {ok:false,msg:'邮箱格式不对'});
     if (u && accounts.has(u)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res, 409, {ok:false,msg:'这个邮箱已经注册过账号了'});
+    if (bannedHit(email, '')) return sendJSON(res, 403, {ok:false,msg:'这个邮箱以前有账号因违规被封，不能再注册了'});
     if (!mailUsable()){
       return sendJSON(res, 503, {ok:false, msg: Date.now() < mailBrokenUntil
         ? '邮箱服务刚出故障，暂时发不了验证码；不填邮箱也能直接注册'
@@ -760,13 +795,15 @@ async function handleApi(req, res, urlPath){
     const code = String(body.code||'').trim();
     if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
     if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
-    // 邮箱服务可用时必须走验证码；发信服务挂了就不拦人，允许直接注册
+    // 邮箱必填：即使发不了验证码也要填，用来追溯封号
     const needEmail = mailUsable();
-    if (needEmail && !EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
-    if (!needEmail && email && !EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
+    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'请填一个正确的邮箱'});
     if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
     if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
-    if (email) for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
+    for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
+    const ip = clientIp(req);
+    const hit = bannedHit(email, ip);
+    if (hit) return sendJSON(res, 403, {ok:false, msg:hit});
     if (needEmail){
       const rec = emailCodes.get(email);
       if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次'});
@@ -776,7 +813,7 @@ async function handleApi(req, res, urlPath){
       if (!checkCaptcha(String(body.cid||''), body.captcha)) return sendJSON(res,400,{ok:false,msg:'验证码不对，点「换一张」再试'});
     }
     const { hash, salt } = hashPass(p);
-    accounts.set(u, { hash, salt, email });
+    accounts.set(u, { hash, salt, email, ip });
     saveUsers();
     return sendJSON(res, 200, {ok:true});
   }
@@ -974,9 +1011,9 @@ async function handleApi(req, res, urlPath){
   }
   if (req.method === 'GET' && urlPath === '/api/admin/accounts'){
     if (!isAdmin(req)) return sendJSON(res, 401, {ok:false,msg:'未授权'});
-    const items = [...accounts.keys()].map(u => {
+    const items = [...accounts.entries()].map(([u, a]) => {
       const s = leaderboard.find(x=>x.u===u);
-      return { u, best: s ? s.s : 0 };
+      return { u, best: s ? s.s : 0, email: a.email || '', ip: a.ip || '', strikes: a.strikes || 0 };
     }).sort((a,b)=>a.u.localeCompare(b.u,'zh'));
     return sendJSON(res, 200, {ok:true, items, total:items.length});
   }
@@ -986,6 +1023,7 @@ async function handleApi(req, res, urlPath){
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const u = String(body.u||'').trim();
     if (!accounts.has(u)) return sendJSON(res, 404, {ok:false,msg:'账号不存在'});
+    banAccount(accounts.get(u));   // 管理员删号也进黑名单
     accounts.delete(u);
     saveUsers();
     cleanupSocial(u);
