@@ -272,6 +272,20 @@ function relationOf(me, other){
 }
 function bestOf(u){ const s = leaderboard.find(x => x.u === u); return s ? s.s : 0; }
 
+// 官方账号的展示分数：固定值，不会被真实游戏成绩覆盖（只升不降）
+const OFFICIAL_NAME = 'SnakeOnline官方';
+const OFFICIAL_BEST = 10000000000;
+function ensureOfficialScore(){
+  const row = leaderboard.find(x => x.u === OFFICIAL_NAME);
+  if (row){
+    if (row.s !== OFFICIAL_BEST){ row.s = OFFICIAL_BEST; }
+  } else {
+    leaderboard.push({ u: OFFICIAL_NAME, s: OFFICIAL_BEST });
+  }
+  leaderboard.sort((a, b) => b.s - a.s);
+  saveScores();
+}
+
 // 在线连接：同一个账号可能电脑和手机同时开着
 const socketsByUser = new Map();
 function isOnline(u){ return socketsByUser.has(u); }
@@ -1315,6 +1329,7 @@ function lanIPs(){
 
 // 先从云备份恢复账号数据，再开始监听
 cloudRestore().finally(() => {
+  ensureOfficialScore();   // 官方号展示分数固定为 10000000000
   server.listen(PORT, () => {
     console.log('');
     console.log('  🐍 多人联机贪吃蛇（完整版：账号+房间+排行榜+聊天）');

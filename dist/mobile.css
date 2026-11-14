@@ -39,6 +39,8 @@ html,body {
 }
 .auth-card h1 { font-size:24px; text-align:center; margin-bottom:4px; }
 .auth-sub { color:var(--muted); text-align:center; font-size:13px; margin-bottom:16px; }
+.feedback-line { text-align:center; font-size:12px; color:var(--muted); margin:-8px 0 12px; }
+.feedback-line a { color:#38bdf8; text-decoration:none; }
 .auth-tabs { display:flex; gap:4px; background:var(--panel2); border-radius:10px; padding:4px; margin-bottom:16px; }
 .auth-tabs .tab {
   flex:1; padding:10px 0; border:none; background:transparent; color:var(--muted);

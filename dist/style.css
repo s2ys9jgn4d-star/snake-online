@@ -36,6 +36,9 @@ html,body {
 }
 .auth-card h1 { font-size:28px; text-align:center; margin-bottom:4px; }
 .auth-sub { color:var(--muted); text-align:center; font-size:13px; margin-bottom:18px; }
+.feedback-line { text-align:center; font-size:12px; color:var(--muted); margin:-10px 0 14px; }
+.feedback-line a { color:#38bdf8; text-decoration:none; }
+.feedback-line a:hover { text-decoration:underline; }
 .auth-tabs { display:flex; gap:4px; background:var(--panel2); border-radius:10px; padding:4px; margin-bottom:16px; }
 .auth-tabs .tab {
   flex:1; padding:8px 0; border:none; background:transparent; color:var(--muted);
