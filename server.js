@@ -663,6 +663,10 @@ function hasBannedWord(text){
 const DAY_MS = 24 * 3600 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
+// 官方账号：界面上显示「官方」徽章，且不受违禁词处罚（防止测试时把自己封掉）
+const OFFICIAL_USERS = new Set(['SnakeOnline官方']);
+function isOfficial(u){ return OFFICIAL_USERS.has(u); }
+
 function fmtLeft(ms){
   const hours = Math.ceil(ms / 3600000);
   return hours <= 24 ? hours + ' 小时' : Math.ceil(hours / 24) + ' 天';
@@ -688,6 +692,7 @@ function kickUser(user, text){
 
 // 记一次过并处罚，返回给当事人看的提示；账号不存在返回 null
 function punishBannedWord(user){
+  if (isOfficial(user)) return '官方账号不受违禁词处罚（这条消息被拦下，不记过）';
   const a = accounts.get(user);
   if (!a) return null;
   a.strikes = (a.strikes || 0) + 1;
@@ -857,7 +862,7 @@ async function handleApi(req, res, urlPath){
     return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u)});
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
-    return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20)});
+    return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20).map(x => ({ ...x, off: isOfficial(x.u) }))});
   }
   // 邮箱发信自检：只报「有没有」不报值，方便排查线上配置
   if (req.method === 'GET' && urlPath === '/api/mail-status'){
@@ -883,7 +888,7 @@ async function handleApi(req, res, urlPath){
     const me = authFromReq(req);
     if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
     const items = [...accounts.keys()].filter(u => u !== me).map(u => ({
-      u, best: bestOf(u), online: isOnline(u), relation: relationOf(me, u)
+      u, best: bestOf(u), online: isOnline(u), relation: relationOf(me, u), off: isOfficial(u)
     })).sort((a,b) => (b.online - a.online) || a.u.localeCompare(b.u, 'zh'));
     return sendJSON(res, 200, {ok:true, items});
   }
@@ -891,7 +896,7 @@ async function handleApi(req, res, urlPath){
   if (req.method === 'GET' && urlPath === '/api/friends'){
     const me = authFromReq(req);
     if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
-    const friends = friendListOf(me).map(u => ({ u, online:isOnline(u), best:bestOf(u) }));
+    const friends = friendListOf(me).map(u => ({ u, online:isOnline(u), best:bestOf(u), off:isOfficial(u) }));
     const requests = (social.reqs[me] || []).map(r => ({ from:r.from, ts:r.ts }));
     return sendJSON(res, 200, {ok:true, friends, requests});
   }

@@ -343,6 +343,11 @@ function escHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// 名字 + 官方徽章（off 由服务器标记）
+function nameHtml(u, off){
+  return escHtml(u) + (off ? '<span class="off-badge">✓ 官方</span>' : '');
+}
+
 async function refreshFriends(){
   const r = await api('/api/friends');
   if (!r.ok) return;
@@ -389,7 +394,7 @@ function renderFriends(){
   for (const f of friendCache.friends){
     const row = document.createElement('div');
     row.className = 'people-row';
-    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${escHtml(f.u)}</span><span class="pb">${t('best', { n: f.best || 0 })}</span>`;
+    row.innerHTML = `<span class="dot${f.online ? ' on' : ''}"></span><span class="pn">${nameHtml(f.u, f.off)}</span><span class="pb">${t('best', { n: f.best || 0 })}</span>`;
     const chatBtn = document.createElement('button');
     chatBtn.className = 'mini-btn'; chatBtn.textContent = t('chat');
     chatBtn.onclick = () => openDm(f.u);
@@ -410,7 +415,7 @@ function renderPlayers(){
   for (const p of items.slice(0, 100)){
     const row = document.createElement('div');
     row.className = 'people-row';
-    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${escHtml(p.u)}</span><span class="pb">${t('best', { n: p.best || 0 })}</span>`;
+    row.innerHTML = `<span class="dot${p.online ? ' on' : ''}"></span><span class="pn">${nameHtml(p.u, p.off)}</span><span class="pb">${t('best', { n: p.best || 0 })}</span>`;
     const btn = document.createElement('button');
     btn.className = 'mini-btn';
     if (p.relation === 'friend'){
@@ -564,12 +569,12 @@ function renderLeaderboard(items){
     const li = document.createElement('li');
     const me = p.u === authUser ? ' me' : '';
     li.className = me + ' top' + (i+1);
-    li.innerHTML = `<span class="rk">${i+1}</span><span class="nm">${escape(p.u)}</span><span class="sc">${p.s}</span>`;
+    li.innerHTML = `<span class="rk">${i+1}</span><span class="nm">${nameHtml(p.u, p.off)}</span><span class="sc">${p.s}</span>`;
     el.appendChild(li);
   });
 }
 
-function escape(s){ return String(s).replace(/[<>]/g, c => ({'<':'<','>':'>'}[c])); }
+function escape(s){ return escHtml(s); }
 
 // ============================================================
 //  聊天（大厅 + 房间共用 renderChat）

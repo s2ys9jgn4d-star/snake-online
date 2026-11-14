@@ -254,3 +254,10 @@ html,body {
 }
 
 .captcha-img{display:block;width:120px;height:40px;margin:8px 0 4px;border-radius:8px;cursor:pointer;background:#eef2f7}
+
+/* 官方账号徽章 */
+.off-badge{
+  margin-left:5px; padding:0 5px; border-radius:6px; font-size:10px; line-height:16px;
+  background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#231a05; font-weight:700;
+  vertical-align:middle; white-space:nowrap;
+}
