@@ -649,6 +649,10 @@ function sendDir(dir){
 }
 
 window.addEventListener('keydown', e => {
+  // 正在输入框里打字（用户名/密码/邮箱/聊天）时，不要抢方向键
+  const el = e.target;
+  const tag = (el && el.tagName) || '';
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (el && el.isContentEditable)) return;
   if (!wsPlayerId) return;
   if (e.key === ' ') { sendWS({t:'respawn'}); $('dead').classList.add('hidden'); e.preventDefault(); return; }
   if (e.key === 'Escape') { $('leaveBtn').click(); return; }
