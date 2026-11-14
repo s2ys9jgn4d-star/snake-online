@@ -10,8 +10,8 @@
  * 也可以手动指定：MAIL_HOST / MAIL_PORT / MAIL_SECURE / MAIL_FROM
  *
  * 注意：Railway 免费/试用套餐封了出站 SMTP（25/465/587），所以线上请用 HTTPS 接口：
- *   MAIL_API     = smtp2go | brevo | resend   （走 443 端口，不会被封）
- *   MAIL_API_KEY = 对应平台给你的 API Key
+ *   MAIL_API     = smtp2go | brevo | resend | mailjet   （走 443 端口，不会被封）
+ *   MAIL_API_KEY = 对应平台给你的 API Key（Mailjet 写成「APIKey:SecretKey」）
  *   MAIL_FROM    = 已验证的发件邮箱
  *
  * 想配第二个备用邮箱？把上面 4 个变量改成 MAIL1_ 开头就行：
@@ -73,6 +73,7 @@ function isConfigured(){
 const API_ENDPOINTS = {
   brevo:    'https://api.brevo.com/v3/smtp/email',
   resend:   'https://api.resend.com/emails',
+  mailjet:  'https://api.mailjet.com/v3.1/send',
   smtp2go:  'https://api.smtp2go.com/v3/email/send'
 };
 
@@ -93,6 +94,22 @@ async function sendViaApi(c, { to, subject, text }){
   } else if (c.api === 'resend'){
     body = { from, to: [to], subject, text };
     headers = { authorization: 'Bearer ' + c.key, 'content-type': 'application/json' };
+  } else if (c.api === 'mailjet'){
+    // Mailjet 要两个密钥：MAIL_API_KEY 写成「API Key:Secret Key」
+    const pair = String(c.key).split(':');
+    if (pair.length < 2 || !pair[0] || !pair[1]) throw new Error('MAIL_API_KEY 要写成「APIKey:SecretKey」两段，用冒号隔开');
+    body = {
+      Messages: [{
+        From: { Email: c.from, Name: '联机贪吃蛇' },
+        To: [{ Email: to }],
+        Subject: subject,
+        TextPart: text
+      }]
+    };
+    headers = {
+      authorization: 'Basic ' + Buffer.from(pair[0] + ':' + pair[1]).toString('base64'),
+      'content-type': 'application/json'
+    };
   } else {  // smtp2go
     body = { api_key: c.key, sender: from, to: [to], subject, text_body: text };
     headers = { 'content-type': 'application/json' };
@@ -103,6 +120,13 @@ async function sendViaApi(c, { to, subject, text }){
   });
   const raw = await r.text().catch(() => '');
   if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + raw.slice(0, 200));
+  // Mailjet 出错时也可能返回 200，要看 Messages[0].Status
+  if (c.api === 'mailjet'){
+    let d = null;
+    try { d = JSON.parse(raw); } catch {}
+    const st = d && d.Messages && d.Messages[0] && d.Messages[0].Status;
+    if (st !== 'success') throw new Error('接口没发出去：' + raw.slice(0, 200));
+  }
   // SMTP2GO 出错时也返回 200，要看 data.failed / data.succeeded
   if (c.api === 'smtp2go'){
     let d = null;
