@@ -350,6 +350,16 @@ function verifyPass(pass, salt, hash){
 
 // token 管理：Map<token, username>
 const tokens = new Map();
+// 游客：只存在内存里，重启就没了（不写 users.json，不进排行榜，不改好友数据）
+const guests = new Set();
+function isGuest(u){ return guests.has(u); }
+function newGuestName(){
+  for (let i = 0; i < 50; i++){
+    const n = '游客' + crypto.randomInt(1000, 10000);
+    if (!accounts.has(n) && !guests.has(n) && n !== OFFICIAL_NAME) return n;
+  }
+  return '游客' + Date.now().toString().slice(-6);
+}
 function newToken(user){
   const t = crypto.randomBytes(24).toString('hex');
   tokens.set(t, user);
@@ -358,6 +368,7 @@ function newToken(user){
 
 function updateScore(user, score){
   if (!user || !score) return;
+  if (isGuest(user)) return;   // 游客的成绩不进排行榜
   let found = false;
   for (const entry of leaderboard){
     if (entry.u === user){ if (score > entry.s) entry.s = score; found = true; break; }
@@ -844,6 +855,7 @@ async function handleApi(req, res, urlPath){
     if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'邮箱格式不对，要像 abc@example.com 这样'});
     if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
     if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
+    if (guests.has(u)) return sendJSON(res,409,{ok:false,msg:'这个名字正被游客使用，换一个吧'});
     for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
     const ip = clientIp(req);
     const hit = bannedHit(email, ip);
@@ -871,6 +883,13 @@ async function handleApi(req, res, urlPath){
     const token = newToken(u);
     return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)});
   }
+  // 游客试玩：不注册、不写文件，拿一个临时身份进大厅
+  if (req.method === 'POST' && urlPath === '/api/guest'){
+    const u = newGuestName();
+    guests.add(u);
+    const token = newToken(u);
+    return sendJSON(res, 200, {ok:true, token, user:u, guest:true, muteLeft:0});
+  }
   if (req.method === 'POST' && urlPath === '/api/logout'){
     const user = authFromReq(req);
     // 客户端自己删 token 即可；服务端不强制失效（同 token 多连接场景复杂）
@@ -897,7 +916,7 @@ async function handleApi(req, res, urlPath){
     const u = authFromReq(req);
     if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
     const score = leaderboard.find(x=>x.u===u);
-    return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u)});
+    return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u), guest:isGuest(u)});
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20).map(x => ({ ...x, off: isOfficial(x.u) }))});
@@ -934,9 +953,15 @@ async function handleApi(req, res, urlPath){
   if (req.method === 'GET' && urlPath === '/api/friends'){
     const me = authFromReq(req);
     if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    // 游客没有好友：不加官方、不读写 friends.json
+    if (isGuest(me)) return sendJSON(res, 200, {ok:true, friends:[], requests:[]});
     const friends = friendListOf(me).map(u => ({ u, online:isOnline(u), best:bestOf(u), off:isOfficial(u) }));
     const requests = (social.reqs[me] || []).map(r => ({ from:r.from, ts:r.ts }));
     return sendJSON(res, 200, {ok:true, friends, requests});
+  }
+  // 游客不能加好友 / 私聊：这些记录会写进 friends.json，游客要求不留痕
+  if (/^\/api\/friend\//.test(urlPath) && isGuest(authFromReq(req) || '')){
+    return sendJSON(res, 403, {ok:false,msg:'游客不能用好友功能，注册账号后就可以啦'});
   }
   // 发好友申请（如果对方已经申请过我，就直接成为好友）
   if (req.method === 'POST' && urlPath === '/api/friend/request'){
@@ -1186,6 +1211,7 @@ function handleWsMessage(ws, text){
       return;
     }
     if (msg.t === 'create_room'){
+      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，挑一个房间加入吧'}));
       const name = String(msg.name||'').trim().slice(0, 20);
       if (!name) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名不能为空'}));
       if (hasBannedWord(name)) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名含有不允许的字词'}));
@@ -1202,6 +1228,7 @@ function handleWsMessage(ws, text){
     }
     // 单人模式：开一间私密房，塞一个豆包进去陪打
     if (msg.t === 'solo'){
+      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，进别人的房间就能玩'}));
       if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限'}));
       const id = roomId();
       const name = (ws.user + ' 的单人房').slice(0, 20);
@@ -1231,8 +1258,9 @@ function handleWsMessage(ws, text){
     if (msg.t === 'chat'){
       const text = String(msg.text||'').trim().slice(0, 200);
       if (!text) return;
+      // 游客不能在大厅发言（房间里可以聊）
+      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能在大厅发言，进房间后就能聊'}));
       if (blockChatIfNeeded(ws, text)) return;
-      // 大厅聊天：发给所有已登录但不在房间的用户
       const m = JSON.stringify({t:'chat', from:ws.user, text});
       for (const s of loggedInSockets) if (!s.room) s.sendText(m);
       // 存起来，之后进大厅的人能看到

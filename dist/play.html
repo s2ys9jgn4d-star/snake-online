@@ -6,7 +6,7 @@
 <title data-i18n="appTitle">多人联机贪吃蛇</title>
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="favicon.png">
-<link rel="stylesheet" href="style.css?v=20261114g">
+<link rel="stylesheet" href="style.css?v=20261115b">
 </head>
 <body>
 <div id="app">
@@ -122,6 +122,8 @@
         </div>
         <button id="authBtn">登录</button>
         <p id="authErr" class="error"></p>
+        <button id="guestBtn" type="button" class="guest-btn">🎮 游客试玩 <span>Guest</span></button>
+        <p class="guest-note">没邮箱也能玩：加入房间即可，不保存记录</p>
       </div>
       <div class="auth-foot">
         <p data-i18n="foot1">⌨️ 电脑：方向键 / WASD 控制，死亡后空格重生</p>
@@ -148,14 +150,18 @@
         <h3><span data-i18n="roomList">🏠 房间列表</span><button id="refreshRooms" class="ghost-btn" data-i18n="refresh">刷新</button></h3>
         <div id="roomList" class="room-list"></div>
 
-        <h3 style="margin-top:18px" data-i18n="createRoom">➕ 创建房间</h3>
-        <div class="create-room">
-          <input id="newRoomName" maxlength="20" placeholder="房间名" data-i18n-ph="roomName">
-          <input id="newRoomPass" maxlength="32" placeholder="密码（可选）" data-i18n-ph="passOptional">
-          <button id="createRoomBtn" data-i18n="createJoin">创建并自动加入</button>
-        </div>
-        <div class="create-room" style="margin-top:10px">
-          <button id="soloBtn" style="width:100%" data-i18n="solo">🤖 单人模式（对战豆包）</button>
+        <div id="guestTip" class="guest-tip hidden">🎮 游客模式：不能在大厅发言 · 只能加入别人的房间 · 成绩不上排行榜 · 不留记录</div>
+
+        <div id="createRoomBox">
+          <h3 style="margin-top:18px" data-i18n="createRoom">➕ 创建房间</h3>
+          <div class="create-room">
+            <input id="newRoomName" maxlength="20" placeholder="房间名" data-i18n-ph="roomName">
+            <input id="newRoomPass" maxlength="32" placeholder="密码（可选）" data-i18n-ph="passOptional">
+            <button id="createRoomBtn" data-i18n="createJoin">创建并自动加入</button>
+          </div>
+          <div class="create-room" style="margin-top:10px">
+            <button id="soloBtn" style="width:100%" data-i18n="solo">🤖 单人模式（对战豆包）</button>
+          </div>
         </div>
 
         <!-- 大厅聊天 -->
@@ -270,6 +276,6 @@
 </div>
 
 <script src="i18n.js?v=20261114d"></script>
-<script src="game.js?v=20261114h"></script>
+<script src="game.js?v=20261115b"></script>
 </body>
 </html>

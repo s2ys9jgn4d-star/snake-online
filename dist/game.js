@@ -197,10 +197,36 @@ async function doAuthAction(){
   } catch (e) { $('authErr').textContent = t('networkError'); }
 }
 
+// —— 游客试玩：不注册、不保存，直接进大厅 ——
+let isGuestUser = false;
+$('guestBtn').addEventListener('click', async () => {
+  $('authErr').textContent = '';
+  try {
+    const r = await api('/api/guest', { method:'POST' });
+    if (!r.ok){ $('authErr').textContent = r.msg || '游客进入失败，稍后再试'; return; }
+    isGuestUser = true;
+    authToken = r.token; authUser = r.user;
+    localStorage.setItem('snakeToken', authToken);
+    localStorage.setItem('snakeUser', authUser);
+    enterLobby();
+  } catch (e) { $('authErr').textContent = t('networkError'); }
+});
+
+// 游客界面：隐藏开房区、禁用大厅发言、显示限制说明
+function applyGuestUI(){
+  document.body.classList.toggle('is-guest', isGuestUser);
+  const box = $('createRoomBox'); if (box) box.classList.toggle('hidden', isGuestUser);
+  const tip = $('guestTip'); if (tip) tip.classList.toggle('hidden', !isGuestUser);
+  const inp = $('lobbyChatInput'), btn = $('lobbyChatSend');
+  if (inp) inp.disabled = isGuestUser;
+  if (btn) btn.disabled = isGuestUser;
+}
+
 $('logoutBtn').addEventListener('click', () => {
   localStorage.removeItem('snakeToken');
   localStorage.removeItem('snakeUser');
   authToken = null; authUser = null;
+  isGuestUser = false; applyGuestUI();
   ws && ws.close(); ws = null;
   showPanel('auth');
 });
@@ -230,7 +256,7 @@ $('deleteAcctBtn').addEventListener('click', async () => {
   refreshMailReady();
   if (authToken) {
     const r = await api('/api/me');
-    if (r.ok && r.user === authUser) enterLobby();
+    if (r.ok && r.user === authUser){ isGuestUser = !!r.guest; enterLobby(); }
     else {
       localStorage.removeItem('snakeToken'); localStorage.removeItem('snakeUser');
       authToken = null; authUser = null;
@@ -299,7 +325,8 @@ function handleWs(msg){
 
 function onAuthOk(user){
   authUser = user;
-  $('lobbyUserName').textContent = user;
+  $('lobbyUserName').textContent = isGuestUser ? user + ' · 游客' : user;
+  applyGuestUI();
   $('lobbyChat').innerHTML = '';   // 每次进入大厅先清空，避免补发历史时重复
   refreshMe(); refreshScores();
   refreshFriends(); refreshPlayers();

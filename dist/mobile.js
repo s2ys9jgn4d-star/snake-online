@@ -180,7 +180,24 @@ async function doAuth(){
   } catch (e) { $('authErr').textContent = t('networkError'); }
 }
 
+// —— 游客试玩：不注册、不保存，直接进大厅 ——
+let isGuestUser = false;
+function applyGuestUI(){
+  document.body.classList.toggle('is-guest', isGuestUser);
+  const box = $('createRoomBox'); if (box) box.classList.toggle('hidden', isGuestUser);
+  const tip = $('guestTip'); if (tip) tip.classList.toggle('hidden', !isGuestUser);
+}
+$('guestBtn').addEventListener('click', async () => {
+  $('authErr').textContent = '';
+  try {
+    const r = await api('/api/guest', { method:'POST' });
+    if (!r.ok){ $('authErr').textContent = r.msg || '游客进入失败，稍后再试'; return; }
+    saveAuth(r);
+  } catch (e) { $('authErr').textContent = t('networkError'); }
+});
+
 function saveAuth(r){
+  isGuestUser = !!r.guest;
   authToken = r.token; authUser = r.user;
   localStorage.setItem('snakeToken', authToken);
   localStorage.setItem('snakeUser', authUser);
@@ -190,6 +207,7 @@ function saveAuth(r){
 $('logoutBtn').addEventListener('click', () => {
   localStorage.removeItem('snakeToken'); localStorage.removeItem('snakeUser');
   authToken = null; authUser = null;
+  isGuestUser = false; applyGuestUI();
   if (ws) ws.close(); ws = null;
   showPanel('auth');
 });
@@ -218,7 +236,7 @@ $('deleteAcctBtn').addEventListener('click', async () => {
   refreshMailReady();
   if (authToken){
     const r = await api('/api/me');
-    if (r.ok && r.user === authUser){ enterLobby(); return; }
+    if (r.ok && r.user === authUser){ isGuestUser = !!r.guest; enterLobby(); return; }
     localStorage.removeItem('snakeToken'); localStorage.removeItem('snakeUser');
     authToken = null; authUser = null;
   }
@@ -286,7 +304,8 @@ function sendWS(obj){ if (ws && ws.readyState===1) ws.send(JSON.stringify(obj));
 
 function onAuthOk(user){
   authUser = user;
-  $('lobbyUserName').textContent = user;
+  $('lobbyUserName').textContent = isGuestUser ? user + ' · 游客' : user;
+  applyGuestUI();
   refreshMe(); refreshScores();
   refreshFriends(); refreshPlayers();
   startSocialPoll();
