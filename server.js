@@ -13,7 +13,7 @@ const mail = require('./mail'); // 注册验证码邮件
 
 const PORT = Number(process.env.PORT) || 8180;
 const PUBLIC_DIR = path.join(__dirname, 'dist');
-const DATA_DIR = path.join(__dirname, 'data');
+let DATA_DIR = path.join(__dirname, 'data');
 
 const COLS = 42, ROWS = 30;
 const START_LEN = 3, FOOD_TARGET = 7, FOOD_MAX = 60;
@@ -35,9 +35,22 @@ function randInt(n){ return (Math.random()*n)|0; }
 // ============================================================
 //  AUTH（账号/排行榜持久化）
 // ============================================================
+// 有些托管环境的代码目录是只读的，建不了也写不了 data/，就退到系统临时目录
+function pickDataDir(){
+  const candidates = [path.join(__dirname, 'data'), path.join(os.tmpdir(), 'snake-online-data')];
+  for (const dir of candidates){
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, '.writable'), 'ok');
+      return dir;
+    } catch {}
+  }
+  return path.join(os.tmpdir(), 'snake-online-data');
+}
+DATA_DIR = pickDataDir();
+
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SCORES_FILE = path.join(DATA_DIR, 'scores.json');
-fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // 内存缓存：Map<username, { hash, salt }>、Map<username, best>
 let accounts = new Map();
@@ -1461,10 +1474,55 @@ const MIME = {
   '.map':'application/json'
 };
 
+// ============================================================
+//  上游代理：设了 UPSTREAM 就把接口和实时连接转给主服务，
+//  两个域名共用同一套账号数据（本机静态页照旧自己提供）
+// ============================================================
+const UPSTREAM = process.env.UPSTREAM || '';
+let upMod = null, UP = null;
+if (UPSTREAM){
+  UP = new URL(UPSTREAM);
+  upMod = UP.protocol === 'https:' ? require('https') : http;
+}
+function upPort(){ return UP.port || (UP.protocol === 'https:' ? 443 : 80); }
+function proxyHttp(req, res, urlPath){
+  const preq = upMod.request({
+    hostname: UP.hostname, port: upPort(), path: urlPath + (/[?]/.test(req.url) ? req.url.slice(req.url.indexOf('?')) : ''),
+    method: req.method, headers: Object.assign({}, req.headers, { host: UP.host })
+  }, pres => {
+    res.writeHead(pres.statusCode || 502, pres.headers);
+    pres.pipe(res);
+  });
+  preq.on('error', () => {
+    try { res.writeHead(502, { 'Content-Type':'application/json; charset=utf-8' }); res.end(JSON.stringify({ ok:false, msg:'主服务连接失败，请稍后重试' })); } catch {}
+  });
+  req.pipe(preq);
+}
+function proxyUpgrade(req, socket){
+  const preq = upMod.request({
+    hostname: UP.hostname, port: upPort(), path: req.url, method: 'GET',
+    headers: Object.assign({}, req.headers, { host: UP.host })
+  });
+  preq.on('upgrade', (pres, psock, phead) => {
+    let head = 'HTTP/1.1 101 Switching Protocols\r\n';
+    for (const k in pres.headers) head += k + ': ' + pres.headers[k] + '\r\n';
+    socket.write(head + '\r\n');
+    if (phead && phead.length) socket.write(phead);
+    psock.pipe(socket); socket.pipe(psock);
+    socket.on('error', () => psock.destroy());
+    psock.on('error', () => socket.destroy());
+  });
+  preq.on('error', () => socket.destroy());
+  preq.end();
+}
+
 const server = http.createServer(async (req, res) => {
   let urlPath;
   try { urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname); }
   catch { res.writeHead(400); return res.end('Bad Request'); }
+
+  // 代理模式：接口交给主服务，账号数据自然就是同一份
+  if (UPSTREAM && urlPath.startsWith('/api/')) return proxyHttp(req, res, urlPath);
 
   // API 走异步处理器
   if (urlPath.startsWith('/api/')) return handleApi(req, res, urlPath);
@@ -1486,6 +1544,8 @@ const server = http.createServer(async (req, res) => {
 server.on('upgrade', (req, socket) => {
   const headers = req.headers;
   if ((headers.upgrade||'').toLowerCase() !== 'websocket' || !headers['sec-websocket-key']){ socket.destroy(); return; }
+  // 代理模式：实时连接也转给主服务，两个域名进的是同一批房间
+  if (UPSTREAM) return proxyUpgrade(req, socket);
   const accept = crypto.createHash('sha1').update(headers['sec-websocket-key'] + WS_GUID).digest('base64');
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
   onConnection(new WSSocket(socket));
