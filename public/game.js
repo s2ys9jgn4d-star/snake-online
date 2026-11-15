@@ -40,8 +40,9 @@ async function detectLocalServer(){
       if (r.ok){ API_BASE = location.origin; return; }
     } catch {}
   }
-  // 2. 本机 server（https 页面会被 mixed-content 拦截，跳过）
-  if (location.protocol !== 'https:') {
+  // 2. 本机 server：只在 http 页面（本地开发调试）才探测
+  //    打包成客户端后是 file:// 页面，一律连线上，避免本机库和线上库两套账号打架
+  if (location.protocol === 'http:') {
     try {
       const r = await fetch('http://localhost:8180/api/scores', { signal: AbortSignal.timeout(800) });
       if (r.ok){
