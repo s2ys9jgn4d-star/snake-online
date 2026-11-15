@@ -146,14 +146,15 @@
   }
   .card.fit::before { opacity: 1; }
   .card .fit-badge {
-    display: none; position: absolute; top: 14px; right: 14px;
+    display: none; position: absolute; top: 14px; inset-inline-end: 14px;
     font-size: 11px; font-weight: 700; letter-spacing: .02em;
     color: #cfe0ff; background: rgba(91,140,255,.20);
     border: 1px solid rgba(91,140,255,.55); border-radius: 999px;
     padding: 3px 9px; white-space: nowrap;
   }
   .card.fit .fit-badge { display: inline-block; }
-  .card .name { font-size: 17px; font-weight: 700; margin-bottom: 7px; padding-right: 8px; }
+  .card .name { font-size: 17px; font-weight: 700; margin-bottom: 7px; padding-inline-end: 8px; }
+  .card.fit .name { padding-inline-end: 112px; }
   .card .meta { font-size: 13px; color: var(--muted); margin-bottom: 15px; line-height: 1.65; min-height: 42px; }
   .card a {
     display: inline-block; padding: 9px 18px; border-radius: 9px; text-decoration: none;
