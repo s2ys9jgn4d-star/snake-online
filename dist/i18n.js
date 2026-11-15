@@ -1600,6 +1600,30 @@
     if (TRANSLATIONS[ek]) TRANSLATIONS[ek].dlExt = EXTRA[ek];
   }
 
+  // 补丁 2：反馈区文案（原来写死在 feedback-line 里，切语言时不变）
+  var EXTRA_FEEDBACK = {
+    'en':'Bug report','zh-CN':'Bug 反馈','zh-TW':'Bug 回報','ja':'バグ報告','ko':'버그 신고',
+    'ru':'Сообщить об ошибке','uk':'Повідомити про помилку','de':'Fehler melden','fr':'Signaler un bug',
+    'es':'Informar de un error','pt-PT':'Reportar erro','pt-BR':'Reportar erro','it':'Segnala un bug',
+    'nl':'Bug melden','pl':'Zgłoś błąd','cs':'Nahlásit chybu','sv':'Rapportera bugg',
+    'fi':'Ilmoita virheestä','nb':'Rapporter feil','da':'Rapporter fejl','tr':'Hata bildir',
+    'ar':'الإبلاغ عن خطأ','fa':'گزارش خطا','he':'דיווח על באג','ur':'بگ رپورٹ کریں',
+    'hi':'बग रिपोर्ट करें','th':'แจ้งข้อบกพร่อง','vi':'Báo lỗi','id':'Laporkan bug',
+    'ms':'Laporkan bug','el':'Αναφορά σφάλματος','hu':'Hibajelentés','ro':'Raportează un bug',
+    'bg':'Докладвай грешка','hr':'Prijavi grešku','sr':'Пријави грешку','sk':'Nahlásiť chybu',
+    'sl':'Prijavi napako','lt':'Pranešti apie klaidą','lv':'Ziņot par kļūdu','et':'Teata veast',
+    'ca':'Informar d’error','gl':'Informar dun erro','af':'Rapporteer fout','sw':'Ripoti hitilafu',
+    'bn':'বাগ রিপোর্ট করুন','ta':'குறையைப் புகாரளி','te':'బగ్‌ను నివేదించండి','eo':'Sciigi pri eraro'
+  };
+  for (var fk in EXTRA_FEEDBACK){
+    if (TRANSLATIONS[fk]) TRANSLATIONS[fk].feedback = EXTRA_FEEDBACK[fk];
+  }
+  // 没在表里的语言统一回落到英文，避免显示原始 key
+  for (var li = 0; li < LANG_LIST.length; li++){
+    var lc = LANG_LIST[li].code;
+    if (TRANSLATIONS[lc] && !TRANSLATIONS[lc].feedback) TRANSLATIONS[lc].feedback = EXTRA_FEEDBACK.en;
+  }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
