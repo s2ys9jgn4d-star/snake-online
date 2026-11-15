@@ -1441,6 +1441,31 @@
     for (var tkey in PATCH4[tk]) TRANSLATIONS[tk][tkey] = PATCH4[tk][tkey];
   }
 
+  // —— 第五批：设置里的「邮箱验证码重置密码」——
+  var PATCH5 = {
+    'en': { resetTitle:'Reset password', resetHint:'A 6-digit code will be sent to the email you registered with', resetSend:'Send code', resetConfirm:'Reset', newPassPh:'New password (4-32)', resetSent:'Code sent', resetOk:'Password updated', resetFail:'Something went wrong, please try again', errPassLen:'Password must be 4-32 characters' },
+    'zh-CN': { resetTitle:'重置密码', resetHint:'验证码会发到你注册时填的邮箱', resetSend:'发送验证码', resetConfirm:'确认重置', newPassPh:'新密码（4-32 位）', resetSent:'验证码已发送', resetOk:'密码已重置', resetFail:'操作失败，请稍后再试', errPassLen:'新密码要 4-32 位' },
+    'zh-TW': { resetTitle:'重設密碼', resetHint:'驗證碼會寄到你註冊時填的信箱', resetSend:'發送驗證碼', resetConfirm:'確認重設', newPassPh:'新密碼（4-32 位）', resetSent:'驗證碼已寄出', resetOk:'密碼已重設', resetFail:'操作失敗，請稍後再試', errPassLen:'新密碼要 4-32 位' },
+    'ja': { resetTitle:'パスワードを再設定', resetHint:'登録したメールアドレスに6桁のコードを送ります', resetSend:'コードを送信', resetConfirm:'再設定', newPassPh:'新しいパスワード（4〜32文字）', resetSent:'コードを送信しました', resetOk:'パスワードを変更しました', resetFail:'失敗しました。もう一度お試しください', errPassLen:'パスワードは4〜32文字にしてください' },
+    'ko': { resetTitle:'비밀번호 재설정', resetHint:'가입한 이메일로 6자리 코드를 보냅니다', resetSend:'코드 보내기', resetConfirm:'재설정', newPassPh:'새 비밀번호 (4~32자)', resetSent:'코드를 보냈습니다', resetOk:'비밀번호가 변경되었습니다', resetFail:'실패했습니다. 다시 시도해 주세요', errPassLen:'비밀번호는 4~32자여야 합니다' },
+    'es': { resetTitle:'Restablecer contraseña', resetHint:'Enviaremos un código de 6 dígitos al correo con el que te registraste', resetSend:'Enviar código', resetConfirm:'Restablecer', newPassPh:'Nueva contraseña (4-32)', resetSent:'Código enviado', resetOk:'Contraseña actualizada', resetFail:'Algo salió mal, inténtalo de nuevo', errPassLen:'La contraseña debe tener 4-32 caracteres' },
+    'fr': { resetTitle:'Réinitialiser le mot de passe', resetHint:'Un code à 6 chiffres sera envoyé à l’e-mail utilisé lors de l’inscription', resetSend:'Envoyer le code', resetConfirm:'Réinitialiser', newPassPh:'Nouveau mot de passe (4-32)', resetSent:'Code envoyé', resetOk:'Mot de passe mis à jour', resetFail:'Une erreur est survenue, réessayez', errPassLen:'Le mot de passe doit contenir 4 à 32 caractères' },
+    'de': { resetTitle:'Passwort zurücksetzen', resetHint:'Ein 6-stelliger Code wird an deine registrierte E-Mail gesendet', resetSend:'Code senden', resetConfirm:'Zurücksetzen', newPassPh:'Neues Passwort (4-32)', resetSent:'Code gesendet', resetOk:'Passwort geändert', resetFail:'Etwas ist schiefgelaufen, bitte erneut versuchen', errPassLen:'Das Passwort muss 4-32 Zeichen haben' },
+    'ru': { resetTitle:'Сбросить пароль', resetHint:'Код из 6 цифр придёт на почту, указанную при регистрации', resetSend:'Отправить код', resetConfirm:'Сбросить', newPassPh:'Новый пароль (4–32)', resetSent:'Код отправлен', resetOk:'Пароль изменён', resetFail:'Что-то пошло не так, попробуйте ещё раз', errPassLen:'Пароль должен быть от 4 до 32 символов' },
+    'pt-BR': { resetTitle:'Redefinir senha', resetHint:'Um código de 6 dígitos será enviado para o e-mail cadastrado', resetSend:'Enviar código', resetConfirm:'Redefinir', newPassPh:'Nova senha (4-32)', resetSent:'Código enviado', resetOk:'Senha atualizada', resetFail:'Algo deu errado, tente novamente', errPassLen:'A senha deve ter de 4 a 32 caracteres' },
+    'pt-PT': { resetTitle:'Repor palavra-passe', resetHint:'Um código de 6 dígitos será enviado para o e-mail de registo', resetSend:'Enviar código', resetConfirm:'Repor', newPassPh:'Nova palavra-passe (4-32)', resetSent:'Código enviado', resetOk:'Palavra-passe atualizada', resetFail:'Algo correu mal, tente novamente', errPassLen:'A palavra-passe deve ter 4 a 32 caracteres' },
+    'it': { resetTitle:'Reimposta password', resetHint:'Un codice di 6 cifre verrà inviato all’email di registrazione', resetSend:'Invia codice', resetConfirm:'Reimposta', newPassPh:'Nuova password (4-32)', resetSent:'Codice inviato', resetOk:'Password aggiornata', resetFail:'Qualcosa è andato storto, riprova', errPassLen:'La password deve avere 4-32 caratteri' },
+    'ar': { resetTitle:'إعادة تعيين كلمة المرور', resetHint:'سيُرسل رمز من 6 أرقام إلى البريد الذي سجلت به', resetSend:'إرسال الرمز', resetConfirm:'تأكيد', newPassPh:'كلمة مرور جديدة (4-32)', resetSent:'تم إرسال الرمز', resetOk:'تم تحديث كلمة المرور', resetFail:'حدث خطأ، حاول مرة أخرى', errPassLen:'يجب أن تكون كلمة المرور من 4 إلى 32 حرفًا' },
+    'vi': { resetTitle:'Đặt lại mật khẩu', resetHint:'Mã 6 số sẽ được gửi tới email bạn đã đăng ký', resetSend:'Gửi mã', resetConfirm:'Đặt lại', newPassPh:'Mật khẩu mới (4-32)', resetSent:'Đã gửi mã', resetOk:'Đã cập nhật mật khẩu', resetFail:'Có lỗi xảy ra, vui lòng thử lại', errPassLen:'Mật khẩu phải từ 4 đến 32 ký tự' },
+    'id': { resetTitle:'Atur ulang sandi', resetHint:'Kode 6 digit akan dikirim ke email saat mendaftar', resetSend:'Kirim kode', resetConfirm:'Atur ulang', newPassPh:'Sandi baru (4-32)', resetSent:'Kode terkirim', resetOk:'Sandi diperbarui', resetFail:'Terjadi kesalahan, coba lagi', errPassLen:'Sandi harus 4-32 karakter' },
+    'tr': { resetTitle:'Şifreyi sıfırla', resetHint:'6 haneli kod kayıt olurken verdiğin e-postaya gönderilecek', resetSend:'Kod gönder', resetConfirm:'Sıfırla', newPassPh:'Yeni şifre (4-32)', resetSent:'Kod gönderildi', resetOk:'Şifre güncellendi', resetFail:'Bir hata oluştu, tekrar deneyin', errPassLen:'Şifre 4-32 karakter olmalı' }
+  };
+  for (var rk in PATCH5){
+    if (!Object.prototype.hasOwnProperty.call(PATCH5, rk)) continue;
+    if (!TRANSLATIONS[rk]) TRANSLATIONS[rk] = {};
+    for (var rkey in PATCH5[rk]) TRANSLATIONS[rk][rkey] = PATCH5[rk][rkey];
+  }
+
 
   function supported(code){
     if (!code) return false;

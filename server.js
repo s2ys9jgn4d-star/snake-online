@@ -144,6 +144,7 @@ function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); cloudBackup(); }
 //  注册验证码（只存在内存里，10 分钟过期，服务器重启就失效）
 // ============================================================
 const emailCodes = new Map();     // email -> { code, exp }
+const resetCodes = new Map();     // username -> { code, exp, tries } —— 重置密码用
 const codeCooldown = new Map();   // email -> 上次发送时间
 const CODE_TTL = 10 * 60 * 1000;
 const CODE_GAP = 60 * 1000;
@@ -1074,6 +1075,72 @@ async function handleApi(req, res, urlPath){
     if (to === OFFICIAL_NAME) maybeOfficialReply(me);   // 给官方发消息会自动收到一条说明
     return sendJSON(res, 200, {ok:true, ts:item.ts});
   }
+  // —— 通过邮箱验证码重置密码 ——
+  // 验证码只发到账号已绑定的邮箱，前端传不了别的地址
+  if (req.method === 'POST' && urlPath === '/api/reset_code'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'请先登录'});
+    if (isGuest(me)) return sendJSON(res, 403, {ok:false,msg:'游客没有绑定邮箱，不能重置密码'});
+    const acc = accounts.get(me);
+    const email = acc && acc.email;
+    if (!email) return sendJSON(res, 400, {ok:false,msg:'这个账号没有绑定邮箱，无法重置密码'});
+    if (!mailUsable()) return sendJSON(res, 503, {ok:false,msg:'邮箱服务暂时不可用，请稍后再试'});
+    const key = 'reset:' + me;
+    const last = codeCooldown.get(key) || 0;
+    if (Date.now() - last < CODE_GAP){
+      return sendJSON(res, 429, {ok:false,msg:'发太频繁了，' + Math.ceil((CODE_GAP - (Date.now() - last)) / 1000) + ' 秒后再试'});
+    }
+    const code = String(100000 + randInt(900000));
+    resetCodes.set(me, { code, exp: Date.now() + CODE_TTL, tries: 0 });
+    codeCooldown.set(key, Date.now());
+    try {
+      await mail.sendMail({
+        to: email,
+        subject: '联机贪吃蛇 · 重置密码验证码',
+        text: '你正在重置账号「' + me + '」的密码，验证码是：' + code + '\n\n10 分钟内有效。\n如果不是你本人操作，请忽略这封邮件，并尽快修改密码。'
+      });
+    } catch (e){
+      resetCodes.delete(me);
+      console.log('重置密码发信失败：' + e.message);
+      return sendJSON(res, 500, {ok:false,msg:'邮件发送失败：' + e.message});
+    }
+    const [name, domain] = email.split('@');
+    return sendJSON(res, 200, {ok:true, msg:'验证码已发到 ' + name.slice(0, 2) + '***@' + domain + '，10 分钟内有效'});
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/reset_pass'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'请先登录'});
+    if (isGuest(me)) return sendJSON(res, 403, {ok:false,msg:'游客不能重置密码'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const rec = resetCodes.get(me);
+    if (!rec || rec.exp < Date.now()){
+      resetCodes.delete(me);
+      return sendJSON(res, 400, {ok:false,msg:'验证码已过期，请重新发送'});
+    }
+    if (rec.tries >= 5){
+      resetCodes.delete(me);
+      return sendJSON(res, 429, {ok:false,msg:'错误次数太多，请重新发送验证码'});
+    }
+    if (String(body.code || '').trim() !== rec.code){
+      rec.tries++;
+      return sendJSON(res, 400, {ok:false,msg:'验证码不对，还可以试 ' + (5 - rec.tries) + ' 次'});
+    }
+    const np = String(body.pass || '');
+    if (np.length < 4 || np.length > 32) return sendJSON(res, 400, {ok:false,msg:'新密码要 4-32 位'});
+    const acc = accounts.get(me);
+    const p = hashPass(np);
+    acc.hash = p.hash;
+    acc.salt = p.salt;
+    saveUsers();
+    resetCodes.delete(me);
+    // 其他设备上的登录态一并失效，当前这台保留
+    const cur = (req.headers.authorization || '').trim().slice(7);
+    for (const [t, u2] of [...tokens.entries()]) if (u2 === me && t !== cur) tokens.delete(t);
+    return sendJSON(res, 200, {ok:true, msg:'密码已重置'});
+  }
+
   // —— 改名：账号名整体迁移（账号、排行榜、登录态、好友、私聊）——
   if (req.method === 'POST' && urlPath === '/api/rename'){
     const me = authFromReq(req);

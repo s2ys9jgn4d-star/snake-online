@@ -237,6 +237,20 @@ try {
         </div>
         <p id="setNameTip" class="set-tip" data-i18n="nameTip">改名后排行榜、好友关系都会跟着变</p>
       </div>
+
+      <div class="set-group" id="passGroup">
+        <label data-i18n="resetTitle">重置密码</label>
+        <p class="set-tip" data-i18n="resetHint">验证码会发到你注册时填的邮箱</p>
+        <div class="set-row">
+          <input id="resetCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码" data-i18n-ph="code6">
+          <button id="resetSendBtn" type="button" data-i18n="resetSend">发送验证码</button>
+        </div>
+        <div class="set-row">
+          <input id="resetPass" type="password" maxlength="32" placeholder="新密码（4-32 位）" data-i18n-ph="newPassPh">
+          <button id="resetPassBtn" type="button" data-i18n="resetConfirm">确认重置</button>
+        </div>
+        <p id="resetTip" class="set-tip"></p>
+      </div>
     </div>
   </div>
 
@@ -324,7 +338,7 @@ try {
 
 </div>
 
-<script src="i18n.js?v=20261115f"></script>
-<script src="game.js?v=20261115f"></script>
+<script src="i18n.js?v=20261115g"></script>
+<script src="game.js?v=20261115g"></script>
 </body>
 </html>

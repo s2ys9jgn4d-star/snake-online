@@ -702,6 +702,11 @@ function openSettings(){
   const tip = $('setNameTip');
   tip.className = 'set-tip';
   tip.textContent = t('nameTip');
+  // 游客没有邮箱，整块重置密码都不显示
+  const pg = $('passGroup');
+  if (pg) pg.classList.toggle('hidden', isGuestUser);
+  const rt = $('resetTip');
+  if (rt){ rt.className = 'set-tip'; rt.textContent = ''; }
   setModal.classList.remove('hidden');
 }
 $('settingsBtn').addEventListener('click', openSettings);
@@ -758,6 +763,62 @@ $('setNameBtn').addEventListener('click', async () => {
 });
 
 $('respawnBtn').addEventListener('click', () => { sendWS({t:'respawn'}); $('dead').classList.add('hidden'); });
+
+// —— 邮箱验证码重置密码 ——
+let resetTimer = null;
+$('resetSendBtn').addEventListener('click', async () => {
+  const btn = $('resetSendBtn'), tip = $('resetTip');
+  btn.disabled = true;
+  tip.className = 'set-tip';
+  tip.textContent = t('saving');
+  try {
+    const r = await fetch('/api/reset_code', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + authToken },
+      body: '{}'
+    }).then(x => x.json());
+    if (!r.ok){ tip.className='set-tip err'; tip.textContent = r.msg || t('resetFail'); btn.disabled = false; return; }
+    tip.className = 'set-tip ok';
+    tip.textContent = r.msg || t('resetSent');
+    let left = 60;
+    btn.textContent = left + 's';
+    clearInterval(resetTimer);
+    resetTimer = setInterval(() => {
+      left--;
+      if (left <= 0){
+        clearInterval(resetTimer); resetTimer = null;
+        btn.disabled = false; btn.textContent = t('resetSend');
+      } else btn.textContent = left + 's';
+    }, 1000);
+  } catch {
+    tip.className = 'set-tip err';
+    tip.textContent = t('netErr');
+    btn.disabled = false;
+  }
+});
+$('resetPassBtn').addEventListener('click', async () => {
+  const tip = $('resetTip');
+  const code = $('resetCode').value.trim();
+  const pass = $('resetPass').value;
+  tip.className = 'set-tip';
+  if (!code){ tip.className='set-tip err'; tip.textContent = t('errNeedCode'); return; }
+  if (pass.length < 4 || pass.length > 32){ tip.className='set-tip err'; tip.textContent = t('errPassLen'); return; }
+  try {
+    const r = await fetch('/api/reset_pass', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + authToken },
+      body: JSON.stringify({ code, pass })
+    }).then(x => x.json());
+    if (!r.ok){ tip.className='set-tip err'; tip.textContent = r.msg || t('resetFail'); return; }
+    tip.className = 'set-tip ok';
+    tip.textContent = r.msg || t('resetOk');
+    $('resetCode').value = '';
+    $('resetPass').value = '';
+  } catch {
+    tip.className = 'set-tip err';
+    tip.textContent = t('netErr');
+  }
+});
 
 // —— 输入：键盘 + 触摸（保留 server 给的 seq 机制）——
 const KEYMAP = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
