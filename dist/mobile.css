@@ -339,7 +339,14 @@ body::before {
   display:flex; align-items:flex-start; gap:7px; margin:4px 0 8px;
   font-size:12px; line-height:1.6; color:var(--muted); cursor:pointer;
 }
-.agree-row input { flex:0 0 auto; margin:2px 0 0; accent-color:var(--accent); cursor:pointer; }
+/* .auth-body input 是 width:100% 且去掉了默认外观，勾选框必须单独还原 */
+.agree-row input {
+  flex:0 0 auto; width:17px !important; height:17px;
+  margin:2px 0 0 !important; padding:0 !important;
+  -webkit-appearance:checkbox !important; appearance:checkbox !important;
+  accent-color:var(--accent); cursor:pointer;
+}
+.agree-row > span { flex:1; min-width:0; }
 .agree-row a { color:var(--accent); text-decoration:none; }
 .guest-tip {
   margin:0 0 12px; padding:10px 12px; border-radius:10px; font-size:12px; line-height:1.6;

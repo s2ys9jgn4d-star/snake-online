@@ -481,7 +481,13 @@ body.is-guest #deleteAcctBtn { display:none; }
   display:flex; align-items:flex-start; gap:8px; margin:2px 0 8px;
   font-size:12.5px; line-height:1.6; color:var(--muted); cursor:pointer;
 }
-.agree-row input { flex:0 0 auto; margin:3px 0 0; accent-color:var(--accent); cursor:pointer; }
+/* .auth-body input 是 width:100%，会把小方框撑满整行，这里必须重置 */
+.agree-row input {
+  flex:0 0 auto; width:16px !important; height:16px;
+  margin:3px 0 0 !important; padding:0 !important; border-radius:4px;
+  accent-color:var(--accent); cursor:pointer;
+}
+.agree-row > span { flex:1; min-width:0; }
 .agree-row a { color:var(--accent); text-decoration:none; }
 .agree-row a:hover { text-decoration:underline; }
 body.is-guest #setNameGroup { display:none; }
