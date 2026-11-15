@@ -1,0 +1,16 @@
+# 让浏览器按 UTF-8 解码扩展与脚本，避免把中文源码显示成乱码
+/snake-ext.js
+  Content-Type: application/javascript; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/scratch-in-scratch.js
+  Content-Type: application/javascript; charset=utf-8
+
+/game.js
+  Content-Type: application/javascript; charset=utf-8
+
+/mobile.js
+  Content-Type: application/javascript; charset=utf-8
+
+/*.css
+  Content-Type: text/css; charset=utf-8

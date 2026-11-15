@@ -1,42 +1,55 @@
 #!/bin/bash
-# 确保 Tailscale 与 Funnel 处于开启状态（开机/定时自检）
-# 日志：/tmp/snake-funnel.log
+set -uo pipefail
 
-TS="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 LOG="/tmp/snake-funnel.log"
-echo "----- $(date '+%F %T') 开始检查 -----" >> "$LOG"
+LOCK="/tmp/snake-funnel.lock"
+PORT=8180
 
-# 1) Tailscale 没跑就拉起来
-if ! "$TS" status >/dev/null 2>&1; then
-    echo "Tailscale 未运行，正在启动…" >> "$LOG"
-    open -a Tailscale
-fi
+log(){ printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$LOG"; }
 
-# 2) 最多等 90 秒让它连上
-for _ in $(seq 1 45); do
-    if "$TS" status 2>/dev/null | grep -qi "stopped"; then
-        sleep 2
-    else
-        break
-    fi
+[ -f "$LOG" ] && [ "$(stat -f%z "$LOG")" -gt 1048576 ] && mv -f "$LOG" "$LOG.1"
+
+if ! mkdir "$LOCK" 2>/dev/null; then log "上一次还在跑，跳过"; exit 0; fi
+trap 'rmdir "$LOCK"' EXIT
+
+TS=""
+for c in "/Applications/Tailscale.app/Contents/MacOS/Tailscale" \
+         "/usr/local/bin/tailscale" \
+         "/opt/homebrew/bin/tailscale"; do
+  [ -x "$c" ] && TS="$c" && break
 done
+[ -z "$TS" ] && { log "找不到 tailscale 命令"; exit 1; }
 
-if "$TS" status 2>/dev/null | grep -qi "stopped"; then
-    echo "Tailscale 仍未就绪，本次放弃" >> "$LOG"
-    exit 1
+if ! curl -sf -m 3 "http://127.0.0.1:$PORT/api/scores" >/dev/null; then
+  log "本机 $PORT 没响应，先别开 Funnel"
+  exit 1
 fi
 
-# 3) Funnel 已开就什么都不做
-if "$TS" funnel status 2>/dev/null | grep -q "Funnel on"; then
-    echo "Funnel 已在运行，无需处理" >> "$LOG"
-    exit 0
+if ! "$TS" status >/dev/null 2>&1; then
+  log "Tailscale 未运行，正在启动…"
+  open -a Tailscale
 fi
 
-# 4) 重新开启
-"$TS" funnel --bg 8180 >> "$LOG" 2>&1
-if "$TS" funnel status 2>/dev/null | grep -q "Funnel on"; then
-    echo "Funnel 已重新开启 ✅" >> "$LOG"
+ready=0
+for _ in $(seq 1 45); do
+  out=$("$TS" status 2>/dev/null)
+  if printf '%s' "$out" | grep -qiE 'stopped|logged out|not logged in'; then
+    sleep 2
+  else
+    ready=1; break
+  fi
+done
+[ "$ready" -eq 1 ] || { log "90 秒内仍未就绪，放弃"; exit 1; }
+
+if "$TS" funnel status 2>/dev/null | grep -q 'Funnel on'; then
+  log "Funnel 已在运行，无需处理"
+  exit 0
+fi
+
+"$TS" funnel --bg "$PORT" >>"$LOG" 2>&1
+if "$TS" funnel status 2>/dev/null | grep -q 'Funnel on'; then
+  log "Funnel 已重新开启 ✅"
 else
-    echo "Funnel 开启失败 ❌" >> "$LOG"
-    exit 1
+  log "Funnel 开启失败 ❌"
+  exit 1
 fi
