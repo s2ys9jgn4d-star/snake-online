@@ -479,11 +479,30 @@ body.is-guest #setNameGroup { display:none; }
 
 /* ============ 浅色主题 ============ */
 html[data-theme="light"] {
-  --bg:#eef2f9; --panel:rgba(255,255,255,.9); --panel-solid:#ffffff; --panel2:#e9eefa;
-  --line:rgba(70,100,170,.2); --text:#1b2436; --muted:#606d8a;
+  --bg:#eef2f9; --panel:#ffffff; --panel-solid:#ffffff; --panel2:#eef2fa;
+  --line:rgba(70,100,170,.18); --text:#1b2436; --muted:#5f6b86;
   --shadow:0 18px 44px rgba(40,60,110,.14);
   --glow:0 0 0 3px rgba(91,140,255,.16);
 }
-html[data-theme="light"] .auth-tabs { background:rgba(226,233,246,.85); }
+/* 原本写死深色的组件，统一换成白底浅灰 */
+html[data-theme="light"] .auth-tabs { background:#e9eef8; }
+html[data-theme="light"] .lobby-header { background:rgba(255,255,255,.94); }
+html[data-theme="light"] .lobby-user button { background:#eef2fa; color:#5f6b86; }
+html[data-theme="light"] .lobby-user button:hover { color:var(--accent); background:rgba(91,140,255,.12); }
+html[data-theme="light"] .auth-body input,
+html[data-theme="light"] .create-room input,
+html[data-theme="light"] .chat-input input { background:#fff; color:var(--text); }
+html[data-theme="light"] .auth-body input::placeholder,
+html[data-theme="light"] .chat-input input::placeholder { color:#93a0b8; }
+html[data-theme="light"] .auth-body input:focus { background:#fff; }
+html[data-theme="light"] .chat-box { background:#f8fafd; }
+html[data-theme="light"] .room-row:hover { background:#e8eefc; }
+html[data-theme="light"] .people-row { background:#f6f9fe; }
+html[data-theme="light"] .people-row:hover { background:#eaf1fd; }
+html[data-theme="light"] .mini-btn.ghost { background:#fff; }
+html[data-theme="light"] .speed-btn { background:#fff; }
+html[data-theme="light"] .code-row button { background:#fff; color:var(--text); }
+html[data-theme="light"] .hud-item { background:rgba(255,255,255,.94); }
+html[data-theme="light"] .dm-box { background:#fff; box-shadow:0 18px 44px rgba(40,60,110,.18); }
 html[data-theme="light"] .modal-mask { background:rgba(208,219,238,.62); }
-html[data-theme="light"] .ghost-btn:hover { background:rgba(91,140,255,.1); }
+html[data-theme="light"] .ghost-btn:hover { color:var(--accent); background:rgba(91,140,255,.1); }
