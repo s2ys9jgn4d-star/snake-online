@@ -656,7 +656,23 @@ let stateGap = 0;   // state 帧间隔滑动平均：帧抖时不再让蛇抽搐
 let pingMs = 0, halfRtt = 0;
 let inputSeq = 0, pendingTurns = [];
 let deadShown = false;
-let chosenMs = 200;
+// —— 设置：默认速度 / 主题 / 改名（存在本机，换设备不跟着走）——
+function loadSettings(){
+  try { return JSON.parse(localStorage.getItem('snakeSettings') || '{}') || {}; } catch { return {}; }
+}
+function saveSettings(patch){
+  const s = Object.assign(loadSettings(), patch);
+  localStorage.setItem('snakeSettings', JSON.stringify(s));
+  return s;
+}
+const userSettings = loadSettings();
+if (userSettings.theme === 'light') document.documentElement.setAttribute('data-theme','light');
+
+let chosenMs = Number(userSettings.speed) || 200;
+// 按保存的默认速度点亮对应的按钮
+document.querySelectorAll('#speedRow .speed-btn, #speedRow2 .speed-btn').forEach(x =>
+  x.classList.toggle('active', Number(x.dataset.ms) === chosenMs)
+);
 
 // —— 速度选择（登录菜单 + 游戏侧栏共享 chosenMs）——
 document.querySelectorAll('#speedRow .speed-btn, #speedRow2 .speed-btn').forEach(b => {
@@ -668,6 +684,75 @@ document.querySelectorAll('#speedRow .speed-btn, #speedRow2 .speed-btn').forEach
     );
     if (currentPanel === 'game' && wsPlayerId) sendWS({t:'speed', ms});
   });
+});
+
+// —— 设置面板：默认速度 / 界面主题 / 账号改名 ——
+const setModal = $('settingsModal');
+function openSettings(){
+  const s = loadSettings();
+  const cur = Number(s.speed) || chosenMs;
+  document.querySelectorAll('#setSpeeds .speed-btn').forEach(b =>
+    b.classList.toggle('active', Number(b.dataset.ms) === cur));
+  const theme = s.theme === 'light' ? 'light' : 'dark';
+  document.querySelectorAll('#setThemes .theme-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.theme === theme));
+  $('setNameInput').value = authUser || '';
+  const tip = $('setNameTip');
+  tip.className = 'set-tip';
+  tip.textContent = t('nameTip');
+  setModal.classList.remove('hidden');
+}
+$('settingsBtn').addEventListener('click', openSettings);
+$('settingsClose').addEventListener('click', () => setModal.classList.add('hidden'));
+setModal.addEventListener('click', e => { if (e.target === setModal) setModal.classList.add('hidden'); });
+
+document.querySelectorAll('#setSpeeds .speed-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const ms = Number(b.dataset.ms) || 200;
+    saveSettings({ speed: ms });
+    document.querySelectorAll('#setSpeeds .speed-btn').forEach(x =>
+      x.classList.toggle('active', Number(x.dataset.ms) === ms));
+    // 立刻同步到游戏内速度选择，不用等下次进房间
+    chosenMs = ms;
+    document.querySelectorAll('#speedRow .speed-btn, #speedRow2 .speed-btn').forEach(x =>
+      x.classList.toggle('active', Number(x.dataset.ms) === ms));
+    if (currentPanel === 'game' && wsPlayerId) sendWS({ t:'speed', ms });
+  });
+});
+
+document.querySelectorAll('#setThemes .theme-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const mode = b.dataset.theme === 'light' ? 'light' : 'dark';
+    saveSettings({ theme: mode });
+    if (mode === 'light') document.documentElement.setAttribute('data-theme','light');
+    else document.documentElement.removeAttribute('data-theme');
+    document.querySelectorAll('#setThemes .theme-btn').forEach(x =>
+      x.classList.toggle('active', x.dataset.theme === mode));
+  });
+});
+
+$('setNameBtn').addEventListener('click', async () => {
+  const nu = $('setNameInput').value.trim();
+  const tip = $('setNameTip');
+  tip.className = 'set-tip';
+  if (!nu){ tip.textContent = t('nameEmpty'); tip.classList.add('err'); return; }
+  if (nu === authUser){ tip.textContent = t('nameSame'); tip.classList.add('err'); return; }
+  tip.textContent = t('saving');
+  try {
+    const r = await fetch('/api/rename', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + authToken },
+      body: JSON.stringify({ name: nu })
+    }).then(x => x.json());
+    if (!r.ok){ tip.textContent = r.msg || '改名失败'; tip.classList.add('err'); return; }
+    localStorage.setItem('snakeUser', r.user);
+    tip.textContent = t('nameOk');
+    tip.classList.add('ok');
+    setTimeout(() => location.reload(), 700);
+  } catch {
+    tip.textContent = t('netErr');
+    tip.classList.add('err');
+  }
 });
 
 $('respawnBtn').addEventListener('click', () => { sendWS({t:'respawn'}); $('dead').classList.add('hidden'); });

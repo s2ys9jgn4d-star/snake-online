@@ -1071,6 +1071,57 @@ async function handleApi(req, res, urlPath){
     if (to === OFFICIAL_NAME) maybeOfficialReply(me);   // 给官方发消息会自动收到一条说明
     return sendJSON(res, 200, {ok:true, ts:item.ts});
   }
+  // —— 改名：账号名整体迁移（账号、排行榜、登录态、好友、私聊）——
+  if (req.method === 'POST' && urlPath === '/api/rename'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'请先登录'});
+    if (isGuest(me)) return sendJSON(res, 403, {ok:false,msg:'游客不能改名，注册账号后才可以'});
+    if (me === OFFICIAL_NAME) return sendJSON(res, 403, {ok:false,msg:'官方账号不能改名'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const nu = String(body.name||'').trim();
+    if (!nu || nu.length>16 || /[^\w\u4e00-\u9fa5]/.test(nu))
+      return sendJSON(res, 400, {ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
+    if (nu === me) return sendJSON(res, 400, {ok:false,msg:'和现在的名字一样'});
+    if (accounts.has(nu)) return sendJSON(res, 409, {ok:false,msg:'用户名已存在'});
+    if (guests.has(nu)) return sendJSON(res, 409, {ok:false,msg:'这个名字正被游客使用，换一个吧'});
+    if (hasBannedWord(nu)) return sendJSON(res, 400, {ok:false,msg:'用户名含有不允许的字词，换一个吧'});
+
+    // 1) 账号本体（密码、邮箱、处罚记录原样带走）
+    const acc = accounts.get(me);
+    accounts.delete(me);
+    accounts.set(nu, acc);
+    // 2) 排行榜
+    for (const e of leaderboard) if (e.u === me) e.u = nu;
+    // 3) 登录态：token 不变，只把指向改掉，前端不用重新登录
+    for (const [t, u2] of [...tokens.entries()]) if (u2 === me) tokens.set(t, nu);
+    // 4) 好友关系与待处理申请
+    if (social.friends[me]){ social.friends[nu] = social.friends[me]; delete social.friends[me]; }
+    for (const k in social.friends) social.friends[k] = social.friends[k].map(x => x === me ? nu : x);
+    if (social.reqs[me]){ social.reqs[nu] = social.reqs[me]; delete social.reqs[me]; }
+    for (const k in social.reqs) for (const r of social.reqs[k]) if (r.from === me) r.from = nu;
+    // 5) 私聊：会话键由两个名字排序拼接，改名后要重建
+    const nmsgs = {};
+    for (const k in social.msgs){
+      const nk = k.split('|').map(x => x === me ? nu : x).sort().join('|');
+      const list = social.msgs[k];
+      for (const m of list) if (m.from === me) m.from = nu;
+      nmsgs[nk] = (nmsgs[nk] || []).concat(list);
+    }
+    social.msgs = nmsgs;
+    // 6) 在线连接与房间内显示名
+    const sockSet = socketsByUser.get(me);
+    if (sockSet){
+      socketsByUser.delete(me);
+      socketsByUser.set(nu, sockSet);
+      for (const ws of sockSet) ws.user = nu;
+    }
+    for (const rm of rooms.values())
+      for (const p of rm.players.values()) if (p.name === me) p.name = nu;
+
+    saveUsers(); saveScores(); saveSocial();
+    return sendJSON(res, 200, {ok:true, user:nu, msg:'改名成功'});
+  }
   // —— 管理员接口 ——
   if (req.method === 'POST' && urlPath === '/api/admin/login'){
     const body = await readBody(req);

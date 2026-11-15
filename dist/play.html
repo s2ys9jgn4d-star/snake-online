@@ -6,7 +6,14 @@
 <title data-i18n="appTitle">多人联机贪吃蛇</title>
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="favicon.png">
-<link rel="stylesheet" href="style.css?v=20261115d">
+<link rel="stylesheet" href="style.css?v=20261115e">
+<script>
+// 提前应用主题，避免先闪一下深色再变浅色
+try {
+  var _s = JSON.parse(localStorage.getItem('snakeSettings') || '{}');
+  if (_s.theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+} catch (e) {}
+</script>
 </head>
 <body>
 <div id="app">
@@ -139,6 +146,7 @@
       <div class="lobby-user">
         <span id="lobbyUserName">游客</span>
         <span id="lobbyBest">最高分 0</span>
+        <button id="settingsBtn" class="ghost-btn" data-i18n="settings">⚙️ 设置</button>
         <button id="adminBtn" onclick="window.open('admin.html','_blank')" data-i18n="admin">管理后台</button>
         <button id="logoutBtn" data-i18n="logout">退出</button>
         <button id="deleteAcctBtn" style="color:#ef4444" data-i18n="deleteAccount">注销账号</button>
@@ -187,6 +195,43 @@
 
         <h3 style="margin-top:16px" data-i18n="rank">🏆 排行榜 Top 20</h3>
         <ol id="rankList"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 设置（登录后可从大厅打开） ============ -->
+  <div id="settingsModal" class="modal-mask hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span data-i18n="settings">⚙️ 设置</span>
+        <button id="settingsClose" class="ghost-btn" data-i18n="close">关闭</button>
+      </div>
+
+      <div class="set-group">
+        <label data-i18n="defaultSpeed">默认速度</label>
+        <div class="set-row" id="setSpeeds">
+          <button type="button" class="speed-btn" data-ms="300" data-i18n="slow">慢速</button>
+          <button type="button" class="speed-btn" data-ms="200" data-i18n="normal">标准</button>
+          <button type="button" class="speed-btn" data-ms="110" data-i18n="fast">快速</button>
+          <button type="button" class="speed-btn" data-ms="50" data-i18n="sanic">超快</button>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <label data-i18n="theme">界面主题</label>
+        <div class="set-row" id="setThemes">
+          <button type="button" class="theme-btn" data-theme="dark" data-i18n="themeDark">深色</button>
+          <button type="button" class="theme-btn" data-theme="light" data-i18n="themeLight">浅色</button>
+        </div>
+      </div>
+
+      <div class="set-group" id="setNameGroup">
+        <label data-i18n="accountName">账号名字</label>
+        <div class="set-row">
+          <input id="setNameInput" maxlength="16" placeholder="新用户名" data-i18n-ph="namePh">
+          <button id="setNameBtn" data-i18n="saveName">改名</button>
+        </div>
+        <p id="setNameTip" class="set-tip" data-i18n="nameTip">改名后排行榜、好友关系都会跟着变</p>
       </div>
     </div>
   </div>
@@ -275,7 +320,7 @@
 
 </div>
 
-<script src="i18n.js?v=20261115d"></script>
-<script src="game.js?v=20261115d"></script>
+<script src="i18n.js?v=20261115e"></script>
+<script src="game.js?v=20261115e"></script>
 </body>
 </html>
