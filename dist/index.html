@@ -333,12 +333,14 @@
   else if (/Mac/i.test(ua) || /Mac/i.test(pf)) plat = 'mac';
   else if (/Linux|X11/i.test(ua) || /Linux/i.test(pf)) plat = 'linux';
 
+  // 安装包统一走线上地址，避免静态托管站点缺文件
+  var BASE = 'https://snake-online.up.railway.app/';
   var MAP = {
-    mac:     { name: 'macOS',   icon: '🍎', href: '贪吃蛇.dmg',         ext: 'DMG' },
-    win:     { name: 'Windows', icon: '🖥️', href: '贪吃蛇-win64.zip',   ext: 'ZIP' },
-    linux:   { name: 'Linux',   icon: '🐧', href: '贪吃蛇.deb',         ext: 'DEB' },
-    android: { name: 'Android', icon: '🤖', href: '贪吃蛇.apk',         ext: 'APK' },
-    ios:     { name: 'iOS',     icon: '📱', href: '贪吃蛇-unsigned.ipa', ext: 'IPA' }
+    mac:     { name: 'macOS',   icon: '🍎', href: BASE + '贪吃蛇.dmg',         ext: 'DMG' },
+    win:     { name: 'Windows', icon: '🖥️', href: BASE + '贪吃蛇-win64.zip',   ext: 'ZIP' },
+    linux:   { name: 'Linux',   icon: '🐧', href: BASE + '贪吃蛇.deb',         ext: 'DEB' },
+    android: { name: 'Android', icon: '🤖', href: BASE + '贪吃蛇.apk',         ext: 'APK' },
+    ios:     { name: 'iOS',     icon: '📱', href: BASE + '贪吃蛇-unsigned.ipa', ext: 'IPA' }
   };
   var info = MAP[plat];
 
