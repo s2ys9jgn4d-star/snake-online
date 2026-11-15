@@ -475,6 +475,15 @@ body.is-guest #deleteAcctBtn { display:none; }
 .set-tip { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
 .set-tip.err { color:var(--danger); }
 .set-tip.ok { color:var(--accent2); }
+
+/* 注册时的服务条款勾选 */
+.agree-row {
+  display:flex; align-items:flex-start; gap:8px; margin:2px 0 8px;
+  font-size:12.5px; line-height:1.6; color:var(--muted); cursor:pointer;
+}
+.agree-row input { flex:0 0 auto; margin:3px 0 0; accent-color:var(--accent); cursor:pointer; }
+.agree-row a { color:var(--accent); text-decoration:none; }
+.agree-row a:hover { text-decoration:underline; }
 body.is-guest #setNameGroup { display:none; }
 
 /* ============ 浅色主题 ============ */

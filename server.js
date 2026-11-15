@@ -844,6 +844,9 @@ async function handleApi(req, res, urlPath){
   if (req.method === 'POST' && urlPath === '/api/register'){
     const body = await readBody(req);
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    // 注册必须先勾选同意服务条款与隐私政策。
+    // 已发布的老客户端请求里没有这个字段，所以只拦截显式拒绝（false），避免它们无法注册。
+    if (body.agree === false) return sendJSON(res, 400, {ok:false,msg:'请先阅读并同意服务条款和隐私政策', key:'errAgree'});
     const u = String(body.u||'').trim();
     const p = String(body.p||'');
     const email = normalizeEmail(body.email);

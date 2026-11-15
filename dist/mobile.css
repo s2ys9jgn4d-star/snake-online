@@ -334,6 +334,13 @@ body::before {
 .auth-body button.guest-btn:active { background:rgba(91,140,255,.14); color:#fff; }
 .guest-btn span { font-size:11px; opacity:.65; }
 .guest-note { text-align:center; font-size:12px; color:var(--muted); margin-top:7px; }
+/* 注册时的服务条款勾选 */
+.agree-row {
+  display:flex; align-items:flex-start; gap:7px; margin:4px 0 8px;
+  font-size:12px; line-height:1.6; color:var(--muted); cursor:pointer;
+}
+.agree-row input { flex:0 0 auto; margin:2px 0 0; accent-color:var(--accent); cursor:pointer; }
+.agree-row a { color:var(--accent); text-decoration:none; }
 .guest-tip {
   margin:0 0 12px; padding:10px 12px; border-radius:10px; font-size:12px; line-height:1.6;
   color:#ffe08a; background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.32);

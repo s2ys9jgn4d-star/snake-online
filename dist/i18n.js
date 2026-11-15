@@ -1416,6 +1416,31 @@
     for (var skey in PATCH3[sk]) TRANSLATIONS[sk][skey] = PATCH3[sk][skey];
   }
 
+  // —— 第四批：注册时的服务条款勾选 ——
+  var PATCH4 = {
+    'en': { agreePrefix:'I have read and agree to the ', termsLink:'Terms of Service', privacyLink:'Privacy Policy', andWord:' and ', agreeSuffix:'', errAgree:'Please agree to the Terms of Service and Privacy Policy' },
+    'zh-CN': { agreePrefix:'我已阅读并同意', termsLink:'《服务条款》', privacyLink:'《隐私政策》', andWord:'和', agreeSuffix:'', errAgree:'请先勾选同意服务条款和隐私政策' },
+    'zh-TW': { agreePrefix:'我已閱讀並同意', termsLink:'《服務條款》', privacyLink:'《隱私政策》', andWord:'和', agreeSuffix:'', errAgree:'請先勾選同意服務條款與隱私政策' },
+    'ja': { agreePrefix:' ', termsLink:'利用規約', privacyLink:'プライバシーポリシー', andWord:'と', agreeSuffix:'に同意します', errAgree:'利用規約とプライバシーポリシーに同意してください' },
+    'ko': { agreePrefix:' ', termsLink:'서비스 약관', privacyLink:'개인정보 처리방침', andWord:' 및 ', agreeSuffix:'에 동의합니다', errAgree:'서비스 약관과 개인정보 처리방침에 동의해 주세요' },
+    'es': { agreePrefix:'He leído y acepto los ', termsLink:'Términos del servicio', privacyLink:'Política de privacidad', andWord:' y la ', agreeSuffix:'', errAgree:'Debes aceptar los Términos del servicio y la Política de privacidad' },
+    'fr': { agreePrefix:'J’ai lu et j’accepte les ', termsLink:'Conditions d’utilisation', privacyLink:'Politique de confidentialité', andWord:' et la ', agreeSuffix:'', errAgree:'Veuillez accepter les Conditions d’utilisation et la Politique de confidentialité' },
+    'de': { agreePrefix:'Ich habe die ', termsLink:'Nutzungsbedingungen', privacyLink:'Datenschutzerklärung', andWord:' und die ', agreeSuffix:' gelesen und stimme zu', errAgree:'Bitte stimme den Nutzungsbedingungen und der Datenschutzerklärung zu' },
+    'ru': { agreePrefix:'Я прочитал и согласен с ', termsLink:'Условиями использования', privacyLink:'Политикой конфиденциальности', andWord:' и ', agreeSuffix:'', errAgree:'Сначала примите Условия использования и Политику конфиденциальности' },
+    'pt-BR': { agreePrefix:'Li e aceito os ', termsLink:'Termos de Serviço', privacyLink:'Política de Privacidade', andWord:' e a ', agreeSuffix:'', errAgree:'Aceite os Termos de Serviço e a Política de Privacidade' },
+    'pt-PT': { agreePrefix:'Li e aceito os ', termsLink:'Termos de Serviço', privacyLink:'Política de Privacidade', andWord:' e a ', agreeSuffix:'', errAgree:'Aceita os Termos de Serviço e a Política de Privacidade' },
+    'it': { agreePrefix:'Ho letto e accetto i ', termsLink:'Termini di servizio', privacyLink:'Informativa sulla privacy', andWord:' e la ', agreeSuffix:'', errAgree:'Accetta i Termini di servizio e l’Informativa sulla privacy' },
+    'ar': { agreePrefix:'أوافق على ', termsLink:'شروط الخدمة', privacyLink:'سياسة الخصوصية', andWord:' و', agreeSuffix:'', errAgree:'يجب الموافقة على شروط الخدمة وسياسة الخصوصية' },
+    'vi': { agreePrefix:'Tôi đã đọc và đồng ý với ', termsLink:'Điều khoản dịch vụ', privacyLink:'Chính sách quyền riêng tư', andWord:' và ', agreeSuffix:'', errAgree:'Hãy đồng ý với Điều khoản dịch vụ và Chính sách quyền riêng tư' },
+    'id': { agreePrefix:'Saya telah membaca dan menyetujui ', termsLink:'Ketentuan Layanan', privacyLink:'Kebijakan Privasi', andWord:' dan ', agreeSuffix:'', errAgree:'Setujui Ketentuan Layanan dan Kebijakan Privasi' },
+    'tr': { agreePrefix:'Okudum ve kabul ediyorum: ', termsLink:'Hizmet Şartları', privacyLink:'Gizlilik Politikası', andWord:' ve ', agreeSuffix:'', errAgree:'Hizmet Şartları ve Gizlilik Politikası’nı kabul edin' }
+  };
+  for (var tk in PATCH4){
+    if (!Object.prototype.hasOwnProperty.call(PATCH4, tk)) continue;
+    if (!TRANSLATIONS[tk]) TRANSLATIONS[tk] = {};
+    for (var tkey in PATCH4[tk]) TRANSLATIONS[tk][tkey] = PATCH4[tk][tkey];
+  }
+
 
   function supported(code){
     if (!code) return false;

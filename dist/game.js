@@ -97,6 +97,7 @@ function applyRegExtra(){
   $('mailCodeBox').classList.toggle('hidden', !(reg && mailReady === true));
   $('captchaBox').classList.toggle('hidden', !(reg && mailReady === false));
   $('noMailTip').classList.toggle('hidden', !(reg && mailReady === false));
+  $('agreeRow').classList.toggle('hidden', !reg);
 }
 async function refreshMailReady(){
   try {
@@ -167,10 +168,11 @@ async function doAuthAction(){
     if (!EMAIL_RE.test(email)) { $('authErr').textContent = t('errEmailFormat'); return; }
     if (mailReady === true && !code) { $('authErr').textContent = t('errNeedCode'); return; }
     if (mailReady === false && !captcha){ $('authErr').textContent = t('errNeedCaptcha'); return; }
+    if (!$('agreeBox').checked){ $('authErr').textContent = t('errAgree'); return; }
   }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
-      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code, cid: captchaId, captcha})
+      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code, cid: captchaId, captcha, agree: true})
     });
     if (!r.ok){
       $('authErr').textContent = r.msg || t('opFailed');
