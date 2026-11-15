@@ -577,7 +577,7 @@ class Room {
     this.resetPlayer(p);
     this.players.set(id, p);
     ws.playerId = id; ws.room = this;
-    ws.sendText(JSON.stringify({t:'joined_room', roomId:this.id, roomName:this.name, id, cols:COLS, rows:ROWS, tickMs:this.tickMs}));
+    ws.sendText(JSON.stringify({t:'joined_room', roomId:this.id, roomName:this.name, solo:this.isSolo, soloOf:this.owner, id, cols:COLS, rows:ROWS, tickMs:this.tickMs}));
     ws.sendText(this.snapshot());
     this.broadcast(JSON.stringify({t:'chat', from:'系统', sys:1, key:'sysJoined', args:{name:username}, text:username+' 加入了房间'}));
     return p;

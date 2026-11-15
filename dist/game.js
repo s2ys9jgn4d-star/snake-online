@@ -325,7 +325,7 @@ function handleWs(msg){
 
 function onAuthOk(user){
   authUser = user;
-  $('lobbyUserName').textContent = isGuestUser ? user + ' · 游客' : user;
+  $('lobbyUserName').textContent = isGuestUser ? user + ' · ' + t('guestTag') : user;
   applyGuestUI();
   $('lobbyChat').innerHTML = '';   // 每次进入大厅先清空，避免补发历史时重复
   refreshMe(); refreshScores();
@@ -372,7 +372,7 @@ function escHtml(s){
 
 // 名字 + 官方徽章（off 由服务器标记）；名字单独包一层，超长时只省略名字，徽章不被裁掉
 function nameHtml(u, off){
-  return '<span class="nm-t">' + escHtml(u) + '</span>' + (off ? '<span class="off-badge">✓ 官方</span>' : '');
+  return '<span class="nm-t">' + escHtml(u) + '</span>' + (off ? '<span class="off-badge">' + escHtml(t('offBadge')) + '</span>' : '');
 }
 // 大数字加千分位：10000000000 → 10,000,000,000
 function fmtNum(n){ return Number(n || 0).toLocaleString('en-US'); }
@@ -568,8 +568,9 @@ function onRoomCreated(msg){ /* server 会自动 addPlayer → joined_room 消�
 function onJoinedRoom(msg){
   myRoom = msg;
   wsPlayerId = msg.id;  // 关键：记录自己的玩家 ID，否则键盘监听不生效
-  $('curRoomName').textContent = msg.roomName;
-  $('enterRoomName').textContent = msg.roomName;
+  const roomLabel = msg.solo ? t('soloRoomName', { name: msg.soloOf || authUser }) : msg.roomName;
+  $('curRoomName').textContent = roomLabel;
+  $('enterRoomName').textContent = roomLabel;
   $('menuError').textContent = '';
   $('menu').classList.remove('hidden');
   $('dead').classList.add('hidden');

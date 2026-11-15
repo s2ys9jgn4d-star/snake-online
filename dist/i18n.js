@@ -1341,6 +1341,31 @@
     for (var pkey in PATCH[pk]) TRANSLATIONS[pk][pkey] = PATCH[pk][pkey];
   }
 
+  // —— 第二批：游客提示条、游客标签、官方徽章、单人房标题 ——
+  var PATCH2 = {
+    'en': { guestTip:'🎮 Guest mode: no lobby chat · join others’ rooms only · scores not ranked · nothing saved', guestTag:'Guest', offBadge:'✓ Official', soloRoomName:'{name}’s solo room' },
+    'zh-CN': { guestTip:'🎮 游客模式：不能在大厅发言 · 只能加入别人的房间 · 成绩不上排行榜 · 不留记录', guestTag:'游客', offBadge:'✓ 官方', soloRoomName:'{name} 的单人房' },
+    'zh-TW': { guestTip:'🎮 遊客模式：不能在大廳發言 · 只能加入別人的房間 · 成績不上排行榜 · 不留紀錄', guestTag:'遊客', offBadge:'✓ 官方', soloRoomName:'{name} 的單人房' },
+    'ja': { guestTip:'🎮 ゲストモード：ロビーでは発言不可 · 他の人のルームに参加のみ · ランキング対象外 · 記録は保存されません', guestTag:'ゲスト', offBadge:'✓ 公式', soloRoomName:'{name} のソロルーム' },
+    'ko': { guestTip:'🎮 게스트 모드: 로비 채팅 불가 · 다른 사람 방에만 참가 · 순위 미반영 · 기록 저장 안 됨', guestTag:'게스트', offBadge:'✓ 공식', soloRoomName:'{name}의 솔로 방' },
+    'es': { guestTip:'🎮 Modo invitado: sin chat en el vestíbulo · solo unirse a salas ajenas · sin ranking · no se guarda nada', guestTag:'Invitado', offBadge:'✓ Oficial', soloRoomName:'Sala individual de {name}' },
+    'fr': { guestTip:'🎮 Mode invité : pas de chat dans le hall · rejoins les salles des autres · pas de classement · rien n’est sauvegardé', guestTag:'Invité', offBadge:'✓ Officiel', soloRoomName:'Salle solo de {name}' },
+    'de': { guestTip:'🎮 Gastmodus: kein Lobby-Chat · nur fremden Räumen beitreten · kein Ranking · nichts wird gespeichert', guestTag:'Gast', offBadge:'✓ Offiziell', soloRoomName:'Solo-Raum von {name}' },
+    'ru': { guestTip:'🎮 Режим гостя: нельзя писать в лобби · только вход в чужие комнаты · без рейтинга · ничего не сохраняется', guestTag:'Гость', offBadge:'✓ Официальный', soloRoomName:'Одиночная комната {name}' },
+    'pt-BR': { guestTip:'🎮 Modo convidado: sem chat no lobby · só entrar em salas de outros · sem ranking · nada é salvo', guestTag:'Convidado', offBadge:'✓ Oficial', soloRoomName:'Sala solo de {name}' },
+    'pt-PT': { guestTip:'🎮 Modo convidado: sem chat no lobby · só entrar em salas de outros · sem classificação · nada é guardado', guestTag:'Convidado', offBadge:'✓ Oficial', soloRoomName:'Sala individual de {name}' },
+    'it': { guestTip:'🎮 Modalità ospite: niente chat nella lobby · solo stanze altrui · nessuna classifica · niente viene salvato', guestTag:'Ospite', offBadge:'✓ Ufficiale', soloRoomName:'Stanza solitaria di {name}' },
+    'ar': { guestTip:'🎮 وضع الضيف: لا دردشة في الردهة · الانضمام إلى غرف الآخرين فقط · بدون ترتيب · لا يتم حفظ أي شيء', guestTag:'ضيف', offBadge:'✓ رسمي', soloRoomName:'غرفة {name} الفردية' },
+    'vi': { guestTip:'🎮 Chế độ khách: không chat ở sảnh · chỉ vào phòng người khác · không xếp hạng · không lưu gì', guestTag:'Khách', offBadge:'✓ Chính thức', soloRoomName:'Phòng chơi đơn của {name}' },
+    'id': { guestTip:'🎮 Mode tamu: tidak bisa chat di lobi · hanya bergabung ke room orang lain · tidak masuk peringkat · tidak ada yang disimpan', guestTag:'Tamu', offBadge:'✓ Resmi', soloRoomName:'Room solo {name}' },
+    'tr': { guestTip:'🎮 Misafir modu: lobide sohbet yok · sadece başkalarının odalarına katıl · sıralamaya girmez · hiçbir şey kaydedilmez', guestTag:'Misafir', offBadge:'✓ Resmî', soloRoomName:'{name} kişisel odası' }
+  };
+  for (var qk in PATCH2){
+    if (!Object.prototype.hasOwnProperty.call(PATCH2, qk)) continue;
+    if (!TRANSLATIONS[qk]) TRANSLATIONS[qk] = {};
+    for (var qkey in PATCH2[qk]) TRANSLATIONS[qk][qkey] = PATCH2[qk][qkey];
+  }
+
 
   function supported(code){
     if (!code) return false;
