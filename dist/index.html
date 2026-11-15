@@ -236,19 +236,19 @@
     <div class="grid">
       <div class="card" data-platform="mac">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
-        <div class="name">🍎 macOS</div>
+        <div class="name">🍎 <bdi>macOS</bdi></div>
         <div class="meta" data-i18n="dlMacMeta">贪吃蛇.app · DMG 安装包 · 原生 WKWebView 窗口</div>
         <a href="贪吃蛇.dmg"><span data-i18n="dlDownload">下载</span> DMG</a>
       </div>
       <div class="card" data-platform="win">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
-        <div class="name">🖥️ Windows</div>
+        <div class="name">🖥️ <bdi>Windows</bdi></div>
         <div class="meta" data-i18n="dlWinMeta">Snake.exe · Win64 ZIP · 需安装 WebView2 Runtime</div>
         <a href="贪吃蛇-win64.zip"><span data-i18n="dlDownload">下载</span> ZIP</a>
       </div>
       <div class="card" data-platform="linux">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
-        <div class="name">🐧 Linux</div>
+        <div class="name">🐧 <bdi>Linux</bdi></div>
         <div class="meta" data-i18n="dlLinuxMeta">snake-game · DEB 包 · Debian / Ubuntu / 深度</div>
         <a href="贪吃蛇.deb"><span data-i18n="dlDownload">下载</span> DEB</a>
       </div>
@@ -260,7 +260,7 @@
     <div class="grid">
       <div class="card" data-platform="android">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
-        <div class="name">🤖 Android</div>
+        <div class="name">🤖 <bdi>Android</bdi></div>
         <div class="meta" data-i18n="dlAndroidMeta">com.snake.game · APK · Android 5.0+</div>
         <a href="贪吃蛇.apk"><span data-i18n="dlDownload">下载</span> APK</a>
       </div>
@@ -350,7 +350,7 @@
   if (box) {
     if (info) {
       document.getElementById('smartIcon').textContent = info.icon;
-      document.getElementById('smartName').textContent = info.name;
+      document.getElementById('smartName').innerHTML = '<bdi>' + info.name + '</bdi>';
       var btn = document.getElementById('smartBtn');
       btn.href = info.href;
       btn.innerHTML = '<span data-i18n="dlDownload">下载</span> ' + info.ext;
