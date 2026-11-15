@@ -187,11 +187,26 @@ function wrap76(s){
   return out.join('\r\n');
 }
 
+function mailDomain(addr){
+  const m = String(addr || '').match(/@([^@]+)$/);
+  return m ? m[1] : 'localhost';
+}
+
+function ehloName(c){
+  // 用真实域名打招呼，EHLO localhost 会被反垃圾规则扣分
+  return mailDomain(c.from || c.user);
+}
+
 function buildMessage(c, { to, subject, text }){
+  const domain = mailDomain(c.from || c.user);
+  const mid = '<' + Date.now().toString(36) + '.' + Math.random().toString(36).slice(2, 10) + '@' + domain + '>';
   return [
     'Date: ' + new Date().toUTCString(),
+    'Message-ID: ' + mid,
     'From: =?UTF-8?B?' + b64('联机贪吃蛇') + '?= <' + c.from + '>',
+    'Reply-To: <' + c.from + '>',
     'To: <' + to + '>',
+    'Auto-Submitted: auto-generated',
     'Subject: =?UTF-8?B?' + b64(subject) + '?=',
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=UTF-8',
@@ -222,12 +237,12 @@ async function sendOne(c, { to, subject, text }){
 
   try {
     check(await r.read(), '连接');                       // 220 欢迎语
-    check(await r.cmd('EHLO localhost'), 'EHLO');
+    check(await r.cmd('EHLO ' + ehloName(c)), 'EHLO');
     if (!c.secure){
       check(await r.cmd('STARTTLS'), 'STARTTLS');
       sock.removeAllListeners('data');
       r = await startTls(sock, c.host);
-      check(await r.cmd('EHLO localhost'), 'EHLO(TLS)');
+      check(await r.cmd('EHLO ' + ehloName(c)), 'EHLO(TLS)');
     }
     const a1 = await r.cmd('AUTH LOGIN');
     if (a1.code !== 334) throw new Error('服务器不支持账号密码登录：' + a1.text);
@@ -269,4 +284,4 @@ async function sendMail(opts){
   throw new Error(errs.join('；'));
 }
 
-module.exports = { sendMail, isConfigured, accounts, apiConfig };
+module.exports = { sendMail, isConfigured, accounts, apiConfig, buildMessage, ehloName };
