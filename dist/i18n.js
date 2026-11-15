@@ -1155,6 +1155,193 @@
 
   var CURRENT = 'en';
 
+  // —— 后加文案（游客模式、系统消息等）——
+  // 单独用补丁表，不往 RAW 定长数组里塞，避免数组错位；没写到的语言自动回退英文
+  var PATCH = {
+    'en': {
+      guestBtn:'Play as guest', guestNote:'No email needed — just join a room, progress is not saved', admin:'Admin',
+      deadWall:'Hit the wall', deadSelf:'Bit yourself', deadOther:'Crashed into another snake', sysLabel:'System',
+      sysJoined:'{name} joined the room', sysLeft:'{name} left the room', sysSpeed:'{name} set the speed to {ms}ms/step',
+      speedInvalid:'Invalid speed', speedOwner:'Only the host can change the speed — create your own room',
+      speedTooFast:'Too many changes, wait a few seconds',
+      guestNoCreate:'Guests cannot create rooms — please join one', guestNoCreate2:'Guests cannot create rooms — join someone else’s',
+      guestNoLobbyChat:'Guests cannot chat in the lobby — join a room to chat', badRoomName:'Room name contains a forbidden word',
+      roomLimit:'Too many rooms, try again later', noSuchRoom:'Room not found', soloOther:'That is someone else’s solo room',
+      badPass:'Wrong password', roomFullMax:'Room is full (max {n} players)', mutedFor:'You are muted, wait {t}'
+    },
+    'zh-CN': {
+      guestBtn:'游客试玩', guestNote:'没邮箱也能玩：加入房间即可，不保存记录', admin:'管理后台',
+      deadWall:'撞墙了', deadSelf:'咬到自己了', deadOther:'撞上了对手的身体', sysLabel:'系统',
+      sysJoined:'{name} 加入了房间', sysLeft:'{name} 离开了房间', sysSpeed:'{name} 把速度调成了 {ms}ms/步',
+      speedInvalid:'速度值无效', speedOwner:'只有房主能调速度，你可以自己开一个房间',
+      speedTooFast:'调得太频繁了，等几秒再试',
+      guestNoCreate:'游客不能开房间，挑一个房间加入吧', guestNoCreate2:'游客不能开房间，进别人的房间就能玩',
+      guestNoLobbyChat:'游客不能在大厅发言，进房间后就能聊', badRoomName:'房间名含有不允许的字词',
+      roomLimit:'房间数已达上限', noSuchRoom:'房间不存在', soloOther:'这是别人的单人房',
+      badPass:'密码不对', roomFullMax:'房间已满（最多 {n} 人）', mutedFor:'你正在禁言中，还需等待 {t}'
+    },
+    'zh-TW': {
+      guestBtn:'遊客試玩', guestNote:'沒郵箱也能玩：加入房間即可，不保存記錄', admin:'管理後台',
+      deadWall:'撞牆了', deadSelf:'咬到自己了', deadOther:'撞上了對手的身體', sysLabel:'系統',
+      sysJoined:'{name} 加入了房間', sysLeft:'{name} 離開了房間', sysSpeed:'{name} 把速度調成了 {ms}ms/步',
+      speedInvalid:'速度值無效', speedOwner:'只有房主能調速度，你可以自己開一個房間',
+      speedTooFast:'調得太頻繁了，等幾秒再試',
+      guestNoCreate:'遊客不能開房間，挑一個房間加入吧', guestNoCreate2:'遊客不能開房間，進別人的房間就能玩',
+      guestNoLobbyChat:'遊客不能在大廳發言，進房間後就能聊', badRoomName:'房間名含有不允許的字詞',
+      roomLimit:'房間數已達上限', noSuchRoom:'房間不存在', soloOther:'這是別人的單人房',
+      badPass:'密碼不對', roomFullMax:'房間已滿（最多 {n} 人）', mutedFor:'你正在禁言中，還需等待 {t}'
+    },
+    'ja': {
+      guestBtn:'ゲストでプレイ', guestNote:'メール不要 — ルームに参加するだけ。記録は保存されません', admin:'管理画面',
+      deadWall:'壁にぶつかった', deadSelf:'自分を噛んだ', deadOther:'相手の体に衝突した', sysLabel:'システム',
+      sysJoined:'{name} がルームに入室しました', sysLeft:'{name} がルームを退出しました', sysSpeed:'{name} が速度を {ms}ms/歩 に変更しました',
+      speedInvalid:'速度の値が無効です', speedOwner:'速度を変えられるのはホストだけです。自分でルームを作れます',
+      speedTooFast:'変更が多すぎます。数秒待ってから試してください',
+      guestNoCreate:'ゲストはルームを作れません。ルームに参加してください', guestNoCreate2:'ゲストはルームを作れません。他の人のルームに入ってください',
+      guestNoLobbyChat:'ゲストはロビーで発言できません。ルームに入ると話せます', badRoomName:'ルーム名に使用できない言葉が含まれています',
+      roomLimit:'ルーム数が上限に達しました', noSuchRoom:'ルームが見つかりません', soloOther:'他の人のソロ用ルームです',
+      badPass:'パスワードが違います', roomFullMax:'ルームが満員です（最大 {n} 人）', mutedFor:'ミュート中です。あと {t} 待ってください'
+    },
+    'ko': {
+      guestBtn:'게스트로 플레이', guestNote:'이메일 없이 플레이 — 방에 참가하면 됩니다. 기록은 저장되지 않습니다', admin:'관리자',
+      deadWall:'벽에 부딪혔습니다', deadSelf:'자기 몸을 물었습니다', deadOther:'상대 몸통에 부딪혔습니다', sysLabel:'시스템',
+      sysJoined:'{name} 님이 방에 입장했습니다', sysLeft:'{name} 님이 방을 떠났습니다', sysSpeed:'{name} 님이 속도를 {ms}ms/칸으로 변경했습니다',
+      speedInvalid:'속도 값이 올바르지 않습니다', speedOwner:'방장만 속도를 바꿀 수 있습니다. 직접 방을 만들 수 있어요',
+      speedTooFast:'너무 자주 변경했습니다. 몇 초 후 다시 시도하세요',
+      guestNoCreate:'게스트는 방을 만들 수 없습니다. 방에 참가하세요', guestNoCreate2:'게스트는 방을 만들 수 없습니다. 다른 사람 방에 들어가세요',
+      guestNoLobbyChat:'게스트는 로비에서 채팅할 수 없습니다. 방에 들어가면 가능합니다', badRoomName:'방 이름에 허용되지 않는 단어가 있습니다',
+      roomLimit:'방 개수가 한도에 도달했습니다', noSuchRoom:'방을 찾을 수 없습니다', soloOther:'다른 사람의 솔로 방입니다',
+      badPass:'비밀번호가 틀렸습니다', roomFullMax:'방이 가득 찼습니다 (최대 {n}명)', mutedFor:'채팅 금지 중입니다. {t} 후에 다시 시도하세요'
+    },
+    'es': {
+      guestBtn:'Jugar como invitado', guestNote:'Sin correo — solo únete a una sala, el progreso no se guarda', admin:'Administración',
+      deadWall:'Chocaste con la pared', deadSelf:'Te mordiste', deadOther:'Chocaste con otra serpiente', sysLabel:'Sistema',
+      sysJoined:'{name} se unió a la sala', sysLeft:'{name} salió de la sala', sysSpeed:'{name} cambió la velocidad a {ms} ms/paso',
+      speedInvalid:'Velocidad no válida', speedOwner:'Solo el anfitrión puede cambiar la velocidad; puedes crear tu propia sala',
+      speedTooFast:'Demasiados cambios, espera unos segundos',
+      guestNoCreate:'Los invitados no pueden crear salas — únete a una', guestNoCreate2:'Los invitados no pueden crear salas — entra en la de otro',
+      guestNoLobbyChat:'Los invitados no pueden hablar en el vestíbulo — entra en una sala para chatear', badRoomName:'El nombre de la sala contiene una palabra prohibida',
+      roomLimit:'Hay demasiadas salas, inténtalo más tarde', noSuchRoom:'Sala no encontrada', soloOther:'Es la sala individual de otra persona',
+      badPass:'Contraseña incorrecta', roomFullMax:'La sala está llena (máx. {n} jugadores)', mutedFor:'Estás silenciado, espera {t}'
+    },
+    'fr': {
+      guestBtn:'Jouer en invité', guestNote:'Sans e-mail — rejoins simplement une salle, la progression n’est pas sauvegardée', admin:'Administration',
+      deadWall:'Tu as heurté le mur', deadSelf:'Tu t’es mordu', deadOther:'Tu as percuté un autre serpent', sysLabel:'Système',
+      sysJoined:'{name} a rejoint la salle', sysLeft:'{name} a quitté la salle', sysSpeed:'{name} a réglé la vitesse à {ms} ms/pas',
+      speedInvalid:'Vitesse invalide', speedOwner:'Seul l’hôte peut changer la vitesse — tu peux créer ta propre salle',
+      speedTooFast:'Trop de changements, attends quelques secondes',
+      guestNoCreate:'Les invités ne peuvent pas créer de salle — rejoins-en une', guestNoCreate2:'Les invités ne peuvent pas créer de salle — entre dans celle d’un autre',
+      guestNoLobbyChat:'Les invités ne peuvent pas parler dans le hall — entre dans une salle pour discuter', badRoomName:'Le nom de la salle contient un mot interdit',
+      roomLimit:'Trop de salles, réessaie plus tard', noSuchRoom:'Salle introuvable', soloOther:'C’est la salle solo de quelqu’un d’autre',
+      badPass:'Mot de passe incorrect', roomFullMax:'La salle est pleine (max {n} joueurs)', mutedFor:'Tu es réduit au silence, attends {t}'
+    },
+    'de': {
+      guestBtn:'Als Gast spielen', guestNote:'Keine E-Mail nötig — einfach einem Raum beitreten, Fortschritt wird nicht gespeichert', admin:'Verwaltung',
+      deadWall:'Gegen die Wand gestoßen', deadSelf:'Selbst gebissen', deadOther:'In eine andere Schlange gefahren', sysLabel:'System',
+      sysJoined:'{name} ist dem Raum beigetreten', sysLeft:'{name} hat den Raum verlassen', sysSpeed:'{name} hat die Geschwindigkeit auf {ms} ms/Schritt gesetzt',
+      speedInvalid:'Ungültige Geschwindigkeit', speedOwner:'Nur der Host kann die Geschwindigkeit ändern — du kannst einen eigenen Raum erstellen',
+      speedTooFast:'Zu viele Änderungen, warte ein paar Sekunden',
+      guestNoCreate:'Gäste können keine Räume erstellen — tritt einem bei', guestNoCreate2:'Gäste können keine Räume erstellen — tritt dem eines anderen bei',
+      guestNoLobbyChat:'Gäste können nicht in der Lobby schreiben — tritt einem Raum bei', badRoomName:'Der Raumnamen enthält ein verbotenes Wort',
+      roomLimit:'Zu viele Räume, versuche es später erneut', noSuchRoom:'Raum nicht gefunden', soloOther:'Das ist der Solo-Raum einer anderen Person',
+      badPass:'Falsches Passwort', roomFullMax:'Raum ist voll (max. {n} Spieler)', mutedFor:'Du bist stummgeschaltet, warte {t}'
+    },
+    'ru': {
+      guestBtn:'Играть гостем', guestNote:'Без почты — просто зайдите в комнату, прогресс не сохраняется', admin:'Админка',
+      deadWall:'Ударился о стену', deadSelf:'Укусил себя', deadOther:'Врезался в другую змею', sysLabel:'Система',
+      sysJoined:'{name} вошёл в комнату', sysLeft:'{name} вышел из комнаты', sysSpeed:'{name} изменил скорость на {ms} мс/шаг',
+      speedInvalid:'Недопустимая скорость', speedOwner:'Скорость меняет только хозяин комнаты — можешь создать свою',
+      speedTooFast:'Слишком частые изменения, подожди несколько секунд',
+      guestNoCreate:'Гости не могут создавать комнаты — зайдите в существующую', guestNoCreate2:'Гости не могут создавать комнаты — зайдите к другому игроку',
+      guestNoLobbyChat:'Гости не могут писать в лобби — зайдите в комнату', badRoomName:'В названии комнаты есть запрещённое слово',
+      roomLimit:'Слишком много комнат, попробуйте позже', noSuchRoom:'Комната не найдена', soloOther:'Это чужая комната для одиночной игры',
+      badPass:'Неверный пароль', roomFullMax:'Комната заполнена (макс. {n} игроков)', mutedFor:'Вы заглушены, подождите {t}'
+    },
+    'pt-BR': {
+      guestBtn:'Jogar como convidado', guestNote:'Sem e-mail — basta entrar em uma sala, o progresso não é salvo', admin:'Administração',
+      deadWall:'Bateu na parede', deadSelf:'Mordeu a si mesmo', deadOther:'Bateu em outra cobra', sysLabel:'Sistema',
+      sysJoined:'{name} entrou na sala', sysLeft:'{name} saiu da sala', sysSpeed:'{name} mudou a velocidade para {ms} ms/passo',
+      speedInvalid:'Velocidade inválida', speedOwner:'Só o anfitrião pode mudar a velocidade — você pode criar sua própria sala',
+      speedTooFast:'Mudanças demais, espere alguns segundos',
+      guestNoCreate:'Convidados não podem criar salas — entre em uma', guestNoCreate2:'Convidados não podem criar salas — entre na de outra pessoa',
+      guestNoLobbyChat:'Convidados não podem falar no lobby — entre em uma sala para conversar', badRoomName:'O nome da sala contém uma palavra proibida',
+      roomLimit:'Salas demais, tente mais tarde', noSuchRoom:'Sala não encontrada', soloOther:'É a sala solo de outra pessoa',
+      badPass:'Senha incorreta', roomFullMax:'Sala cheia (máx. {n} jogadores)', mutedFor:'Você está silenciado, aguarde {t}'
+    },
+    'pt-PT': {
+      guestBtn:'Jogar como convidado', guestNote:'Sem e-mail — basta entrar numa sala, o progresso não é guardado', admin:'Administração',
+      deadWall:'Bateu na parede', deadSelf:'Mordeu-se a si próprio', deadOther:'Bateu noutra cobra', sysLabel:'Sistema',
+      sysJoined:'{name} entrou na sala', sysLeft:'{name} saiu da sala', sysSpeed:'{name} alterou a velocidade para {ms} ms/passo',
+      speedInvalid:'Velocidade inválida', speedOwner:'Só o anfitrião pode alterar a velocidade — podes criar a tua sala',
+      speedTooFast:'Demasiadas alterações, espera alguns segundos',
+      guestNoCreate:'Convidados não podem criar salas — entra numa', guestNoCreate2:'Convidados não podem criar salas — entra na de outra pessoa',
+      guestNoLobbyChat:'Convidados não podem falar no lobby — entra numa sala para conversar', badRoomName:'O nome da sala contém uma palavra proibida',
+      roomLimit:'Salas a mais, tenta mais tarde', noSuchRoom:'Sala não encontrada', soloOther:'É a sala individual de outra pessoa',
+      badPass:'Senha incorreta', roomFullMax:'Sala cheia (máx. {n} jogadores)', mutedFor:'Estás silenciado, aguarda {t}'
+    },
+    'it': {
+      guestBtn:'Gioca come ospite', guestNote:'Senza email — entra in una stanza, i progressi non vengono salvati', admin:'Amministrazione',
+      deadWall:'Hai sbattuto contro il muro', deadSelf:'Ti sei morso', deadOther:'Hai colpito un altro serpente', sysLabel:'Sistema',
+      sysJoined:'{name} è entrato nella stanza', sysLeft:'{name} è uscito dalla stanza', sysSpeed:'{name} ha impostato la velocità a {ms} ms/passo',
+      speedInvalid:'Velocità non valida', speedOwner:'Solo l’host può cambiare la velocità — puoi creare la tua stanza',
+      speedTooFast:'Troppe modifiche, attendi qualche secondo',
+      guestNoCreate:'Gli ospiti non possono creare stanze — unisciti a una', guestNoCreate2:'Gli ospiti non possono creare stanze — entra in quella di un altro',
+      guestNoLobbyChat:'Gli ospiti non possono scrivere nella lobby — entra in una stanza', badRoomName:'Il nome della stanza contiene una parola vietata',
+      roomLimit:'Troppe stanze, riprova più tardi', noSuchRoom:'Stanza non trovata', soloOther:'È la stanza solitaria di un altro',
+      badPass:'Password errata', roomFullMax:'Stanza piena (max {n} giocatori)', mutedFor:'Sei silenziato, attendi {t}'
+    },
+    'ar': {
+      guestBtn:'اللعب كضيف', guestNote:'بدون بريد إلكتروني — انضم إلى غرفة فقط، لن يتم حفظ التقدم', admin:'الإدارة',
+      deadWall:'اصطدمت بالحائط', deadSelf:'عضضت نفسك', deadOther:'اصطدمت بثعبان آخر', sysLabel:'النظام',
+      sysJoined:'انضم {name} إلى الغرفة', sysLeft:'غادر {name} الغرفة', sysSpeed:'غيّر {name} السرعة إلى {ms} مللي ثانية/خطوة',
+      speedInvalid:'سرعة غير صالحة', speedOwner:'المضيف فقط يمكنه تغيير السرعة — يمكنك إنشاء غرفة خاصة بك',
+      speedTooFast:'تغييرات كثيرة جدًا، انتظر بضع ثوانٍ',
+      guestNoCreate:'لا يمكن للضيوف إنشاء غرف — انضم إلى غرفة موجودة', guestNoCreate2:'لا يمكن للضيوف إنشاء غرف — انضم إلى غرفة شخص آخر',
+      guestNoLobbyChat:'لا يمكن للضيوف التحدث في الردهة — انضم إلى غرفة للدردشة', badRoomName:'اسم الغرفة يحتوي على كلمة محظورة',
+      roomLimit:'عدد الغرف وصل إلى الحد الأقصى', noSuchRoom:'الغرفة غير موجودة', soloOther:'هذه غرفة فردية لشخص آخر',
+      badPass:'كلمة المرور غير صحيحة', roomFullMax:'الغرفة ممتلئة (بحد أقصى {n} لاعبين)', mutedFor:'أنت مكتوم، انتظر {t}'
+    },
+    'vi': {
+      guestBtn:'Chơi với tư cách khách', guestNote:'Không cần email — chỉ cần vào phòng, tiến trình không được lưu', admin:'Quản trị',
+      deadWall:'Đâm vào tường', deadSelf:'Tự cắn mình', deadOther:'Đâm vào rắn khác', sysLabel:'Hệ thống',
+      sysJoined:'{name} đã vào phòng', sysLeft:'{name} đã rời phòng', sysSpeed:'{name} đã đổi tốc độ thành {ms}ms/bước',
+      speedInvalid:'Tốc độ không hợp lệ', speedOwner:'Chỉ chủ phòng mới đổi được tốc độ — bạn có thể tự tạo phòng',
+      speedTooFast:'Đổi quá nhiều, đợi vài giây rồi thử lại',
+      guestNoCreate:'Khách không thể tạo phòng — hãy vào một phòng', guestNoCreate2:'Khách không thể tạo phòng — hãy vào phòng của người khác',
+      guestNoLobbyChat:'Khách không thể chat ở sảnh — vào phòng để trò chuyện', badRoomName:'Tên phòng chứa từ không được phép',
+      roomLimit:'Đã đạt giới hạn số phòng', noSuchRoom:'Không tìm thấy phòng', soloOther:'Đây là phòng chơi đơn của người khác',
+      badPass:'Sai mật khẩu', roomFullMax:'Phòng đã đầy (tối đa {n} người)', mutedFor:'Bạn đang bị cấm chat, chờ {t}'
+    },
+    'id': {
+      guestBtn:'Main sebagai tamu', guestNote:'Tanpa email — cukup bergabung ke room, progres tidak disimpan', admin:'Admin',
+      deadWall:'Menabrak dinding', deadSelf:'Menggigit diri sendiri', deadOther:'Menabrak ular lain', sysLabel:'Sistem',
+      sysJoined:'{name} bergabung ke room', sysLeft:'{name} keluar dari room', sysSpeed:'{name} mengubah kecepatan menjadi {ms}ms/langkah',
+      speedInvalid:'Kecepatan tidak valid', speedOwner:'Hanya host yang bisa mengubah kecepatan — kamu bisa membuat room sendiri',
+      speedTooFast:'Terlalu sering diubah, tunggu beberapa detik',
+      guestNoCreate:'Tamu tidak bisa membuat room — gabung ke salah satu', guestNoCreate2:'Tamu tidak bisa membuat room — gabung ke room orang lain',
+      guestNoLobbyChat:'Tamu tidak bisa chat di lobi — gabung ke room untuk chat', badRoomName:'Nama room mengandung kata terlarang',
+      roomLimit:'Room sudah mencapai batas', noSuchRoom:'Room tidak ditemukan', soloOther:'Ini room solo orang lain',
+      badPass:'Kata sandi salah', roomFullMax:'Room penuh (maks {n} pemain)', mutedFor:'Kamu dibisukan, tunggu {t}'
+    },
+    'tr': {
+      guestBtn:'Misafir olarak oyna', guestNote:'E-posta gerekmez — bir odaya katıl, kayıt tutulmaz', admin:'Yönetim',
+      deadWall:'Duvara çarptın', deadSelf:'Kendini ısırdın', deadOther:'Başka bir yılana çarptın', sysLabel:'Sistem',
+      sysJoined:'{name} odaya katıldı', sysLeft:'{name} odadan ayrıldı', sysSpeed:'{name} hızı {ms} ms/adım olarak değiştirdi',
+      speedInvalid:'Geçersiz hız', speedOwner:'Hızı sadece oda sahibi değiştirebilir — kendi odanı oluşturabilirsin',
+      speedTooFast:'Çok fazla değişiklik, birkaç saniye bekle',
+      guestNoCreate:'Misafirler oda oluşturamaz — bir odaya katıl', guestNoCreate2:'Misafirler oda oluşturamaz — başkasının odasına katıl',
+      guestNoLobbyChat:'Misafirler lobide sohbet edemez — sohbet için bir odaya katıl', badRoomName:'Oda adı yasak bir kelime içeriyor',
+      roomLimit:'Oda sayısı sınıra ulaştı', noSuchRoom:'Oda bulunamadı', soloOther:'Bu başkasının tek kişilik odası',
+      badPass:'Şifre yanlış', roomFullMax:'Oda dolu (en fazla {n} oyuncu)', mutedFor:'Susturuldunuz, {t} bekleyin'
+    }
+  };
+  for (var pk in PATCH){
+    if (!Object.prototype.hasOwnProperty.call(PATCH, pk)) continue;
+    if (!TRANSLATIONS[pk]) TRANSLATIONS[pk] = {};
+    for (var pkey in PATCH[pk]) TRANSLATIONS[pk][pkey] = PATCH[pk][pkey];
+  }
+
+
   function supported(code){
     if (!code) return false;
     for (var i = 0; i < LANG_LIST.length; i++) if (LANG_LIST[i].code === code) return true;

@@ -482,7 +482,7 @@ class Room {
     for (const p of this.players.values()){
       if (!p.alive) continue;
       const h = p.newHead;
-      if (h.x<0||h.y<0||h.x>=COLS||h.y>=ROWS) dead.set(p.id,'撞墙了');
+      if (h.x<0||h.y<0||h.x>=COLS||h.y>=ROWS) dead.set(p.id,'deadWall');
     }
     const headCells = new Map();
     for (const p of this.players.values()){
@@ -508,7 +508,7 @@ class Room {
     for (const p of this.players.values()){
       if (!p.alive||dead.has(p.id)) continue;
       const owner = bodyCells.get(p.newHead.x+','+p.newHead.y);
-      if (owner !== undefined) dead.set(p.id, owner===p.id ? '咬到自己了' : '撞上了对手的身体');
+      if (owner !== undefined) dead.set(p.id, owner===p.id ? 'deadSelf' : 'deadOther');
     }
     for (const p of this.players.values()){
       if (!p.alive) continue;
@@ -532,10 +532,10 @@ class Room {
   // 只有房主能改，且 5 秒内只能改一次：防止有人（脚本/扩展/连点）反复抢着调速度
   setSpeed(ms, by){
     const v = Math.round(Number(ms));
-    if (!Number.isFinite(v)) return { ok:false, msg:'速度值无效' };
-    if (by !== this.owner) return { ok:false, msg:'只有房主能调速度，你可以自己开一个房间' };
+    if (!Number.isFinite(v)) return { ok:false, msg:'速度值无效', key:'speedInvalid' };
+    if (by !== this.owner) return { ok:false, msg:'只有房主能调速度，你可以自己开一个房间', key:'speedOwner' };
     const now = Date.now();
-    if (now - (this.lastSpeedAt || 0) < 5000) return { ok:false, msg:'调得太频繁了，等几秒再试' };
+    if (now - (this.lastSpeedAt || 0) < 5000) return { ok:false, msg:'调得太频繁了，等几秒再试', key:'speedTooFast' };
     this.lastSpeedAt = now;
     this.tickMs = Math.min(500, Math.max(50, v));
     clearInterval(this.timer);
@@ -565,7 +565,7 @@ class Room {
 
   addPlayer(ws, username){
     if (this.players.size >= MAX_PLAYERS_PER_ROOM){
-      ws.sendText(JSON.stringify({t:'sys',msg:'房间已满（最多'+MAX_PLAYERS_PER_ROOM+'人）'}));
+      ws.sendText(JSON.stringify({t:'sys',msg:'房间已满（最多'+MAX_PLAYERS_PER_ROOM+'人）', key:'roomFullMax', args:{n:MAX_PLAYERS_PER_ROOM}}));
       ws.sendText(JSON.stringify({t:'room_full'}));
       return null;
     }
@@ -579,7 +579,7 @@ class Room {
     ws.playerId = id; ws.room = this;
     ws.sendText(JSON.stringify({t:'joined_room', roomId:this.id, roomName:this.name, id, cols:COLS, rows:ROWS, tickMs:this.tickMs}));
     ws.sendText(this.snapshot());
-    this.broadcast(JSON.stringify({t:'chat', from:'系统', text:username+' 加入了房间'}));
+    this.broadcast(JSON.stringify({t:'chat', from:'系统', sys:1, key:'sysJoined', args:{name:username}, text:username+' 加入了房间'}));
     return p;
   }
   // 单人模式的电脑对手：没有真 socket，用一个空壳占位
@@ -593,13 +593,13 @@ class Room {
     };
     this.resetPlayer(p);
     this.players.set(id, p);
-    this.broadcast(JSON.stringify({t:'chat', from:'系统', text:username+' 加入了房间'}));
+    this.broadcast(JSON.stringify({t:'chat', from:'系统', sys:1, key:'sysJoined', args:{name:username}, text:username+' 加入了房间'}));
     return p;
   }
 
   removePlayer(player){
     this.players.delete(player.id);
-    this.broadcast(JSON.stringify({t:'chat', from:'系统', text:player.name+' 离开了房间'}));
+    this.broadcast(JSON.stringify({t:'chat', from:'系统', sys:1, key:'sysLeft', args:{name:player.name}, text:player.name+' 离开了房间'}));
     this.broadcastState();
     // 单人房：真人走了就整间销毁，别留一个空房间给豆包自己玩
     if (this.isSolo && ![...this.players.values()].some(p => !p.isBot)){
@@ -768,7 +768,7 @@ function punishBannedWord(user){
 function blockChatIfNeeded(ws, text){
   const left = muteLeftOf(ws.user);
   if (left > 0){
-    ws.sendText(JSON.stringify({t:'sys', msg:'你正在禁言中，还需等待 ' + fmtLeft(left)}));
+    ws.sendText(JSON.stringify({t:'sys', msg:'你正在禁言中，还需等待 ' + fmtLeft(left), key:'mutedFor', args:{t:fmtLeft(left)}}));
     return true;
   }
   if (hasBannedWord(text)){
@@ -1211,11 +1211,11 @@ function handleWsMessage(ws, text){
       return;
     }
     if (msg.t === 'create_room'){
-      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，挑一个房间加入吧'}));
+      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，挑一个房间加入吧', key:'guestNoCreate'}));
       const name = String(msg.name||'').trim().slice(0, 20);
-      if (!name) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名不能为空'}));
-      if (hasBannedWord(name)) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名含有不允许的字词'}));
-      if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限'}));
+      if (!name) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名不能为空', key:'needRoomName'}));
+      if (hasBannedWord(name)) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名含有不允许的字词', key:'badRoomName'}));
+      if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限', key:'roomLimit'}));
       const id = roomId();
       const pass = msg.pass ? String(msg.pass).slice(0,32) : null;
       const r = new Room(id, name, ws.user, pass);
@@ -1228,8 +1228,8 @@ function handleWsMessage(ws, text){
     }
     // 单人模式：开一间私密房，塞一个豆包进去陪打
     if (msg.t === 'solo'){
-      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，进别人的房间就能玩'}));
-      if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限'}));
+      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，进别人的房间就能玩', key:'guestNoCreate2'}));
+      if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限', key:'roomLimit'}));
       const id = roomId();
       const name = (ws.user + ' 的单人房').slice(0, 20);
       const r = new Room(id, name, ws.user, null);
@@ -1247,10 +1247,10 @@ function handleWsMessage(ws, text){
     if (msg.t === 'join_room'){
       const id = String(msg.id||'').trim();
       const r = rooms.get(id);
-      if (!r) return ws.sendText(JSON.stringify({t:'sys',msg:'房间不存在'}));
-      if (r.isSolo) return ws.sendText(JSON.stringify({t:'sys',msg:'这是别人的单人房'}));
-      if (r.hasPassword() && String(msg.pass||'') !== r.pass) return ws.sendText(JSON.stringify({t:'sys',msg:'密码不对'}));
-      if (r.count >= MAX_PLAYERS_PER_ROOM) return ws.sendText(JSON.stringify({t:'sys',msg:'房间已满'}));
+      if (!r) return ws.sendText(JSON.stringify({t:'sys',msg:'房间不存在', key:'noSuchRoom'}));
+      if (r.isSolo) return ws.sendText(JSON.stringify({t:'sys',msg:'这是别人的单人房', key:'soloOther'}));
+      if (r.hasPassword() && String(msg.pass||'') !== r.pass) return ws.sendText(JSON.stringify({t:'sys',msg:'密码不对', key:'badPass'}));
+      if (r.count >= MAX_PLAYERS_PER_ROOM) return ws.sendText(JSON.stringify({t:'sys',msg:'房间已满', key:'roomFull'}));
       r.addPlayer(ws, ws.user);
       broadcastRooms();
       return;
@@ -1259,7 +1259,7 @@ function handleWsMessage(ws, text){
       const text = String(msg.text||'').trim().slice(0, 200);
       if (!text) return;
       // 游客不能在大厅发言（房间里可以聊）
-      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能在大厅发言，进房间后就能聊'}));
+      if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能在大厅发言，进房间后就能聊', key:'guestNoLobbyChat'}));
       if (blockChatIfNeeded(ws, text)) return;
       const m = JSON.stringify({t:'chat', from:ws.user, text});
       for (const s of loggedInSockets) if (!s.room) s.sendText(m);
@@ -1315,9 +1315,9 @@ function handleWsMessage(ws, text){
   if (msg.t === 'speed'){
     const r = room.setSpeed(msg.ms, ws.user);
     if (r.ok){
-      room.broadcast(JSON.stringify({t:'sys', msg: ws.user+' 把速度调成了 '+room.tickMs+'ms/步'}));
+      room.broadcast(JSON.stringify({t:'sys', msg: ws.user+' 把速度调成了 '+room.tickMs+'ms/步', key:'sysSpeed', args:{name:ws.user, ms:room.tickMs}}));
     } else {
-      ws.sendText(JSON.stringify({t:'sys', msg: r.msg}));
+      ws.sendText(JSON.stringify({t:'sys', msg: r.msg, key:r.key}));
     }
     return;
   }

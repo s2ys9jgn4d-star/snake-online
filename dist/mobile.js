@@ -285,7 +285,7 @@ function handleWs(msg){
     case 'room_full': showToast(t('roomFull')); break;
     case 'left_room': showPanel('lobby'); break;
     case 'chat': onChat(msg); break;
-    case 'sys': showToast(msg.msg); break;
+    case 'sys': showToast(msg.key ? t(msg.key, msg.args) : msg.msg); break;
     // —— 好友实时事件 ——
     case 'friend_request': showToast(t('friendWants', { name: msg.from })); refreshFriends(); refreshPlayers(); break;
     case 'friend_accept': showToast(t('nowFriends', { name: msg.by })); refreshFriends(); refreshPlayers(); break;
@@ -715,7 +715,7 @@ function updateHUD(){
     if (!me.alive){
       if (!deadShown){
         deadShown = true;
-        $('deadReason').textContent = me.deathReason || '';
+        $('deadReason').textContent = me.deathReason ? t(me.deathReason) : '';
         $('deadScore').textContent = me.score;
         $('dead').classList.remove('hidden');
       }
@@ -867,8 +867,11 @@ function appendRoomChat(msg){
   const box = $('roomChat'); if (!box) return;
   const div = document.createElement('div');
   div.className = 'msg';
-  const cls = msg.from === '系统' ? 'sys' : (msg.from === authUser ? 'me' : '');
-  div.innerHTML = '<span class="from ' + cls + '">' + escHtml(msg.from) + ':</span>' + escHtml(msg.text);
+  const isSys = !!msg.sys || msg.from === '系统';
+  const cls = isSys ? 'sys' : (msg.from === authUser ? 'me' : '');
+  const name = isSys ? t('sysLabel') : msg.from;
+  const body = msg.key ? t(msg.key, msg.args) : msg.text;
+  div.innerHTML = '<span class="from ' + cls + '">' + escHtml(name) + ':</span>' + escHtml(body);
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
