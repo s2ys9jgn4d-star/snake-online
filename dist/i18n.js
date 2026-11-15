@@ -1341,6 +1341,31 @@
     for (var pkey in PATCH[pk]) TRANSLATIONS[pk][pkey] = PATCH[pk][pkey];
   }
 
+  // —— 第三批：下载页「自动识别设备」推荐区 ——
+  var PATCH3 = {
+    'en': { dlSmart:'Detected your device', dlSmartTip:'One click and the right installer starts downloading', dlSmartUnknown:'Couldn’t detect your system — pick a version below', dlFit:'✓ Matches your device' },
+    'zh-CN': { dlSmart:'检测到你的设备', dlSmartTip:'点一下，直接下载对应安装包', dlSmartUnknown:'没认出你的系统，从下面挑一个吧', dlFit:'✓ 适合你的设备' },
+    'zh-TW': { dlSmart:'偵測到你的裝置', dlSmartTip:'點一下，直接下載對應安裝檔', dlSmartUnknown:'沒認出你的系統，從下面挑一個吧', dlFit:'✓ 適合你的裝置' },
+    'ja': { dlSmart:'お使いのデバイスを検出しました', dlSmartTip:'ワンクリックで対応するインストーラーをダウンロード', dlSmartUnknown:'システムを判別できませんでした。下から選んでください', dlFit:'✓ お使いのデバイス対応' },
+    'ko': { dlSmart:'기기를 감지했습니다', dlSmartTip:'한 번 클릭하면 맞는 설치 파일이 다운로드됩니다', dlSmartUnknown:'시스템을 인식하지 못했습니다. 아래에서 선택하세요', dlFit:'✓ 내 기기에 맞음' },
+    'es': { dlSmart:'Hemos detectado tu dispositivo', dlSmartTip:'Un clic y se descarga el instalador correcto', dlSmartUnknown:'No pudimos detectar tu sistema: elige una versión abajo', dlFit:'✓ Compatible con tu dispositivo' },
+    'fr': { dlSmart:'Appareil détecté', dlSmartTip:'Un clic et le bon installateur se télécharge', dlSmartUnknown:'Impossible de détecter ton système — choisis une version ci-dessous', dlFit:'✓ Compatible avec ton appareil' },
+    'de': { dlSmart:'Dein Gerät wurde erkannt', dlSmartTip:'Ein Klick und der passende Installer wird heruntergeladen', dlSmartUnknown:'Dein System wurde nicht erkannt – wähle unten eine Version', dlFit:'✓ Passt zu deinem Gerät' },
+    'ru': { dlSmart:'Ваше устройство определено', dlSmartTip:'Один клик — и загрузится подходящий установщик', dlSmartUnknown:'Не удалось определить систему — выберите версию ниже', dlFit:'✓ Подходит вашему устройству' },
+    'pt-BR': { dlSmart:'Detectamos seu dispositivo', dlSmartTip:'Um clique e o instalador certo começa a baixar', dlSmartUnknown:'Não conseguimos detectar seu sistema — escolha uma versão abaixo', dlFit:'✓ Compatível com seu dispositivo' },
+    'pt-PT': { dlSmart:'Detectámos o seu dispositivo', dlSmartTip:'Um clique e o instalador certo começa a transferir', dlSmartUnknown:'Não foi possível detectar o seu sistema — escolha uma versão abaixo', dlFit:'✓ Compatível com o seu dispositivo' },
+    'it': { dlSmart:'Dispositivo rilevato', dlSmartTip:'Un clic e scarichi il programma di installazione giusto', dlSmartUnknown:'Non abbiamo riconosciuto il tuo sistema: scegli una versione qui sotto', dlFit:'✓ Adatto al tuo dispositivo' },
+    'ar': { dlSmart:'تم اكتشاف جهازك', dlSmartTip:'نقرة واحدة لتنزيل المثبّت المناسب', dlSmartUnknown:'لم نتعرّف على نظامك — اختر إصدارًا من الأسفل', dlFit:'✓ مناسب لجهازك' },
+    'vi': { dlSmart:'Đã nhận diện thiết bị của bạn', dlSmartTip:'Một cú nhấp là tải đúng bộ cài', dlSmartUnknown:'Không nhận diện được hệ thống — hãy chọn phiên bản bên dưới', dlFit:'✓ Phù hợp với thiết bị của bạn' },
+    'id': { dlSmart:'Perangkat Anda terdeteksi', dlSmartTip:'Satu klik, penginstal yang tepat langsung diunduh', dlSmartUnknown:'Sistem Anda tidak dikenali — pilih versi di bawah', dlFit:'✓ Cocok untuk perangkat Anda' },
+    'tr': { dlSmart:'Cihazınız algılandı', dlSmartTip:'Tek tıkla doğru yükleyici indirilir', dlSmartUnknown:'Sisteminiz tanınamadı — aşağıdan bir sürüm seçin', dlFit:'✓ Cihazınıza uygun' }
+  };
+  for (var rk in PATCH3){
+    if (!Object.prototype.hasOwnProperty.call(PATCH3, rk)) continue;
+    if (!TRANSLATIONS[rk]) TRANSLATIONS[rk] = {};
+    for (var rkey in PATCH3[rk]) TRANSLATIONS[rk][rkey] = PATCH3[rk][rkey];
+  }
+
   // —— 第二批：游客提示条、游客标签、官方徽章、单人房标题 ——
   var PATCH2 = {
     'en': { guestTip:'🎮 Guest mode: no lobby chat · join others’ rooms only · scores not ranked · nothing saved', guestTag:'Guest', offBadge:'✓ Official', soloRoomName:'{name}’s solo room' },
