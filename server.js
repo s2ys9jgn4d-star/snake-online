@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
+const zlib = require('zlib');
 const ai = require('./ai');   // 单人模式的豆包 AI
 const mail = require('./mail'); // 注册验证码邮件
 
@@ -1516,6 +1517,10 @@ function proxyUpgrade(req, socket){
   preq.end();
 }
 
+// 可压缩的文本类扩展名 + 压缩结果缓存
+const COMPRESSIBLE = new Set(['.html','.js','.css','.svg','.json','.txt','.xml','.map','.webmanifest']);
+const gzipCache = new Map();
+
 const server = http.createServer(async (req, res) => {
   let urlPath;
   try { urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname); }
@@ -1533,9 +1538,24 @@ const server = http.createServer(async (req, res) => {
   fs.readFile(filePath, (err, data) => {
     if (err){ res.writeHead(404, {'Content-Type':'text/plain; charset=utf-8'}); return res.end('404'); }
     const ext = path.extname(filePath);
-    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
-    // 页面/脚本/样式不缓存，避免玩家一直跑旧代码
-    if (ext === '.html' || ext === '.js' || ext === '.css') headers['Cache-Control'] = 'no-cache, must-revalidate';
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Vary': 'Accept-Encoding' };
+    // 页面每次校验（改了立刻生效）；脚本/样式带 ?v= 版本号，可以放心长缓存一天
+    if (ext === '.html') headers['Cache-Control'] = 'no-cache, must-revalidate';
+    else headers['Cache-Control'] = 'public, max-age=86400';
+
+    // gzip：文本类资源压一遍后缓存起来，反复访问不再重复压缩
+    const gzipOk = /gzip/i.test(req.headers['accept-encoding'] || '') && COMPRESSIBLE.has(ext) && data.length > 1024;
+    if (gzipOk){
+      const hit = gzipCache.get(filePath);
+      let gz;
+      if (hit && hit.len === data.length) gz = hit.buf;
+      else { gz = zlib.gzipSync(data); gzipCache.set(filePath, { len: data.length, buf: gz }); }
+      headers['Content-Encoding'] = 'gzip';
+      headers['Content-Length'] = gz.length;
+      res.writeHead(200, headers);
+      return res.end(gz);
+    }
+    headers['Content-Length'] = data.length;
     res.writeHead(200, headers);
     res.end(data);
   });
