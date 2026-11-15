@@ -68,11 +68,13 @@
   header { text-align: center; margin-bottom: 28px; }
   h1 {
     font-size: 44px; letter-spacing: -.5px; margin-bottom: 12px; font-weight: 800;
+    display: inline-block; line-height: 1.15;
+  }
+  h1 .grad {
     background: linear-gradient(100deg, #ffffff 8%, #a8c1ff 52%, #c7b3ff 96%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    display: inline-block;
   }
-  h1 .emoji { -webkit-text-fill-color: initial; }
+  h1 .emoji { font-size: 44px; }
   .subtitle { color: var(--muted); font-size: 16px; }
   .quick-play { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
   .quick-play a {
@@ -209,7 +211,7 @@
   </div>
 
   <header>
-    <h1><span class="emoji">🐍</span> <span data-i18n="dlHead">联机贪吃蛇</span></h1>
+    <h1><span class="emoji">🐍</span> <span class="grad" data-i18n="dlHead">联机贪吃蛇</span></h1>
     <p class="subtitle" data-i18n="dlSub">多人联机 · 房间对战 · 排行榜 · 跨平台客户端</p>
     <div class="quick-play">
       <a href="play.html" class="btn-primary" data-i18n="dlPlayWeb">🖥️ 网页版立即玩</a>
