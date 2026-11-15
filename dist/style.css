@@ -501,6 +501,10 @@ html[data-theme="light"] .people-row { background:#f6f9fe; }
 html[data-theme="light"] .people-row:hover { background:#eaf1fd; }
 html[data-theme="light"] .mini-btn.ghost { background:#fff; }
 html[data-theme="light"] .speed-btn { background:#fff; }
+html[data-theme="light"] .speed-btn.active {
+  background:linear-gradient(135deg,var(--accent),#7c5bff);
+  color:#fff; border-color:transparent;
+}
 html[data-theme="light"] .code-row button { background:#fff; color:var(--text); }
 html[data-theme="light"] .hud-item { background:rgba(255,255,255,.94); }
 html[data-theme="light"] .dm-box { background:#fff; box-shadow:0 18px 44px rgba(40,60,110,.18); }
