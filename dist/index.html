@@ -177,7 +177,8 @@
   footer { text-align: center; color: #5c6685; font-size: 13px; margin-top: 40px; line-height: 1.8; }
 
   /* ---------- 语言选择 ---------- */
-  .lang-bar { position: absolute; top: -24px; right: 0; z-index: 10; }
+  .lang-bar { position: absolute; top: -24px; inset-inline-end: 0; z-index: 10; display: flex; align-items: center; gap: 6px; }
+  .lang-globe { font-size: 15px; line-height: 1; }
   .lang-sel {
     min-height: 32px; max-width: 200px; padding: 6px 26px 6px 10px;
     border: 1px solid var(--line); border-radius: 8px; background: var(--card);
@@ -208,6 +209,7 @@
 <div class="container">
 
   <div class="lang-bar">
+    <span class="lang-globe" aria-hidden="true">🌐</span>
     <select id="langSel" class="lang-sel" aria-label="Language"></select>
   </div>
 
