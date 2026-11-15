@@ -332,7 +332,11 @@ function onAuthFail(msg){
 
 async function refreshMe(){
   const r = await api('/api/me');
-  if (r.ok){ myBest = r.best || 0; $('lobbyBest').textContent = t('best', { n: fmtNum(myBest) }); }
+  if (r.ok){
+    myBest = r.best || 0; $('lobbyBest').textContent = t('best', { n: fmtNum(myBest) });
+    // 官方账号不可注销，直接把按钮藏掉
+    if (r.official){ const b = $('deleteAcctBtn'); if (b) b.style.display = 'none'; }
+  }
 }
 async function refreshScores(){
   const r = await api('/api/scores');

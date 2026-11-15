@@ -917,6 +917,7 @@ async function handleApi(req, res, urlPath){
   if (req.method === 'POST' && urlPath === '/api/delete-account'){
     const u = authFromReq(req);
     if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    if (u === OFFICIAL_NAME) return sendJSON(res, 403, {ok:false,msg:'官方账号不允许注销'});
     const body = await readBody(req);
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const p = String(body.p||'');
@@ -934,7 +935,7 @@ async function handleApi(req, res, urlPath){
     const u = authFromReq(req);
     if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
     const score = leaderboard.find(x=>x.u===u);
-    return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u), guest:isGuest(u)});
+    return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u), guest:isGuest(u), official: u === OFFICIAL_NAME});
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20).map(x => ({ ...x, off: isOfficial(x.u) }))});
