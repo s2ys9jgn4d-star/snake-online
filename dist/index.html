@@ -240,19 +240,19 @@
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
         <div class="name">🍎 <bdi>macOS</bdi></div>
         <div class="meta" data-i18n="dlMacMeta">贪吃蛇.app · DMG 安装包 · 原生 WKWebView 窗口</div>
-        <a href="贪吃蛇.dmg"><span data-i18n="dlDownload">下载</span> DMG</a>
+        <a href="贪吃蛇.dmg?v=20261115p"><span data-i18n="dlDownload">下载</span> DMG</a>
       </div>
       <div class="card" data-platform="win">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
         <div class="name">🖥️ <bdi>Windows</bdi></div>
         <div class="meta" data-i18n="dlWinMeta">Snake.exe · Win64 ZIP · 需安装 WebView2 Runtime</div>
-        <a href="贪吃蛇-win64.zip"><span data-i18n="dlDownload">下载</span> ZIP</a>
+        <a href="贪吃蛇-win64.zip?v=20261115p"><span data-i18n="dlDownload">下载</span> ZIP</a>
       </div>
       <div class="card" data-platform="linux">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
         <div class="name">🐧 <bdi>Linux</bdi></div>
         <div class="meta" data-i18n="dlLinuxMeta">snake-game · DEB 包 · Debian / Ubuntu / 深度</div>
-        <a href="贪吃蛇.deb"><span data-i18n="dlDownload">下载</span> DEB</a>
+        <a href="贪吃蛇.deb?v=20261115p"><span data-i18n="dlDownload">下载</span> DEB</a>
       </div>
     </div>
   </section>
@@ -264,13 +264,13 @@
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
         <div class="name">🤖 <bdi>Android</bdi></div>
         <div class="meta" data-i18n="dlAndroidMeta">com.snake.game · APK · Android 5.0+</div>
-        <a href="贪吃蛇.apk"><span data-i18n="dlDownload">下载</span> APK</a>
+        <a href="贪吃蛇.apk?v=20261115p"><span data-i18n="dlDownload">下载</span> APK</a>
       </div>
       <div class="card" data-platform="ios">
         <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
         <div class="name" data-i18n="dlIosName">🍎 iOS（未签名）</div>
         <div class="meta" data-i18n="dlIosMeta">IPA · 需自行签名 · 用 Sideloadly / AltStore 安装</div>
-        <a href="贪吃蛇-unsigned.ipa"><span data-i18n="dlDownload">下载</span> IPA</a>
+        <a href="贪吃蛇-unsigned.ipa?v=20261115p"><span data-i18n="dlDownload">下载</span> IPA</a>
       </div>
     </div>
   </section>
@@ -281,7 +281,7 @@
       <div class="card">
         <div class="name" data-i18n="dlSb3Name">🎮 Scratch 3 工程文件</div>
         <div class="meta" data-i18n="dlSb3Meta">.sb3 · 导入 TurboWarp 点绿旗即玩 · 全屏打开最新网页版，永不落伍</div>
-        <a href="联机贪吃蛇.sb3"><span data-i18n="dlDownload">下载</span> SB3</a>
+        <a href="联机贪吃蛇.sb3?v=20261115p"><span data-i18n="dlDownload">下载</span> SB3</a>
         <a href="snake-ext.js" class="ghost" target="_blank" data-i18n="dlExt">查看扩展</a>
       </div>
     </div>
@@ -336,11 +336,11 @@
   // 安装包统一走线上地址，避免静态托管站点缺文件
   var BASE = 'https://snake-online.up.railway.app/';
   var MAP = {
-    mac:     { name: 'macOS',   icon: '🍎', href: BASE + '贪吃蛇.dmg',         ext: 'DMG' },
-    win:     { name: 'Windows', icon: '🖥️', href: BASE + '贪吃蛇-win64.zip',   ext: 'ZIP' },
-    linux:   { name: 'Linux',   icon: '🐧', href: BASE + '贪吃蛇.deb',         ext: 'DEB' },
-    android: { name: 'Android', icon: '🤖', href: BASE + '贪吃蛇.apk',         ext: 'APK' },
-    ios:     { name: 'iOS',     icon: '📱', href: BASE + '贪吃蛇-unsigned.ipa', ext: 'IPA' }
+    mac:     { name: 'macOS',   icon: '🍎', href: BASE + '贪吃蛇.dmg?v=20261115p',         ext: 'DMG' },
+    win:     { name: 'Windows', icon: '🖥️', href: BASE + '贪吃蛇-win64.zip?v=20261115p',   ext: 'ZIP' },
+    linux:   { name: 'Linux',   icon: '🐧', href: BASE + '贪吃蛇.deb?v=20261115p',         ext: 'DEB' },
+    android: { name: 'Android', icon: '🤖', href: BASE + '贪吃蛇.apk?v=20261115p',         ext: 'APK' },
+    ios:     { name: 'iOS',     icon: '📱', href: BASE + '贪吃蛇-unsigned.ipa?v=20261115p', ext: 'IPA' }
   };
   var info = MAP[plat];
 

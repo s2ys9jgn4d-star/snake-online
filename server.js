@@ -1520,6 +1520,8 @@ function proxyUpgrade(req, socket){
 
 // 可压缩的文本类扩展名 + 压缩结果缓存
 const COMPRESSIBLE = new Set(['.html','.js','.css','.svg','.json','.txt','.xml','.map','.webmanifest']);
+// 安装包：换包后必须立刻拿到新版，不给浏览器留旧缓存
+const RELEASE_EXT = new Set(['.dmg','.zip','.apk','.ipa','.deb','.hap','.exe','.sb3','.tar','.gz']);
 const gzipCache = new Map();
 
 const server = http.createServer(async (req, res) => {
@@ -1541,7 +1543,8 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath);
     const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Vary': 'Accept-Encoding' };
     // 页面每次校验（改了立刻生效）；脚本/样式带 ?v= 版本号，可以放心长缓存一天
-    if (ext === '.html') headers['Cache-Control'] = 'no-cache, must-revalidate';
+    if (RELEASE_EXT.has(ext)) headers['Cache-Control'] = 'no-cache, must-revalidate';
+    else if (ext === '.html') headers['Cache-Control'] = 'no-cache, must-revalidate';
     else headers['Cache-Control'] = 'public, max-age=86400';
 
     // gzip：文本类资源压一遍后缓存起来，反复访问不再重复压缩

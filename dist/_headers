@@ -14,3 +14,7 @@
 
 /*.css
   Content-Type: text/css; charset=utf-8
+
+# 安装包不缓存，换包立即生效
+/snake-online-release
+  Cache-Control: no-cache, must-revalidate
