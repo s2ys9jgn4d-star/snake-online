@@ -1269,6 +1269,25 @@
     if (s) s.addEventListener('change', onSelChange);
   });
 
+  // 补丁：后来新增的 key。只覆盖字典，不改动上面按位置对应的定长数组。
+  var EXTRA = {
+    'en':'View extension','zh-CN':'查看扩展','zh-TW':'查看擴充功能','ja':'拡張機能を見る',
+    'ko':'확장 보기','ru':'Просмотр расширения','uk':'Переглянути розширення','de':'Erweiterung ansehen',
+    'fr':'Voir l’extension','es':'Ver extensión','pt-PT':'Ver extensão','it':'Vedi estensione',
+    'nl':'Extensie bekijken','pl':'Zobacz rozszerzenie','cs':'Zobrazit rozšíření','sv':'Visa tillägget',
+    'fi':'Näytä laajennus','nb':'Se utvidelsen','da':'Se udvidelsen','tr':'Uzantıyı görüntüle',
+    'ar':'عرض الإضافة','fa':'مشاهده افزونه','he':'הצג הרחבה','ur':'ایکسٹینشن دیکھیں',
+    'hi':'एक्सटेंशन देखें','th':'ดูส่วนขยาย','vi':'Xem tiện ích mở rộng','id':'Lihat ekstensi',
+    'ms':'Lihat sambungan','el':'Προβολή επέκτασης','hu':'Bővítmény megtekintése','ro':'Vezi extensia',
+    'bg':'Преглед на разширението','hr':'Prikaži proširenje','sr':'Прикажи проширење','sk':'Zobraziť rozšírenie',
+    'sl':'Prikaži razširitev','lt':'Rodyti plėtinį','lv':'Skatīt paplašinājumu','et':'Vaata laiendust',
+    'ca':'Veure extensió','gl':'Ver extensión','af':'Sien uitbreiding','sw':'Tazama kiendelezi',
+    'bn':'এক্সটেনশন দেখুন','ta':'நீட்டிப்பைக் காட்டு','te':'పొడిగింపును చూడండి'
+  };
+  for (var ek in EXTRA){
+    if (TRANSLATIONS[ek]) TRANSLATIONS[ek].dlExt = EXTRA[ek];
+  }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
