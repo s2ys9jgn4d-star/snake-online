@@ -1624,6 +1624,24 @@
     if (TRANSLATIONS[lc] && !TRANSLATIONS[lc].feedback) TRANSLATIONS[lc].feedback = EXTRA_FEEDBACK.en;
   }
 
+  // —— 第六批：手机版没有键盘，复活按钮不带「空格」提示 ——
+  var PATCH6 = {
+    'zh-CN': { respawn_mobile: '马上重生' },
+    'zh-TW': { respawn_mobile: '馬上重生' }
+  };
+  for (var nk in PATCH6){
+    if (!Object.prototype.hasOwnProperty.call(PATCH6, nk)) continue;
+    if (!TRANSLATIONS[nk]) TRANSLATIONS[nk] = {};
+    for (var nkey in PATCH6[nk]) TRANSLATIONS[nk][nkey] = PATCH6[nk][nkey];
+  }
+  // 其余语言原本就没有键盘提示，直接沿用 respawn 的文案
+  for (var mi = 0; mi < LANG_LIST.length; mi++){
+    var mc = LANG_LIST[mi].code;
+    if (TRANSLATIONS[mc] && !TRANSLATIONS[mc].respawn_mobile){
+      TRANSLATIONS[mc].respawn_mobile = TRANSLATIONS[mc].respawn || 'Respawn';
+    }
+  }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
