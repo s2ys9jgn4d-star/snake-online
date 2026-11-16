@@ -1230,6 +1230,7 @@ async function handleApi(req, res, urlPath){
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const u = String(body.u||'').trim();
     if (!accounts.has(u)) return sendJSON(res, 404, {ok:false,msg:'账号不存在'});
+    if (isOfficial(u)) return sendJSON(res, 403, {ok:false,msg:'官方账号不允许注销'});
     banAccount(accounts.get(u));   // 管理员删号也进黑名单
     accounts.delete(u);
     saveUsers();

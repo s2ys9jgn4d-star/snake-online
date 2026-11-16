@@ -163,11 +163,19 @@ function render(){
     const best = document.createElement('span');
     best.className = 'best';
     best.textContent = a.best ? '最高分 ' + a.best : '无记录';
-    const btn = document.createElement('button');
-    btn.className = 'del';
-    btn.textContent = '注销';
-    btn.onclick = () => deleteAccount(a.u);
-    li.append(name, best, btn);
+    if (a.u === 'SnakeOnline官方'){
+      // 官方账号受保护：只显示标记，不给注销按钮
+      const lock = document.createElement('span');
+      lock.textContent = '官方账号 · 受保护';
+      lock.style.cssText = 'font-size:12px;color:#8b949e;white-space:nowrap';
+      li.append(name, best, lock);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'del';
+      btn.textContent = '注销';
+      btn.onclick = () => deleteAccount(a.u);
+      li.append(name, best, btn);
+    }
     list.appendChild(li);
   }
 }
