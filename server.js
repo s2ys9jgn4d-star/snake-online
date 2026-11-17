@@ -4,6 +4,7 @@
  * 零 npm 依赖，只用 Node.js 内置模块
  */
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -301,6 +302,51 @@ function bannedHit(email, ip){
 function clientIp(req){
   const f = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   return f || (req.socket && req.socket.remoteAddress) || '';
+}
+
+// —— hCaptcha ——
+// 两个变量都填了才启用；只填 Site Key 时前端会显示组件但服务端不拦，避免误配置锁死登录
+const HCAPTCHA_SITE_KEY = process.env.HCAPTCHA_SITE_KEY || '';
+const HCAPTCHA_SECRET = process.env.HCAPTCHA_SECRET || '';
+
+function postFormOnce(urlStr, fields){
+  return new Promise(resolve => {
+    let u;
+    try { u = new URL(urlStr); } catch (_) { return resolve(null); }
+    const data = new URLSearchParams(fields).toString();
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + (u.search || ''),
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(data)
+      },
+      timeout: 8000
+    }, res => {
+      let buf = '';
+      res.on('data', c => { buf += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(buf)); } catch (_) { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.write(data);
+    req.end();
+  });
+}
+
+async function verifyCaptcha(token, ip){
+  if (!HCAPTCHA_SECRET) return true;        // 没配置就跳过
+  if (!token) return false;
+  const r = await postFormOnce('https://api.hcaptcha.com/siteverify', {
+    secret: HCAPTCHA_SECRET,
+    response: String(token),
+    remoteip: ip || '',
+    sitekey: HCAPTCHA_SITE_KEY
+  });
+  return !!(r && r.success === true);
 }
 
 // 我和某人的关系：friend 好友 / outgoing 我已申请 / incoming 他申请了我 / '' 陌生人
@@ -892,6 +938,9 @@ async function handleApi(req, res, urlPath){
     // 注册必须先勾选同意服务条款与隐私政策。
     // 已发布的老客户端请求里没有这个字段，所以只拦截显式拒绝（false），避免它们无法注册。
     if (body.agree === false) return sendJSON(res, 400, {ok:false,msg:'请先阅读并同意服务条款和隐私政策', key:'errAgree'});
+    // 注册也要过人机验证（配置了 hCaptcha 才拦）
+    if (!(await verifyCaptcha(body.hcaptcha, clientIp(req))))
+      return sendJSON(res, 400, {ok:false,msg:'人机验证没通过，请重新验证', key:'errHcaptcha'});
     const u = String(body.u||'').trim();
     const p = String(body.p||'');
     const email = normalizeEmail(body.email);
@@ -919,11 +968,15 @@ async function handleApi(req, res, urlPath){
     const { hash, salt } = hashPass(p);
     accounts.set(u, { hash, salt, email, ip });
     saveUsers();
-    return sendJSON(res, 200, {ok:true});
+    // 直接发 token，注册后不用再登一次（hCaptcha 票据是一次性的）
+    const token = newToken(u);
+    return sendJSON(res, 200, {ok:true, token, user:u, muteLeft:0}, {'Set-Cookie': authCookie(token)});
   }
   if (req.method === 'POST' && urlPath === '/api/login'){
     const body = await readBody(req);
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    if (!(await verifyCaptcha(body.hcaptcha, clientIp(req))))
+      return sendJSON(res, 400, {ok:false,msg:'人机验证没通过，请重新验证', key:'errHcaptcha'});
     const u = String(body.u||'').trim();
     const p = String(body.p||'');
     const a = accounts.get(u);
@@ -984,6 +1037,15 @@ async function handleApi(req, res, urlPath){
         from: !!process.env.MAIL_FROM
       },
       startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString()
+    });
+  }
+
+  // 前端从这里取 hCaptcha 的 Site Key；没配置就返回空串，页面不显示组件
+  if (req.method === 'GET' && urlPath === '/api/config'){
+    return sendJSON(res, 200, {
+      ok: true,
+      siteKey: HCAPTCHA_SITE_KEY,
+      captchaRequired: !!HCAPTCHA_SECRET && !!HCAPTCHA_SITE_KEY
     });
   }
 

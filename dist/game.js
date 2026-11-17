@@ -157,13 +157,40 @@ $('sendCodeBtn').addEventListener('click', async () => {
   }
 });
 
+// —— hCaptcha：登录/注册前的人机验证 ——
+// Site Key 由服务端 /api/config 下发，没配置就不显示，也不拦
+let hcEnabled = false, hcWidget = null;
+async function setupHcaptcha(){
+  try {
+    const cfg = await api('/api/config');
+    if (!cfg || !cfg.siteKey) return;
+    if (!window.hcaptcha){
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    const box = $('hcaptchaBox');
+    if (!box || !window.hcaptcha) return;
+    const light = document.documentElement.getAttribute('data-theme') === 'light';
+    hcWidget = window.hcaptcha.render(box, { sitekey: cfg.siteKey, theme: light ? 'light' : 'dark' });
+    hcEnabled = true;
+  } catch (_) { /* 脚本加载失败就不拦，服务端仍会校验 */ }
+}
+
 async function doAuthAction(){
   const u = $('authUser').value.trim();
   const p = $('authPass').value;
   const email = $('authEmail') ? $('authEmail').value.trim() : '';
   const code = $('authCode') ? $('authCode').value.trim() : '';
   const captcha = $('captchaInput').value.trim();
+  const hcToken = (hcEnabled && window.hcaptcha && hcWidget !== null) ? window.hcaptcha.getResponse(hcWidget) : '';
   $('authErr').textContent = '';
+  if (hcEnabled && !hcToken){ $('authErr').textContent = t('errHcaptcha'); return; }
   if (authTab === 'register'){
     if (!email) { $('authErr').textContent = t('errEmailRequired'); return; }
     if (!EMAIL_RE.test(email)) { $('authErr').textContent = t('errEmailFormat'); return; }
@@ -173,10 +200,11 @@ async function doAuthAction(){
   }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
-      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code, cid: captchaId, captcha, agree: true})
+      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p, hcaptcha: hcToken} : {u, p, email, code, cid: captchaId, captcha, hcaptcha: hcToken, agree: true})
     });
     if (!r.ok){
       $('authErr').textContent = r.msg || t('opFailed');
+      if (window.hcaptcha && hcWidget !== null) window.hcaptcha.reset(hcWidget);
       if (authTab === 'register' && mailReady === false) refreshCaptcha();
       return;
     }
@@ -185,9 +213,15 @@ async function doAuthAction(){
       localStorage.setItem('snakeToken', authToken);
       localStorage.setItem('snakeUser', authUser);
       enterLobby();
+    } else if (r.token) {
+      // 注册接口直接带 token，省掉一次登录（hCaptcha 票据一次性）
+      authToken = r.token; authUser = r.user;
+      localStorage.setItem('snakeToken', authToken);
+      localStorage.setItem('snakeUser', authUser);
+      enterLobby();
     } else {
-      // 注册成功 → 自动登录
-      const r2 = await api('/api/login', { method:'POST', body: JSON.stringify({u, p}) });
+      // 老服务端注册后自动登录
+      const r2 = await api('/api/login', { method:'POST', body: JSON.stringify({u, p, hcaptcha: hcToken}) });
       if (r2.ok){
         authToken = r2.token; authUser = r2.user;
         localStorage.setItem('snakeToken', authToken);
@@ -270,7 +304,10 @@ $('deleteAcctBtn').addEventListener('click', async () => {
     const c = await api('/api/me');
     if (c.ok && c.user){ authUser = c.user; isGuestUser = !!c.guest; enterLobby(); return; }
   }
-  if (!authToken) showPanel('auth');
+  if (!authToken) {
+    await setupHcaptcha();
+    showPanel('auth');
+  }
 })();
 
 // —— Cookie 提示条：只问一次，选择记在本地 ——

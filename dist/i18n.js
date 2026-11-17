@@ -1662,6 +1662,23 @@
     });
   }
 
+  // PATCH8：人机验证提示
+  var PATCH8 = {
+    'zh-CN': { errHcaptcha: '请先完成人机验证' },
+    'zh-TW': { errHcaptcha: '請先完成人機驗證' },
+    'en': { errHcaptcha: 'Please finish the human verification first' }
+  };
+  for (var dk in PATCH8){
+    if (!Object.prototype.hasOwnProperty.call(PATCH8, dk)) continue;
+    if (!TRANSLATIONS[dk]) TRANSLATIONS[dk] = {};
+    for (var dkey in PATCH8[dk]) TRANSLATIONS[dk][dkey] = PATCH8[dk][dkey];
+  }
+  for (var di = 0; di < LANG_LIST.length; di++){
+    var dc = LANG_LIST[di].code;
+    if (!TRANSLATIONS[dc]) continue;
+    if (!TRANSLATIONS[dc].errHcaptcha) TRANSLATIONS[dc].errHcaptcha = TRANSLATIONS.en.errHcaptcha;
+  }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;

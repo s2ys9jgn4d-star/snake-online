@@ -151,13 +151,40 @@ $('sendCodeBtn').addEventListener('click', async () => {
   }
 });
 
+// —— hCaptcha：登录/注册前的人机验证 ——
+// Site Key 由服务端 /api/config 下发，没配置就不显示，也不拦
+let hcEnabled = false, hcWidget = null;
+async function setupHcaptcha(){
+  try {
+    const cfg = await api('/api/config');
+    if (!cfg || !cfg.siteKey) return;
+    if (!window.hcaptcha){
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    const box = $('hcaptchaBox');
+    if (!box || !window.hcaptcha) return;
+    const light = document.documentElement.getAttribute('data-theme') === 'light';
+    hcWidget = window.hcaptcha.render(box, { sitekey: cfg.siteKey, theme: light ? 'light' : 'dark' });
+    hcEnabled = true;
+  } catch (_) { /* 脚本加载失败就不拦，服务端仍会校验 */ }
+}
+
 async function doAuth(){
   const u = $('authUser').value.trim();
   const p = $('authPass').value;
   const email = $('authEmail').value.trim();
   const code = $('authCode').value.trim();
   const captcha = $('captchaInput').value.trim();
+  const hcToken = (hcEnabled && window.hcaptcha && hcWidget !== null) ? window.hcaptcha.getResponse(hcWidget) : '';
   $('authErr').textContent = '';
+  if (hcEnabled && !hcToken){ $('authErr').textContent = t('errHcaptcha'); return; }
   if (authTab === 'register'){
     if (!email) { $('authErr').textContent = t('errEmailRequired'); return; }
     if (!EMAIL_RE.test(email)) { $('authErr').textContent = t('errEmailFormat'); return; }
@@ -167,17 +194,20 @@ async function doAuth(){
   }
   try {
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
-      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p} : {u, p, email, code, cid: captchaId, captcha, agree: true})
+      method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p, hcaptcha: hcToken} : {u, p, email, code, cid: captchaId, captcha, hcaptcha: hcToken, agree: true})
     });
     if (!r.ok){
       $('authErr').textContent = r.msg || t('opFailed');
+      if (window.hcaptcha && hcWidget !== null) window.hcaptcha.reset(hcWidget);
       if (authTab === 'register' && mailReady === false) refreshCaptcha();
       return;
     }
     if (authTab === 'login') {
       saveAuth(r);
+    } else if (r.token) {
+      saveAuth(r);
     } else {
-      const r2 = await api('/api/login', { method:'POST', body: JSON.stringify({u, p}) });
+      const r2 = await api('/api/login', { method:'POST', body: JSON.stringify({u, p, hcaptcha: hcToken}) });
       if (r2.ok) saveAuth(r2); else $('authErr').textContent = r2.msg || t('regLoginFailed');
     }
   } catch (e) { $('authErr').textContent = t('networkError'); }
@@ -246,6 +276,7 @@ $('deleteAcctBtn').addEventListener('click', async () => {
   // 浏览器里登录态存在 httpOnly Cookie 里，页面读不到，只能问一次服务器
   const c = await api('/api/me');
   if (c.ok && c.user){ authUser = c.user; isGuestUser = !!c.guest; enterLobby(); return; }
+  await setupHcaptcha();
   showPanel('auth');
 })();
 

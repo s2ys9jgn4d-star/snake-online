@@ -335,6 +335,10 @@ body::before {
 .guest-btn span { font-size:11px; opacity:.65; }
 .guest-note { text-align:center; font-size:12px; color:var(--muted); margin-top:7px; }
 /* 注册时的服务条款勾选 */
+/* hCaptcha：服务端没配置 key 时这个盒子是空的，自动隐藏 */
+.hcaptcha-box { margin:10px 0 6px; display:flex; justify-content:center; }
+.hcaptcha-box:empty { display:none; }
+@media (max-width:380px) { .hcaptcha-box { transform:scale(.88); transform-origin:center; } }
 .agree-row {
   display:flex; align-items:flex-start; gap:7px; margin:4px 0 8px;
   font-size:12px; line-height:1.6; color:var(--muted); cursor:pointer;

@@ -477,6 +477,10 @@ body.is-guest #deleteAcctBtn { display:none; }
 .set-tip.ok { color:var(--accent2); }
 
 /* 注册时的服务条款勾选 */
+/* hCaptcha：服务端没配置 key 时这个盒子是空的，自动隐藏 */
+.hcaptcha-box { margin:10px 0 6px; display:flex; justify-content:center; }
+.hcaptcha-box:empty { display:none; }
+@media (max-width:380px) { .hcaptcha-box { transform:scale(.9); transform-origin:center; } }
 .agree-row {
   display:flex; align-items:flex-start; gap:8px; margin:2px 0 8px;
   font-size:12.5px; line-height:1.6; color:var(--muted); cursor:pointer;
