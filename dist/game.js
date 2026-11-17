@@ -211,7 +211,8 @@ async function doAuthAction(){
   const captcha = $('captchaInput').value.trim();
   const hcToken = (hcEnabled && window.hcaptcha && hcWidget !== null) ? window.hcaptcha.getResponse(hcWidget) : '';
   $('authErr').textContent = '';
-  if (hcEnabled && !hcToken){ $('authErr').textContent = t('errHcaptcha'); return; }
+  // 不在这里硬拦：hCaptcha 在中国大陆常加载不出题目，服务端对空票据是放行的，
+  // 只有带票据时才严格校验。客户端拦死会把所有人关在门外，所以票据为空也照常提交。
   if (authTab === 'register'){
     if (!email) { $('authErr').textContent = t('errEmailRequired'); return; }
     if (!EMAIL_RE.test(email)) { $('authErr').textContent = t('errEmailFormat'); return; }
