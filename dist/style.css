@@ -525,3 +525,24 @@ html[data-theme="light"] .hud-item { background:rgba(255,255,255,.94); }
 html[data-theme="light"] .dm-box { background:#fff; box-shadow:0 18px 44px rgba(40,60,110,.18); }
 html[data-theme="light"] .modal-mask { background:rgba(208,219,238,.62); }
 html[data-theme="light"] .ghost-btn:hover { color:var(--accent); background:rgba(91,140,255,.1); }
+
+/* —— Cookie 提示条 —— */
+.cookie-bar {
+  position: fixed; left: 14px; right: 14px; bottom: 14px; z-index: 70;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 13px 16px; border-radius: 14px;
+  background: rgba(14,18,32,.95); border: 1px solid rgba(120,200,255,.22);
+  box-shadow: 0 12px 34px rgba(0,0,0,.4); backdrop-filter: blur(10px);
+  font-size: 13px; line-height: 1.55; color: #dbe7ff;
+}
+.cookie-bar.hidden { display: none; }
+.cookie-bar a { color: #7ee0a0; }
+.cookie-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+#cookieAccept {
+  padding: 8px 16px; border: 0; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(135deg,#3ddc84,#25b463); color: #06210f; font-weight: 700;
+}
+html[data-theme="light"] .cookie-bar {
+  background: #fff; color: #22304a; border-color: #d7e3f6;
+  box-shadow: 0 12px 30px rgba(40,60,110,.16);
+}

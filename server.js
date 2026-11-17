@@ -661,13 +661,18 @@ const lobbyHistory = [];
 // ============================================================
 //  HTTP API（注册/登录/排行榜）
 // ============================================================
-function sendJSON(res, code, obj){
+function sendJSON(res, code, obj, extraHeaders){
   const body = JSON.stringify(obj);
+  // 登录态放在 httpOnly Cookie 里，前端挂了 withCredentials，所以不能用 *
+  const origin = (res.req && res.req.headers && res.req.headers.origin) || '';
   res.writeHead(code, {
     'Content-Type':'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Vary': 'Origin',
+    ...(extraHeaders || {})
   });
   res.end(body);
 }
@@ -681,10 +686,35 @@ function readBody(req){
     });
   });
 }
+// —— 登录态 Cookie ——
+// httpOnly 让页面脚本读不到，XSS 也偷不走；SameSite=None + Secure 是为了让
+// file:// 打开的离线客户端请求线上接口时也能带上（否则跨站请求会被丢弃）。
+const AUTH_COOKIE = 'snakeToken';
+const AUTH_COOKIE_AGE = 60 * 60 * 24 * 30;
+function parseCookies(req){
+  const raw = (req && req.headers && req.headers.cookie) || '';
+  const out = {};
+  raw.split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  });
+  return out;
+}
+function authCookie(token){
+  return AUTH_COOKIE + '=' + encodeURIComponent(token) +
+    '; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=' + AUTH_COOKIE_AGE;
+}
+const AUTH_COOKIE_CLEAR = AUTH_COOKIE + '=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0';
+
 function authFromReq(req){
+  // 优先 Cookie；旧客户端没有 Cookie，继续认 Authorization
   const h = (req.headers.authorization||'').trim();
-  if (!h.startsWith('Bearer ')) return null;
-  return tokens.get(h.slice(7)) || null;
+  if (h.startsWith('Bearer ')){
+    const u = tokens.get(h.slice(7));
+    if (u) return u;
+  }
+  const c = parseCookies(req)[AUTH_COOKIE];
+  return c ? (tokens.get(c) || null) : null;
 }
 
 // ============================================================
@@ -899,19 +929,18 @@ async function handleApi(req, res, urlPath){
     const a = accounts.get(u);
     if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'用户名或密码不对'});
     const token = newToken(u);
-    return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)});
+    return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)}, {'Set-Cookie': authCookie(token)});
   }
   // 游客试玩：不注册、不写文件，拿一个临时身份进大厅
   if (req.method === 'POST' && urlPath === '/api/guest'){
     const u = newGuestName();
     guests.add(u);
     const token = newToken(u);
-    return sendJSON(res, 200, {ok:true, token, user:u, guest:true, muteLeft:0});
+    return sendJSON(res, 200, {ok:true, token, user:u, guest:true, muteLeft:0}, {'Set-Cookie': authCookie(token)});
   }
   if (req.method === 'POST' && urlPath === '/api/logout'){
-    const user = authFromReq(req);
-    // 客户端自己删 token 即可；服务端不强制失效（同 token 多连接场景复杂）
-    return sendJSON(res, 200, {ok:true});
+    // 清掉 Cookie；token 本身继续有效（同 token 多连接场景复杂）
+    return sendJSON(res, 200, {ok:true}, {'Set-Cookie': AUTH_COOKIE_CLEAR});
   }
   // 注销账号：需 token + 密码确认，删除账号/排行榜/所有登录态
   if (req.method === 'POST' && urlPath === '/api/delete-account'){
@@ -929,7 +958,7 @@ async function handleApi(req, res, urlPath){
     leaderboard = leaderboard.filter(x=>x.u!==u);
     saveScores();
     for (const [t, user] of [...tokens.entries()]) if (user===u) tokens.delete(t);
-    return sendJSON(res, 200, {ok:true});
+    return sendJSON(res, 200, {ok:true}, {'Set-Cookie': AUTH_COOKIE_CLEAR});
   }
   if (req.method === 'GET' && urlPath === '/api/me'){
     const u = authFromReq(req);
@@ -1319,7 +1348,7 @@ function handleWsMessage(ws, text){
   // —— 未登录：只允许 auth ——
   if (!ws.user){
     if (msg.t === 'auth'){
-      const user = tokens.get(msg.token);
+      const user = tokens.get(msg.token) || (ws.cookieToken ? tokens.get(ws.cookieToken) : null);
       if (user){
         ws.user = user;
         loggedInSockets.add(ws);
@@ -1573,7 +1602,10 @@ server.on('upgrade', (req, socket) => {
   if (UPSTREAM) return proxyUpgrade(req, socket);
   const accept = crypto.createHash('sha1').update(headers['sec-websocket-key'] + WS_GUID).digest('base64');
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
-  onConnection(new WSSocket(socket));
+  const ws = new WSSocket(socket);
+  // 浏览器同源连接会自动带上 Cookie；离线包仍传 token
+  ws.cookieToken = parseCookies(req)[AUTH_COOKIE] || '';
+  onConnection(ws);
 });
 
 // ============================================================

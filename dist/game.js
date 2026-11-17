@@ -65,7 +65,7 @@ let authUser = localStorage.getItem('snakeUser') || null;
 async function api(path, opts={}){
   const h = {'Content-Type':'application/json'};
   if (authToken) h.Authorization = 'Bearer ' + authToken;
-  const r = await fetch(API_BASE + path, { headers:h, ...opts });
+  const r = await fetch(API_BASE + path, { headers:h, credentials:'include', ...opts });
   return r.json();
 }
 
@@ -265,7 +265,36 @@ $('deleteAcctBtn').addEventListener('click', async () => {
       authToken = null; authUser = null;
     }
   }
+  // 浏览器里登录态存在 httpOnly Cookie 里，页面读不到，只能问一次服务器
+  if (!authToken) {
+    const c = await api('/api/me');
+    if (c.ok && c.user){ authUser = c.user; isGuestUser = !!c.guest; enterLobby(); return; }
+  }
   if (!authToken) showPanel('auth');
+})();
+
+// —— Cookie 提示条：只问一次，选择记在本地 ——
+(function(){
+  function setupCookieBar(){
+    const bar = document.getElementById('cookieBar');
+    if (!bar) return;
+    if (localStorage.getItem('snakeCookieNotice') === '1'){ bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    const setT = (sel, key) => {
+      const el = sel.charAt(0) === '#' ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
+      if (el && typeof t === 'function') el.textContent = t(key);
+    };
+    setT('#cookieBar .cookie-text', 'cookie_notice');
+    setT('#cookieBar .cookie-more', 'cookie_more');
+    setT('#cookieAccept', 'cookie_accept');
+    const btn = document.getElementById('cookieAccept');
+    if (btn) btn.addEventListener('click', () => {
+      localStorage.setItem('snakeCookieNotice', '1');
+      bar.classList.add('hidden');
+    });
+  }
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', setupCookieBar);
+  else setupCookieBar();
 })();
 
 // ============================================================

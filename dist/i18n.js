@@ -1642,6 +1642,26 @@
     }
   }
 
+  // —— 第七批：Cookie 提示条 ——
+  var PATCH7 = {
+    'zh-CN': { cookie_notice: '我们用 Cookie 记住你的登录状态和语言偏好，不用于广告。', cookie_more: '了解更多', cookie_accept: '知道了' },
+    'zh-TW': { cookie_notice: '我們用 Cookie 記住你的登入狀態和語言偏好，不用於廣告。', cookie_more: '了解更多', cookie_accept: '知道了' },
+    'en': { cookie_notice: 'We use cookies to keep you signed in and remember your language. No ads, ever.', cookie_more: 'Learn more', cookie_accept: 'Got it' }
+  };
+  for (var ck in PATCH7){
+    if (!Object.prototype.hasOwnProperty.call(PATCH7, ck)) continue;
+    if (!TRANSLATIONS[ck]) TRANSLATIONS[ck] = {};
+    for (var ckey in PATCH7[ck]) TRANSLATIONS[ck][ckey] = PATCH7[ck][ckey];
+  }
+  // 其余语言先回落到英文
+  for (var ci = 0; ci < LANG_LIST.length; ci++){
+    var cc = LANG_LIST[ci].code;
+    if (!TRANSLATIONS[cc]) continue;
+    ['cookie_notice', 'cookie_more', 'cookie_accept'].forEach(function(k){
+      if (!TRANSLATIONS[cc][k]) TRANSLATIONS[cc][k] = TRANSLATIONS.en[k];
+    });
+  }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
