@@ -339,7 +339,9 @@ function postFormOnce(urlStr, fields){
 
 async function verifyCaptcha(token, ip){
   if (!HCAPTCHA_SECRET) return true;        // 没配置就跳过
-  if (!token) return false;
+  // 没带票据：说明前端没渲染出验证码（网络被墙、旧客户端、脚本加载失败）。
+  // 这里放行，否则所有人会被锁在门外；带了票据的一律严格校验。
+  if (!token) return true;
   const r = await postFormOnce('https://api.hcaptcha.com/siteverify', {
     secret: HCAPTCHA_SECRET,
     response: String(token),
