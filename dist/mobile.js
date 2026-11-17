@@ -276,8 +276,9 @@ $('deleteAcctBtn').addEventListener('click', async () => {
   // 浏览器里登录态存在 httpOnly Cookie 里，页面读不到，只能问一次服务器
   const c = await api('/api/me');
   if (c.ok && c.user){ authUser = c.user; isGuestUser = !!c.guest; enterLobby(); return; }
-  await setupHcaptcha();
+  // 先显示登录面板再渲染 hCaptcha，避免在隐藏容器里渲染尺寸异常
   showPanel('auth');
+  setupHcaptcha();
 })();
 
 // —— Cookie 提示条：只问一次，选择记在本地 ——

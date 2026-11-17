@@ -305,8 +305,9 @@ $('deleteAcctBtn').addEventListener('click', async () => {
     if (c.ok && c.user){ authUser = c.user; isGuestUser = !!c.guest; enterLobby(); return; }
   }
   if (!authToken) {
-    await setupHcaptcha();
+    // 先显示登录面板再渲染 hCaptcha，避免在隐藏容器里渲染尺寸异常
     showPanel('auth');
+    setupHcaptcha();
   }
 })();
 
