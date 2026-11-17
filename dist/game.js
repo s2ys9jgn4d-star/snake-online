@@ -172,7 +172,13 @@ function hcRender(){
   const light = document.documentElement.getAttribute('data-theme') === 'light';
   try { if (hcWidget !== null && window.hcaptcha.reset) window.hcaptcha.reset(hcWidget); } catch (_) {}
   box.innerHTML = '';
-  hcWidget = window.hcaptcha.render(box, { sitekey: hcSiteKey, theme: light ? 'light' : 'dark', hl: hcLangCode() });
+  hcWidget = window.hcaptcha.render(box, {
+    sitekey: hcSiteKey,
+    theme: light ? 'light' : 'dark',
+    hl: hcLangCode(),
+    // 域名没加白、网络被挡时会让验证码报错，这时不要再拦登录
+    'error-callback': function(){ hcEnabled = false; }
+  });
 }
 async function setupHcaptcha(){
   try {
