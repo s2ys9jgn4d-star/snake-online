@@ -153,7 +153,21 @@ $('sendCodeBtn').addEventListener('click', async () => {
 
 // —— hCaptcha：登录/注册前的人机验证 ——
 // Site Key 由服务端 /api/config 下发，没配置就不显示，也不拦
-let hcEnabled = false, hcWidget = null;
+let hcEnabled = false, hcWidget = null, hcSiteKey = '';
+// hCaptcha 不跟随页面语言，要把站内语言码转成它认识的写法
+function hcLangCode(){
+  const l = (window.getLang && window.getLang()) || 'en';
+  const map = { 'zh-CN':'zh', 'zh-TW':'zh-tw', 'pt-PT':'pt', 'pt-BR':'pt' };
+  return map[l] || String(l).split('-')[0];
+}
+function hcRender(){
+  const box = $('hcaptchaBox');
+  if (!box || !hcSiteKey || !window.hcaptcha) return;
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  try { if (hcWidget !== null && window.hcaptcha.reset) window.hcaptcha.reset(hcWidget); } catch (_) {}
+  box.innerHTML = '';
+  hcWidget = window.hcaptcha.render(box, { sitekey: hcSiteKey, theme: light ? 'light' : 'dark', hl: hcLangCode() });
+}
 async function setupHcaptcha(){
   try {
     const cfg = await api('/api/config');
@@ -168,11 +182,12 @@ async function setupHcaptcha(){
         document.head.appendChild(s);
       });
     }
-    const box = $('hcaptchaBox');
-    if (!box || !window.hcaptcha) return;
-    const light = document.documentElement.getAttribute('data-theme') === 'light';
-    hcWidget = window.hcaptcha.render(box, { sitekey: cfg.siteKey, theme: light ? 'light' : 'dark' });
+    if (!window.hcaptcha) return;
+    hcSiteKey = cfg.siteKey;
+    hcRender();
     hcEnabled = true;
+    // 验证码是独立 iframe，切语言后要重新渲染才会跟着变
+    window.addEventListener('snakelangchange', hcRender);
   } catch (_) { /* 脚本加载失败就不拦，服务端仍会校验 */ }
 }
 
