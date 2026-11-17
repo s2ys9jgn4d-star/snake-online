@@ -1679,6 +1679,75 @@
     if (!TRANSLATIONS[dc].errHcaptcha) TRANSLATIONS[dc].errHcaptcha = TRANSLATIONS.en.errHcaptcha;
   }
 
+  // PATCH9：僧伽罗语文案补齐（登录页、游客、设置、找回密码等）
+  var PATCH9 = {
+    'si': {
+      guestBtn: "ආගන්තුකයෙකු ලෙස ක්‍රීඩා කරන්න",
+      guestNote: "ඊමේලයක් අවශ්‍ය නොවේ — කාමරයකට සම්බන්ධ වන්න, ප්‍රගතිය සුරැකෙන්නේ නැත",
+      admin: "පරිපාලක",
+      deadWall: "බිත්තියේ ගැටුණා",
+      deadSelf: "ඔබේම සර්පයාට දෂ්ට වුණා",
+      deadOther: "වෙනත් සර්පයෙකුට ගැටුණි",
+      sysLabel: "පද්ධතිය",
+      sysJoined: "{name} කාමරයට සම්බන්ධ විය",
+      sysLeft: "{name} කාමරයෙන් පිටව ගියේය",
+      sysSpeed: "{name} වේගය {ms}ms/පියවර ලෙස සකස් කළේය",
+      speedInvalid: "වලංගු නොවන වේගය",
+      speedOwner: "වේගය වෙනස් කළ හැක්කේ සත්කාරකයාට පමණි — ඔබේම කාමරයක් සාදන්න",
+      speedTooFast: "වෙනස්කම් බොහෝ වැඩිය, තත්පර කිහිපයක් රැඳී සිටින්න",
+      guestNoCreate: "අමුත්තන්ට කාමර සෑදිය නොහැක — කරුණාකර එකකට සම්බන්ධ වන්න",
+      guestNoCreate2: "අමුත්තන්ට කාමර සෑදිය නොහැක — වෙනත් අයෙකුගේ කාමරයකට සම්බන්ධ වන්න",
+      guestNoLobbyChat: "අමුත්තන්ට ලොබියේ චැට් කළ නොහැක — චැට් කිරීමට කාමරයකට සම්බන්ධ වන්න",
+      badRoomName: "කාමරයේ නාමයේ තහනම් වචනයක් අඩංගු වේ",
+      roomLimit: "කාමර ගණන අධිකයි, පසුව නැවත උත්සාහ කරන්න",
+      noSuchRoom: "කාමරය හමු නොවුණි",
+      soloOther: "එය වෙනත් අයෙකුගේ තනි කාමරයකි",
+      badPass: "වැරදි මුරපදය",
+      roomFullMax: "කාමරය පිරී ඇත (උපරිම ක්‍රීඩකයින් {n}ක්)",
+      mutedFor: "ඔබව නිශ්ශබ්ද කර ඇත, {t}ක් රැඳී සිටින්න",
+      dlSmart: "ඔබේ උපාංගය හඳුනා ගන්නා ලදී",
+      dlSmartTip: "එක් ක්ලික් කිරීමකින් නිවැරදි ස්ථාපකය බාගත කිරීම ආරම්භ වේ",
+      dlSmartUnknown: "ඔබේ පද්ධතිය හඳුනා ගැනීමට නොහැකි විය — පහතින් අනුවාදයක් තෝරන්න",
+      dlFit: "✓ ඔබේ උපාංගයට ගැළපේ",
+      guestTip: "🎮 ආගන්තුක මාදිලිය: ලොබි චැට් නැත · අන් අයගේ කාමරවලට පමණක් සම්බන්ධ වන්න · ලකුණු ශ්‍රේණිගත නොකෙරේ · කිසිවක් සුරැකෙන්නේ නැත",
+      guestTag: "අමුත්තා",
+      offBadge: "නිල",
+      soloRoomName: "{name}ගේ තනි කාමරය",
+      defaultSpeed: "පෙරනිමි වේගය",
+      theme: "තේමාව",
+      themeDark: "අඳුරු",
+      themeLight: "ලා",
+      accountName: "ගිණුම් නාමය",
+      namePh: "නව පරිශීලක නාමය",
+      nameTip: "ශ්‍රේණිගත කිරීම් සහ මිතුරන් නව නාමය අනුගමනය කරනු ඇත",
+      saveName: "නම වෙනස් කරන්න",
+      nameEmpty: "පළමුව නව නමක් ටයිප් කරන්න",
+      nameSame: "එය දැනටමත් ඔබේ නමයි",
+      saving: "සුරැකෙමින්...",
+      nameOk: "නම වෙනස් කරන ලදී, නැවත පූරණය වෙමින්...",
+      netErr: "ජාල දෝෂයකි, නැවත උත්සාහ කරන්න",
+      agreePrefix: "මම පහත සඳහන් දෑ කියවා එකඟ වෙමි ",
+      termsLink: "සේවා කොන්දේසි",
+      privacyLink: "පුද්ගලිකත්ව ප්‍රතිපත්තිය",
+      andWord: " සහ ",
+      agreeSuffix: "",
+      errAgree: "කරුණාකර සේවා කොන්දේසි සහ රහස්‍යතා ප්‍රතිපත්තියට එකඟ වන්න",
+      resetTitle: "මුරපදය නැවත සකසන්න",
+      resetHint: "ඔබ ලියාපදිංචි වූ ඊමේල් ලිපිනයට ඉලක්කම් 6ක කේතයක් එවනු ලැබේ",
+      resetSend: "කේතය එවන්න",
+      resetConfirm: "යළි සකසන්න",
+      newPassPh: "නව මුරපදය (4-32)",
+      resetSent: "කේතය එවන ලදී",
+      resetOk: "මුරපදය යාවත්කාලීන කරන ලදී",
+      resetFail: "යම් දෙයක් වැරදී ඇත! පසුව උත්සාහ කරන්න.",
+      errPassLen: "මුරපදය අක්ෂර 4-32කින් යුක්ත විය යුතුය",
+      dlExt: "විස්තාරණය බලන්න",
+    }
+  };
+  for (var pk in PATCH9){ if (!Object.prototype.hasOwnProperty.call(PATCH9, pk)) continue;
+    if (!TRANSLATIONS[pk]) TRANSLATIONS[pk] = {};
+    for (var pkey in PATCH9[pk]) TRANSLATIONS[pk][pkey] = PATCH9[pk][pkey]; }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
