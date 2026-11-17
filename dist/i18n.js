@@ -1613,7 +1613,8 @@
     'bg':'Докладвай грешка','hr':'Prijavi grešku','sr':'Пријави грешку','sk':'Nahlásiť chybu',
     'sl':'Prijavi napako','lt':'Pranešti apie klaidą','lv':'Ziņot par kļūdu','et':'Teata veast',
     'ca':'Informar d’error','gl':'Informar dun erro','af':'Rapporteer fout','sw':'Ripoti hitilafu',
-    'bn':'বাগ রিপোর্ট করুন','ta':'குறையைப் புகாரளி','te':'బగ్‌ను నివేదించండి','eo':'Sciigi pri eraro'
+    'bn':'বাগ রিপোর্ট করুন','ta':'குறையைப் புகாரளி','te':'బగ్‌ను నివేదించండి','eo':'Sciigi pri eraro',
+    'si':'දෝෂ වාර්තා කරන්න'
   };
   for (var fk in EXTRA_FEEDBACK){
     if (TRANSLATIONS[fk]) TRANSLATIONS[fk].feedback = EXTRA_FEEDBACK[fk];
