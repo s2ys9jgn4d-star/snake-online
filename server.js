@@ -1336,7 +1336,7 @@ async function handleApi(req, res, urlPath){
         google: oauthReady('google'),
         github: oauthReady('github')
       },
-      sms: !!smsProvider()
+      sms: !!smsProvider() || process.env.SMS_DEV_ECHO === '1'
     });
   }
 
@@ -1345,7 +1345,8 @@ async function handleApi(req, res, urlPath){
 
   // —— 手机号验证码：发送 ——
   if (req.method === 'POST' && urlPath === '/api/sms/send'){
-    if (!smsProvider()) return sendJSON(res, 400, { ok:false, msg:'短信服务还没配置', key:'smsFail' });
+    const devEcho = process.env.SMS_DEV_ECHO === '1';
+    if (!smsProvider() && !devEcho) return sendJSON(res, 400, { ok:false, msg:'短信服务还没配置', key:'smsFail' });
     const body = await readBody(req);
     const phone = normPhone(body.phone);
     if (!phone) return sendJSON(res, 400, { ok:false, msg:'手机号格式不对', key:'phoneBad' });
@@ -1357,13 +1358,15 @@ async function handleApi(req, res, urlPath){
     if (now - rec.t > 3600000){ rec.n = 0; rec.t = now; }
     if (rec.n >= 10) return sendJSON(res, 429, { ok:false, msg:'发送太频繁，请稍后再试', key:'smsWait' });
     const code = String(crypto.randomInt(100000, 1000000));
-    const ok = await sendSmsCode(phone, code);
+    let ok = true;
+    if (smsProvider()) ok = await sendSmsCode(phone, code);
+    else console.log('[sms-dev] 验证码', phone, code);
     if (!ok) return sendJSON(res, 502, { ok:false, msg:'短信发送失败，请稍后再试', key:'smsFail' });
     smsCodes.set(phone, { code, exp: now + 10 * 60 * 1000 });
     smsCooldown.set(phone, now);
     rec.n++;
     smsIpHits.set(ip, rec);
-    return sendJSON(res, 200, { ok:true });
+    return sendJSON(res, 200, devEcho ? { ok:true, devCode: code } : { ok:true });
   }
 
   // —— 手机号验证码：登录（没有账号就自动建）——
