@@ -1350,6 +1350,10 @@ async function handleApi(req, res, urlPath){
     const body = await readBody(req);
     const phone = normPhone(body.phone);
     if (!phone) return sendJSON(res, 400, { ok:false, msg:'手机号格式不对', key:'phoneBad' });
+    // 测试开关只对白名单号码生效，其它号码一律当作未配置，避免公开接口变成任意登录后门
+    const devPhone = normPhone(process.env.SMS_DEV_PHONE || '');
+    const devHit = devEcho && (!devPhone || phone === devPhone);
+    if (!smsProvider() && !devHit) return sendJSON(res, 400, { ok:false, msg:'短信服务还没配置', key:'smsFail' });
     const now = Date.now();
     if (now - (smsCooldown.get(phone) || 0) < 60000)
       return sendJSON(res, 429, { ok:false, msg:'请等 1 分钟再发', key:'smsWait' });
@@ -1366,7 +1370,7 @@ async function handleApi(req, res, urlPath){
     smsCooldown.set(phone, now);
     rec.n++;
     smsIpHits.set(ip, rec);
-    return sendJSON(res, 200, devEcho ? { ok:true, devCode: code } : { ok:true });
+    return sendJSON(res, 200, devHit ? { ok:true, devCode: code } : { ok:true });
   }
 
   // —— 手机号验证码：登录（没有账号就自动建）——
