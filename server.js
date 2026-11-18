@@ -554,6 +554,83 @@ async function handleOauth(req, res, urlPath){
   return oauthRedirect(res, ret + (ret.includes('?') ? '&' : '?') + 'oauthCode=' + ticket);
 }
 
+// ============================================================
+//  手机号验证码登录：Twilio（国际）/ 阿里云短信（国内）
+//  两家都没配时不显示手机号入口，也不影响原有登录
+// ============================================================
+function smsProvider(){
+  if (process.env.ALIYUN_SMS_KEY_ID && process.env.ALIYUN_SMS_KEY_SECRET &&
+      process.env.ALIYUN_SMS_SIGN && process.env.ALIYUN_SMS_TEMPLATE) return 'aliyun';
+  if (process.env.TWILIO_SID && process.env.TWILIO_TOKEN && process.env.TWILIO_FROM) return 'twilio';
+  return '';
+}
+// 11 位国内号码补 +86，统一存 E.164
+function normPhone(raw){
+  let s = String(raw || '').replace(/[^\d+]/g, '');
+  if (/^1\d{10}$/.test(s)) s = '+86' + s;
+  if (!/^\+\d{8,15}$/.test(s)) return '';
+  return s;
+}
+function percentEncode(s){
+  return encodeURIComponent(s).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+async function aliyunSms(phone, code){
+  const p = {
+    AccessKeyId: process.env.ALIYUN_SMS_KEY_ID,
+    Action: 'SendSms',
+    Format: 'JSON',
+    PhoneNumbers: phone.replace(/^\+/, ''),
+    RegionId: 'cn-hangzhou',
+    SignName: process.env.ALIYUN_SMS_SIGN,
+    SignatureMethod: 'HMAC-SHA1',
+    SignatureNonce: crypto.randomBytes(8).toString('hex'),
+    SignatureVersion: '1.0',
+    TemplateCode: process.env.ALIYUN_SMS_TEMPLATE,
+    TemplateParam: JSON.stringify({ code }),
+    Timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+    Version: '2017-05-25'
+  };
+  const canon = Object.keys(p).sort().map(k => percentEncode(k) + '=' + percentEncode(p[k])).join('&');
+  const s2s = 'GET&' + percentEncode('/') + '&' + percentEncode(canon);
+  const sig = crypto.createHmac('sha1', process.env.ALIYUN_SMS_KEY_SECRET + '&').update(s2s).digest('base64');
+  const j = await getJsonOnce('https://dysmsapi.aliyuncs.com/?Signature=' + percentEncode(sig) + '&' + canon);
+  return !!(j && j.Code === 'OK');
+}
+async function twilioSms(phone, code){
+  const sid = process.env.TWILIO_SID;
+  const r = await postFormOnce('https://api.twilio.com/2010-04-01/Accounts/' + sid + '/Messages.json', {
+    To: phone,
+    From: process.env.TWILIO_FROM,
+    Body: '【联机贪吃蛇】验证码 ' + code + '，10 分钟内有效。'
+  }, {
+    Authorization: 'Basic ' + Buffer.from(sid + ':' + process.env.TWILIO_TOKEN).toString('base64'),
+    Accept: 'application/json'
+  });
+  // 注意：失败时 Twilio 也返回 status:401，必须用 sid 判断成功
+  return !!(r && r.sid && !r.code);
+}
+function sendSmsCode(phone, code){
+  return smsProvider() === 'aliyun' ? aliyunSms(phone, code) : twilioSms(phone, code);
+}
+const smsCodes = new Map();     // 手机号 -> {code, exp}
+const smsCooldown = new Map();  // 手机号 -> 上次发送时间
+const smsIpHits = new Map();    // IP -> {n, t}，防止被刷
+
+function accountByPhone(phone){
+  if (!phone) return '';
+  for (const [u, a] of accounts) if (a.phone === phone) return u;
+  return '';
+}
+function usernameFromPhone(phone){
+  const base = '玩家' + phone.slice(-4);
+  let cand = base;
+  for (let i = 2; i <= 999; i++){
+    if (!accounts.has(cand) && !guests.has(cand) && !hasBannedWord(cand)) return cand;
+    cand = base + i;
+  }
+  return '玩家' + crypto.randomBytes(3).toString('hex');
+}
+
 // 我和某人的关系：friend 好友 / outgoing 我已申请 / incoming 他申请了我 / '' 陌生人
 function relationOf(me, other){
   if (areFriends(me, other)) return 'friend';
@@ -1258,12 +1335,59 @@ async function handleApi(req, res, urlPath){
         microsoft: oauthReady('microsoft'),
         google: oauthReady('google'),
         github: oauthReady('github')
-      }
+      },
+      sms: !!smsProvider()
     });
   }
 
   // —— 第三方快捷登录（start / callback / exchange）——
   if (urlPath.startsWith('/api/oauth/')) return handleOauth(req, res, urlPath);
+
+  // —— 手机号验证码：发送 ——
+  if (req.method === 'POST' && urlPath === '/api/sms/send'){
+    if (!smsProvider()) return sendJSON(res, 400, { ok:false, msg:'短信服务还没配置', key:'smsFail' });
+    const body = await readBody(req);
+    const phone = normPhone(body.phone);
+    if (!phone) return sendJSON(res, 400, { ok:false, msg:'手机号格式不对', key:'phoneBad' });
+    const now = Date.now();
+    if (now - (smsCooldown.get(phone) || 0) < 60000)
+      return sendJSON(res, 429, { ok:false, msg:'请等 1 分钟再发', key:'smsWait' });
+    const ip = clientIp(req);
+    const rec = smsIpHits.get(ip) || { n: 0, t: now };
+    if (now - rec.t > 3600000){ rec.n = 0; rec.t = now; }
+    if (rec.n >= 10) return sendJSON(res, 429, { ok:false, msg:'发送太频繁，请稍后再试', key:'smsWait' });
+    const code = String(crypto.randomInt(100000, 1000000));
+    const ok = await sendSmsCode(phone, code);
+    if (!ok) return sendJSON(res, 502, { ok:false, msg:'短信发送失败，请稍后再试', key:'smsFail' });
+    smsCodes.set(phone, { code, exp: now + 10 * 60 * 1000 });
+    smsCooldown.set(phone, now);
+    rec.n++;
+    smsIpHits.set(ip, rec);
+    return sendJSON(res, 200, { ok:true });
+  }
+
+  // —— 手机号验证码：登录（没有账号就自动建）——
+  if (req.method === 'POST' && urlPath === '/api/phone-login'){
+    const body = await readBody(req);
+    const phone = normPhone(body.phone);
+    const code = String(body.code || '');
+    const rec = phone ? smsCodes.get(phone) : null;
+    if (!rec || rec.exp < Date.now() || rec.code !== code)
+      return sendJSON(res, 400, { ok:false, msg:'验证码不对或已过期', key:'smsFail' });
+    smsCodes.delete(phone);
+    const ip = clientIp(req);
+    const banMsg = bannedHit(phone, ip);
+    if (banMsg) return sendJSON(res, 403, { ok:false, msg: banMsg, key:'bannedMsg' });
+    let user = accountByPhone(phone);
+    if (!user){
+      user = usernameFromPhone(phone);
+      const { hash, salt } = hashPass(crypto.randomBytes(12).toString('hex'));
+      accounts.set(user, { hash, salt, email:'', phone, ip });
+      saveUsers();
+    }
+    const token = newToken(user);
+    return sendJSON(res, 200, { ok:true, token, user, muteLeft: muteLeftOf(user) }, { 'Set-Cookie': authCookie(token) });
+  }
 
   // —— 好友 API ——
   // 所有玩家（带在线状态和我和他的关系）

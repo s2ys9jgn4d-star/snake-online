@@ -1759,6 +1759,16 @@
     if (!TRANSLATIONS[qk]) TRANSLATIONS[qk] = {};
     for (var qkey in PATCH10[qk]) TRANSLATIONS[qk][qkey] = PATCH10[qk][qkey]; }
 
+  // PATCH11：手机号验证码登录
+  var PATCH11 = {
+    'zh-CN': { smsLogin:'手机号验证码登录', smsLoginBtn:'登录', phonePh:'手机号', sendCode:'发送验证码', smsFill:'请填手机号和验证码', smsFail:'验证码不对或已过期', phoneBad:'手机号格式不对', smsWait:'发送太频繁，请稍后再试' },
+    'zh-TW': { smsLogin:'手機號驗證碼登入', smsLoginBtn:'登入', phonePh:'手機號碼', sendCode:'發送驗證碼', smsFill:'請填手機號和驗證碼', smsFail:'驗證碼不對或已過期', phoneBad:'手機號碼格式不對', smsWait:'發送太頻繁，請稍後再試' },
+    'en': { smsLogin:'Sign in with phone', smsLoginBtn:'Sign in', phonePh:'Phone number', sendCode:'Send code', smsFill:'Enter your phone and code', smsFail:'Wrong or expired code', phoneBad:'Invalid phone number', smsWait:'Too many requests, try again later' }
+  };
+  for (var sk in PATCH11){ if (!Object.prototype.hasOwnProperty.call(PATCH11, sk)) continue;
+    if (!TRANSLATIONS[sk]) TRANSLATIONS[sk] = {};
+    for (var skey in PATCH11[sk]) TRANSLATIONS[sk][skey] = PATCH11[sk][skey]; }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;

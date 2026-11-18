@@ -459,3 +459,17 @@ html[data-theme="light"] .cookie-bar {
   color: #fff; font-size: 13px;
 }
 html[data-theme="light"] .oauth-btn { border-color: #d7e3f6; background: #fff; color: #22304a; }
+
+/* 手机号验证码登录 */
+.sms-row {
+  margin-top: 10px; padding-top: 10px; display: flex; flex-direction: column; gap: 7px;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+.sms-title { font-size: 11px; text-align: center; opacity: .6; margin: 0; }
+.sms-login-btn {
+  width: 100%; padding: 8px 10px; border-radius: 9px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06);
+  color: #fff; font-size: 13px;
+}
+html[data-theme="light"] .sms-row { border-top-color: #e3ebf7; }
+html[data-theme="light"] .sms-login-btn { border-color: #d7e3f6; background: #fff; color: #22304a; }
