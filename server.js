@@ -614,6 +614,9 @@ function sendSmsCode(phone, code){
 }
 const smsCodes = new Map();     // 手机号 -> {code, exp}
 const smsCooldown = new Map();  // 手机号 -> 上次发送时间
+// 全局限流：每个 IP 每分钟最多 240 次 API 请求，防脚本刷接口烧资源
+const apiHits = new Map();      // IP -> {n, t}
+const API_HIT_LIMIT = Number(process.env.API_HIT_LIMIT) || 240;
 const smsIpHits = new Map();    // IP -> {n, t}，防止被刷
 
 function accountByPhone(phone){
@@ -1965,6 +1968,18 @@ const COMPRESSIBLE = new Set(['.html','.js','.css','.svg','.json','.txt','.xml',
 const RELEASE_EXT = new Set(['.dmg','.zip','.apk','.ipa','.deb','.hap','.exe','.sb3','.tar','.gz']);
 const gzipCache = new Map();
 
+// 安装包不再由本站占流量：命中下面的文件名就 302 到 GitHub Releases（免费、无限流量）
+const RELEASES_BASE = process.env.RELEASES_URL
+  || 'https://github.com/s2ys9jgn4d-star/snake-online/releases/download/v1.0.2';
+const RELEASE_ASSET = {
+  '贪吃蛇.dmg': 'snake-online.dmg',
+  '贪吃蛇-unsigned.ipa': 'snake-online-unsigned.ipa',
+  '贪吃蛇-win64.zip': 'snake-online-win64.zip',
+  '贪吃蛇.apk': 'snake-online.apk',
+  '贪吃蛇.deb': 'snake-online.deb',
+  '联机贪吃蛇.sb3': 'snake-online.sb3'
+};
+
 const server = http.createServer(async (req, res) => {
   let urlPath;
   try { urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname); }
@@ -1973,10 +1988,25 @@ const server = http.createServer(async (req, res) => {
   // 代理模式：接口交给主服务，账号数据自然就是同一份
   if (UPSTREAM && urlPath.startsWith('/api/')) return proxyHttp(req, res, urlPath);
 
-  // API 走异步处理器
+  // API 走异步处理器（先过全局限流）
+  if (urlPath.startsWith('/api/')){
+    const ip = clientIp(req), now = Date.now();
+    const rec = apiHits.get(ip) || { n: 0, t: now };
+    if (now - rec.t > 60000){ rec.n = 0; rec.t = now; }
+    rec.n++;
+    if (rec.n > API_HIT_LIMIT) return sendJSON(res, 429, { ok:false, msg:'请求太频繁，请稍后再试', key:'tooFast' });
+    apiHits.set(ip, rec);
+    if (apiHits.size > 2000) for (const [k, v] of apiHits) if (now - v.t > 300000) apiHits.delete(k);
+  }
   if (urlPath.startsWith('/api/')) return handleApi(req, res, urlPath);
 
   if (urlPath === '/') urlPath = '/index.html';
+  // 安装包直连 GitHub Releases，本站只回一个 302，不产生流量
+  const asset = RELEASE_ASSET[path.basename(urlPath)];
+  if (asset){
+    res.writeHead(302, { Location: RELEASES_BASE + '/' + asset, 'Cache-Control': 'no-cache' });
+    return res.end();
+  }
   const filePath = path.join(PUBLIC_DIR, urlPath);
   if (!filePath.startsWith(PUBLIC_DIR + path.sep)){ res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(filePath, (err, data) => {
