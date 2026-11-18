@@ -309,9 +309,61 @@ $('deleteAcctBtn').addEventListener('click', async () => {
   } catch (e) { alert(t('deleteNet')); }
 });
 
+// —— 第三方快捷登录：Microsoft / Google / GitHub ——
+// 哪些可用由服务端 /api/config 决定，没配 key 的按钮直接不显示
+let oauthBase = '';
+async function setupOauth(){
+  try {
+    const cfg = await api('/api/config');
+    oauthBase = cfg.oauthBase || '';
+    const row = $('oauthRow');
+    if (!row) return;
+    let any = false;
+    row.querySelectorAll('[data-p]').forEach(btn => {
+      const on = !!(cfg.oauth && cfg.oauth[btn.dataset.p]);
+      btn.classList.toggle('hidden', !on);
+      if (!on) return;
+      any = true;
+      btn.onclick = () => {
+        location.href = oauthBase + '/api/oauth/' + btn.dataset.p + '/start?return=' +
+          encodeURIComponent(location.origin + location.pathname);
+      };
+    });
+    if (any) row.classList.remove('hidden');
+  } catch (_) {}
+}
+// 第三方登录回来会带 ?oauthCode=xxx，用它换真正的登录态
+async function handleOauthReturn(){
+  const q = new URLSearchParams(location.search);
+  const code = q.get('oauthCode');
+  const err = q.get('oauth');
+  if (!code && !err) return false;
+  history.replaceState(null, '', location.pathname);
+  if (code){
+    try {
+      const r = await api('/api/oauth/exchange', { method:'POST', body: JSON.stringify({ code }) });
+      if (r && r.ok && r.token){
+        authToken = r.token; authUser = r.user; isGuestUser = false;
+        localStorage.setItem('snakeToken', authToken);
+        localStorage.setItem('snakeUser', authUser);
+        enterLobby();
+        return true;
+      }
+    } catch (_) {}
+    showPanel('auth');
+    const e = $('authErr'); if (e) e.textContent = t('oauthFail');
+  } else {
+    showPanel('auth');
+    const e = $('authErr');
+    if (e) e.textContent = (err === 'banned') ? t('bannedMsg') : t('oauthFail');
+  }
+  return false;
+}
+
 // —— 启动时自动恢复登录态 ——
 (async function init(){
   await detectLocalServer();  // file:// 时先探测本机 server
+  if (await handleOauthReturn()) return;
   refreshMailReady();
   if (authToken) {
     const r = await api('/api/me');
@@ -330,6 +382,7 @@ $('deleteAcctBtn').addEventListener('click', async () => {
     // 先显示登录面板再渲染 hCaptcha，避免在隐藏容器里渲染尺寸异常
     showPanel('auth');
     setupHcaptcha();
+    setupOauth();
   }
 })();
 

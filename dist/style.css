@@ -550,3 +550,15 @@ html[data-theme="light"] .cookie-bar {
   background: #fff; color: #22304a; border-color: #d7e3f6;
   box-shadow: 0 12px 30px rgba(40,60,110,.16);
 }
+
+/* 第三方快捷登录 */
+.oauth-row { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.oauth-title { font-size: 12px; text-align: center; opacity: .6; }
+.oauth-btn {
+  width: 100%; padding: 9px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06);
+  color: #fff; font-size: 14px; transition: background .15s;
+}
+.oauth-btn:hover { background: rgba(255,255,255,.14); }
+html[data-theme="light"] .oauth-btn { border-color: #d7e3f6; background: #fff; color: #22304a; }
+html[data-theme="light"] .oauth-btn:hover { background: #f2f5fb; }

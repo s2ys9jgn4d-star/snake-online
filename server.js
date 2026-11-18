@@ -309,7 +309,7 @@ function clientIp(req){
 const HCAPTCHA_SITE_KEY = process.env.HCAPTCHA_SITE_KEY || '';
 const HCAPTCHA_SECRET = process.env.HCAPTCHA_SECRET || '';
 
-function postFormOnce(urlStr, fields){
+function postFormOnce(urlStr, fields, extraHeaders){
   return new Promise(resolve => {
     let u;
     try { u = new URL(urlStr); } catch (_) { return resolve(null); }
@@ -320,7 +320,8 @@ function postFormOnce(urlStr, fields){
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(data)
+        'Content-Length': Buffer.byteLength(data),
+        ...(extraHeaders || {})
       },
       timeout: 8000
     }, res => {
@@ -349,6 +350,208 @@ async function verifyCaptcha(token, ip){
     sitekey: HCAPTCHA_SITE_KEY
   });
   return !!(r && r.success === true);
+}
+
+// ============================================================
+//  第三方快捷登录：Microsoft / Google / GitHub
+//  配了 CLIENT_ID + CLIENT_SECRET 才启用，没配的按钮前端不显示
+//  Apple 不做：邮箱是私密转发地址（@privaterelay.appleid.com），
+//  而且 client_secret 要现签 ES256 JWT，收益很低
+// ============================================================
+const OAUTH_BASE = (process.env.PUBLIC_BASE_URL || 'https://snake-online.up.railway.app').replace(/\/+$/, '');
+const OAUTH_RETURN_HOSTS = new Set([
+  'snake-online.up.railway.app',
+  '37jufc1enq2k6cj3uvh.traesite.cn',
+  'localhost',
+  '127.0.0.1'
+]);
+const OAUTH_PROVIDERS = {
+  microsoft: {
+    id: process.env.MICROSOFT_CLIENT_ID || '',
+    secret: process.env.MICROSOFT_CLIENT_SECRET || '',
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    scope: 'openid email profile User.Read'
+  },
+  google: {
+    id: process.env.GOOGLE_CLIENT_ID || '',
+    secret: process.env.GOOGLE_CLIENT_SECRET || '',
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    scope: 'openid email profile'
+  },
+  github: {
+    id: process.env.GITHUB_CLIENT_ID || '',
+    secret: process.env.GITHUB_CLIENT_SECRET || '',
+    authUrl: 'https://github.com/login/oauth/authorize',
+    tokenUrl: 'https://github.com/login/oauth/access_token',
+    scope: 'read:user user:email'
+  }
+};
+function oauthReady(p){ const c = OAUTH_PROVIDERS[p]; return !!(c && c.id && c.secret); }
+const oauthStates = new Map();   // state -> {p, ret, exp}，防止伪造回调
+const oauthTickets = new Map();  // 一次性票据 -> 登录用户，避免 token 出现在地址栏
+
+function getJsonOnce(urlStr, headers){
+  return new Promise(resolve => {
+    let u;
+    try { u = new URL(urlStr); } catch (_) { return resolve(null); }
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + (u.search || ''),
+      method: 'GET',
+      headers: { 'Accept':'application/json', 'User-Agent':'snake-online', ...(headers || {}) },
+      timeout: 8000
+    }, res => {
+      let buf = '';
+      res.on('data', c => { buf += c; });
+      res.on('end', () => { try { resolve(JSON.parse(buf)); } catch (_) { resolve(null); } });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.end();
+  });
+}
+
+// 各平台拿「已验证的邮箱」：三家接口长得都不一样
+async function oauthProfile(p, token){
+  if (p === 'google'){
+    const j = await getJsonOnce('https://www.googleapis.com/oauth2/v3/userinfo', { Authorization: 'Bearer ' + token }) || {};
+    if (!j.email || j.email_verified === false) return null;
+    return { email: normalizeEmail(j.email), name: j.name || '' };
+  }
+  if (p === 'microsoft'){
+    const j = await getJsonOnce('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName', { Authorization: 'Bearer ' + token }) || {};
+    const email = j.mail || j.userPrincipalName || '';
+    if (!EMAIL_RE.test(email)) return null;
+    return { email: normalizeEmail(email), name: j.displayName || '' };
+  }
+  if (p === 'github'){
+    const j = await getJsonOnce('https://api.github.com/user', { Authorization: 'Bearer ' + token, 'Accept': 'application/vnd.github+json' }) || {};
+    const list = await getJsonOnce('https://api.github.com/user/emails', { Authorization: 'Bearer ' + token, 'Accept': 'application/vnd.github+json' });
+    const arr = Array.isArray(list) ? list : [];
+    const pick = arr.find(e => e.primary && e.verified) || arr.find(e => e.verified);
+    const email = pick ? pick.email : '';
+    if (!EMAIL_RE.test(email)) return null;
+    return { email: normalizeEmail(email), name: j.name || j.login || '' };
+  }
+  return null;
+}
+
+function accountByEmail(email){
+  if (!email) return '';
+  for (const [u, a] of accounts) if (a.email === email) return u;
+  return '';
+}
+// 用邮箱前缀当昵称，重名就加数字，实在不行随机
+function usernameFromEmail(email, name){
+  let base = String(name || email.split('@')[0] || '').replace(/[^0-9A-Za-z_\u4e00-\u9fa5]/g, '');
+  if (base.length < 2) base = email.split('@')[0].replace(/[^0-9A-Za-z_]/g, '');
+  if (base.length < 2) base = 'player';
+  base = base.slice(0, 14);
+  for (let i = 1; i <= 999; i++){
+    const cand = i === 1 ? base : base + i;
+    if (!accounts.has(cand) && !guests.has(cand) && cand !== OFFICIAL_NAME && !hasBannedWord(cand)) return cand;
+  }
+  return 'player' + crypto.randomBytes(3).toString('hex');
+}
+
+function oauthRedirect(res, location){
+  res.writeHead(302, { 'Location': location, 'Cache-Control': 'no-store' });
+  res.end();
+}
+function oauthBack(res, ret, reason){
+  return oauthRedirect(res, ret + (ret.includes('?') ? '&' : '?') + 'oauth=' + reason);
+}
+
+async function handleOauth(req, res, urlPath){
+  // 前端用一次性票据换登录态（避免 token 出现在地址栏/历史记录里）
+  if (urlPath === '/api/oauth/exchange' && req.method === 'POST'){
+    const body = await readBody(req);
+    const code = String(body.code || '');
+    const t = oauthTickets.get(code);
+    if (!t || t.exp < Date.now()){
+      return sendJSON(res, 400, { ok:false, msg:'登录已过期，请重试', key:'oauthFail' });
+    }
+    oauthTickets.delete(code);
+    const token = newToken(t.user);
+    return sendJSON(res, 200, { ok:true, token, user:t.user, muteLeft: muteLeftOf(t.user) }, { 'Set-Cookie': authCookie(token) });
+  }
+
+  const m = urlPath.match(/^\/api\/oauth\/([a-z]+)\/(start|callback)$/);
+  if (!m || req.method !== 'GET'){ res.writeHead(404, { 'Content-Type':'text/plain; charset=utf-8' }); return res.end('404'); }
+  const p = m[1], kind = m[2];
+  if (!oauthReady(p)){
+    res.writeHead(400, { 'Content-Type':'text/html; charset=utf-8' });
+    return res.end('<meta charset="utf-8"><p style="font:16px sans-serif;padding:24px">这个登录方式还没配置，请联系管理员。</p>');
+  }
+  const conf = OAUTH_PROVIDERS[p];
+  const redirectUri = OAUTH_BASE + '/api/oauth/' + p + '/callback';
+
+  if (kind === 'start'){
+    let ret = String(new URL(req.url, 'http://x').searchParams.get('return') || '');
+    try {
+      const ru = new URL(ret);
+      if (!/^https?:$/.test(ru.protocol) || !OAUTH_RETURN_HOSTS.has(ru.hostname)) ret = '';
+    } catch (_) { ret = ''; }
+    if (!ret) ret = OAUTH_BASE + '/mobile.html';
+
+    const state = crypto.randomBytes(16).toString('hex');
+    oauthStates.set(state, { p, ret, exp: Date.now() + 5 * 60 * 1000 });
+    if (oauthStates.size > 500){ for (const [k, v] of oauthStates) if (v.exp < Date.now()) oauthStates.delete(k); }
+
+    const params = new URLSearchParams({
+      client_id: conf.id,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: conf.scope,
+      state
+    });
+    if (p === 'google') params.set('prompt', 'select_account');
+    if (p === 'microsoft') params.set('response_mode', 'query');
+    return oauthRedirect(res, conf.authUrl + '?' + params.toString());
+  }
+
+  // 回调：先验 state，再换 token，再拿邮箱
+  const state = String(new URL(req.url, 'http://x').searchParams.get('state') || '');
+  const ent = oauthStates.get(state);
+  oauthStates.delete(state);
+  if (!ent || ent.exp < Date.now() || ent.p !== p) return oauthRedirect(res, OAUTH_BASE + '/mobile.html?oauth=state');
+  const ret = ent.ret;
+  const q = new URL(req.url, 'http://x').searchParams;
+  if (q.get('error')) return oauthBack(res, ret, 'denied');
+  const code = String(q.get('code') || '');
+  if (!code) return oauthBack(res, ret, 'nocode');
+
+  const tr = await postFormOnce(conf.tokenUrl, {
+    client_id: conf.id,
+    client_secret: conf.secret,
+    code,
+    grant_type: 'authorization_code',
+    redirect_uri: redirectUri
+  }, p === 'github' ? { 'Accept': 'application/json' } : null);
+  const at = tr && tr.access_token;
+  if (!at) return oauthBack(res, ret, 'token');
+
+  const prof = await oauthProfile(p, at);
+  if (!prof) return oauthBack(res, ret, 'email');
+
+  const ip = clientIp(req);
+  const banMsg = bannedHit(prof.email, ip);
+  if (banMsg) return oauthBack(res, ret, 'banned');
+
+  let user = accountByEmail(prof.email);
+  if (!user){
+    user = usernameFromEmail(prof.email, prof.name);
+    const { hash, salt } = hashPass(crypto.randomBytes(12).toString('hex'));
+    accounts.set(user, { hash, salt, email: prof.email, ip, oauth: p });
+    saveUsers();
+  }
+
+  const ticket = crypto.randomBytes(18).toString('hex');
+  oauthTickets.set(ticket, { user, exp: Date.now() + 60 * 1000 });
+  if (oauthTickets.size > 500){ for (const [k, v] of oauthTickets) if (v.exp < Date.now()) oauthTickets.delete(k); }
+  return oauthRedirect(res, ret + (ret.includes('?') ? '&' : '?') + 'oauthCode=' + ticket);
 }
 
 // 我和某人的关系：friend 好友 / outgoing 我已申请 / incoming 他申请了我 / '' 陌生人
@@ -1047,9 +1250,18 @@ async function handleApi(req, res, urlPath){
     return sendJSON(res, 200, {
       ok: true,
       siteKey: HCAPTCHA_SITE_KEY,
-      captchaRequired: !!HCAPTCHA_SECRET && !!HCAPTCHA_SITE_KEY
+      captchaRequired: !!HCAPTCHA_SECRET && !!HCAPTCHA_SITE_KEY,
+      oauthBase: OAUTH_BASE,
+      oauth: {
+        microsoft: oauthReady('microsoft'),
+        google: oauthReady('google'),
+        github: oauthReady('github')
+      }
     });
   }
+
+  // —— 第三方快捷登录（start / callback / exchange）——
+  if (urlPath.startsWith('/api/oauth/')) return handleOauth(req, res, urlPath);
 
   // —— 好友 API ——
   // 所有玩家（带在线状态和我和他的关系）

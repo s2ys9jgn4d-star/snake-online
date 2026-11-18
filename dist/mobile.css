@@ -449,3 +449,13 @@ html[data-theme="light"] .cookie-bar {
   background: #fff; color: #22304a; border-color: #d7e3f6;
   box-shadow: 0 10px 26px rgba(40,60,110,.16);
 }
+
+/* 第三方快捷登录 */
+.oauth-row { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.oauth-title { font-size: 11px; text-align: center; opacity: .6; }
+.oauth-btn {
+  width: 100%; padding: 8px 10px; border-radius: 9px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06);
+  color: #fff; font-size: 13px;
+}
+html[data-theme="light"] .oauth-btn { border-color: #d7e3f6; background: #fff; color: #22304a; }

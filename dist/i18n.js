@@ -1749,6 +1749,16 @@
     if (!TRANSLATIONS[pk]) TRANSLATIONS[pk] = {};
     for (var pkey in PATCH9[pk]) TRANSLATIONS[pk][pkey] = PATCH9[pk][pkey]; }
 
+  // PATCH10：第三方快捷登录
+  var PATCH10 = {
+    'zh-CN': { quickLogin:'快捷登录', oauthFail:'快捷登录失败，请重试或改用账号密码', bannedMsg:'这个账号因违规被封，不能登录' },
+    'zh-TW': { quickLogin:'快速登入', oauthFail:'快速登入失敗，請重試或改用帳號密碼', bannedMsg:'這個帳號因違規被封，不能登入' },
+    'en': { quickLogin:'Quick sign-in', oauthFail:'Quick sign-in failed. Please try again or use your password.', bannedMsg:'This account was banned for rule violations.' }
+  };
+  for (var qk in PATCH10){ if (!Object.prototype.hasOwnProperty.call(PATCH10, qk)) continue;
+    if (!TRANSLATIONS[qk]) TRANSLATIONS[qk] = {};
+    for (var qkey in PATCH10[qk]) TRANSLATIONS[qk][qkey] = PATCH10[qk][qkey]; }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
