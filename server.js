@@ -1126,6 +1126,8 @@ async function handleApi(req, res, urlPath){
       await mail.sendMail({
         to: email,
         subject: '联机贪吃蛇 · 注册验证码',
+        code,
+        purpose: '注册',
         text: '你的验证码是：' + code + '\n\n10 分钟内有效。\n如果不是你本人在注册，忽略这封邮件就好。'
       });
     } catch (e){
@@ -1417,6 +1419,8 @@ async function handleApi(req, res, urlPath){
       await mail.sendMail({
         to: email,
         subject: '联机贪吃蛇 · 重置密码验证码',
+        code,
+        purpose: '重置密码',
         text: '你正在重置账号「' + me + '」的密码，验证码是：' + code + '\n\n10 分钟内有效。\n如果不是你本人操作，请忽略这封邮件，并尽快修改密码。'
       });
     } catch (e){

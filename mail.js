@@ -85,14 +85,44 @@ function apiConfig(){
   return { api, key, from, url: process.env.MAIL_API_URL || API_ENDPOINTS[api] };
 }
 
-async function sendViaApi(c, { to, subject, text }){
+// —— 验证码邮件正文（HTML）：浅灰底 + 白色圆角卡片，和现代登录邮件一致 ——
+function buildHtml({ code, purpose, site }){
+  const host = site || 'snake-online.up.railway.app';
+  const use = purpose || '登录或注册';
+  const font = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const head = "-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  return [
+    '<!DOCTYPE html><html lang="zh-CN"><head>',
+    '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>联机贪吃蛇 · 验证码</title></head>',
+    '<body style="margin:0;padding:0;background-color:#f5f5f7;-webkit-text-size-adjust:100%;">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f7;"><tr><td align="center" style="padding:48px 16px;">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:420px;width:100%;">',
+    '<tr><td align="center" style="padding:0 0 28px;font-family:' + font + ';font-size:17px;font-weight:600;letter-spacing:-0.02em;color:#1d1d1f;">联机贪吃蛇</td></tr>',
+    '<tr><td style="background-color:#ffffff;border-radius:18px;padding:40px 32px;box-shadow:0 2px 12px rgba(0,0,0,0.04);">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">',
+    '<tr><td align="center" style="font-family:' + head + ';font-size:28px;font-weight:600;letter-spacing:-0.03em;color:#1d1d1f;line-height:1.2;padding:0 0 12px;">验证码</td></tr>',
+    '<tr><td align="center" style="font-family:' + font + ';font-size:15px;line-height:1.5;color:#86868b;padding:0 0 28px;">用于' + use + ' <span style="color:#0071e3;">' + host + '</span></td></tr>',
+    '<tr><td align="center" style="padding:0 0 28px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f7;border-radius:14px;"><tr>',
+    '<td align="center" style="padding:20px 36px;font-family:' + head + ';font-size:40px;font-weight:600;letter-spacing:0.28em;color:#1d1d1f;line-height:1;">' + code + '</td>',
+    '</tr></table></td></tr>',
+    '<tr><td align="center" style="font-family:' + font + ';font-size:14px;line-height:1.5;color:#1d1d1f;padding:0 0 8px;">请在 10 分钟内进行使用</td></tr>',
+    '<tr><td align="center" style="font-family:' + font + ';font-size:13px;line-height:1.5;color:#86868b;">如非本人操作，请忽略此邮件。</td></tr>',
+    '</table></td></tr>',
+    '<tr><td align="center" style="padding:28px 8px 0;font-family:' + font + ';font-size:12px;line-height:1.5;color:#86868b;">Copyright © 联机贪吃蛇</td></tr>',
+    '</table></td></tr></table></body></html>'
+  ].join('\n');
+}
+
+async function sendViaApi(c, { to, subject, text, html }){
   const from = '联机贪吃蛇 <' + c.from + '>';
   let body, headers;
   if (c.api === 'brevo'){
-    body = { sender: { email: c.from, name: '联机贪吃蛇' }, to: [{ email: to }], subject, textContent: text };
+    body = { sender: { email: c.from, name: '联机贪吃蛇' }, to: [{ email: to }], subject, textContent: text, htmlContent: html };
     headers = { 'api-key': c.key, 'content-type': 'application/json', accept: 'application/json' };
   } else if (c.api === 'resend'){
-    body = { from, to: [to], subject, text };
+    body = { from, to: [to], subject, text, html };
     headers = { authorization: 'Bearer ' + c.key, 'content-type': 'application/json' };
   } else if (c.api === 'mailjet'){
     // Mailjet 要两个密钥：MAIL_API_KEY 写成「API Key:Secret Key」
@@ -103,7 +133,8 @@ async function sendViaApi(c, { to, subject, text }){
         From: { Email: c.from, Name: '联机贪吃蛇' },
         To: [{ Email: to }],
         Subject: subject,
-        TextPart: text
+        TextPart: text,
+        HTMLPart: html
       }]
     };
     headers = {
@@ -111,7 +142,7 @@ async function sendViaApi(c, { to, subject, text }){
       'content-type': 'application/json'
     };
   } else {  // smtp2go
-    body = { api_key: c.key, sender: from, to: [to], subject, text_body: text };
+    body = { api_key: c.key, sender: from, to: [to], subject, text_body: text, html_body: html };
     headers = { 'content-type': 'application/json' };
   }
   const r = await fetch(c.url, {
@@ -197,10 +228,10 @@ function ehloName(c){
   return mailDomain(c.from || c.user);
 }
 
-function buildMessage(c, { to, subject, text }){
+function buildMessage(c, { to, subject, text, html }){
   const domain = mailDomain(c.from || c.user);
   const mid = '<' + Date.now().toString(36) + '.' + Math.random().toString(36).slice(2, 10) + '@' + domain + '>';
-  return [
+  const head = [
     'Date: ' + new Date().toUTCString(),
     'Message-ID: ' + mid,
     'From: =?UTF-8?B?' + b64('联机贪吃蛇') + '?= <' + c.from + '>',
@@ -208,17 +239,39 @@ function buildMessage(c, { to, subject, text }){
     'To: <' + to + '>',
     'Auto-Submitted: auto-generated',
     'Subject: =?UTF-8?B?' + b64(subject) + '?=',
-    'MIME-Version: 1.0',
+    'MIME-Version: 1.0'
+  ];
+  if (!html){
+    return head.concat([
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      wrap76(b64(text)),
+      ''
+    ]).join('\r\n');
+  }
+  // 同时带纯文本和 HTML：老邮箱看纯文本，新邮箱看卡片
+  const b = '----=_snake_' + Date.now().toString(36);
+  return head.concat([
+    'Content-Type: multipart/alternative; boundary="' + b + '"',
+    '',
+    '--' + b,
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: base64',
     '',
     wrap76(b64(text)),
+    '--' + b,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrap76(b64(html)),
+    '--' + b + '--',
     ''
-  ].join('\r\n');
+  ]).join('\r\n');
 }
 
 // 用指定的一个邮箱发一封
-async function sendOne(c, { to, subject, text }){
+async function sendOne(c, { to, subject, text, html }){
   const tlsOpts = { host: c.host, port: c.port };
   if (!net.isIP(c.host)) tlsOpts.servername = c.host;   // 直接写 IP 时不能带 servername
   let sock = c.secure ? tls.connect(tlsOpts) : net.connect(c.port, c.host);
@@ -254,7 +307,7 @@ async function sendOne(c, { to, subject, text }){
     check(await r.cmd('RCPT TO:<' + to + '>'), 'RCPT TO');
     const d = await r.cmd('DATA');
     if (d.code !== 354) throw new Error('DATA 失败：' + d.text);
-    r.write(buildMessage(c, { to, subject, text }) + '\r\n.\r\n');
+    r.write(buildMessage(c, { to, subject, text, html }) + '\r\n.\r\n');
     check(await r.read(), '发送正文');
     try { r.write('QUIT\r\n'); } catch {}
   } finally {
@@ -264,10 +317,12 @@ async function sendOne(c, { to, subject, text }){
 
 // 按顺序试每个发信方式，前一个失败就换下一个
 async function sendMail(opts){
+  const o = Object.assign({}, opts);
+  if (!o.html && o.code) o.html = buildHtml(o);   // 验证码邮件用卡片样式
   const tryList = [];
   const api = apiConfig();
-  if (api) tryList.push({ name: '接口(' + api.api + ')', run: () => sendViaApi(api, opts) });
-  for (const c of accounts()) tryList.push({ name: c.user, run: () => sendOne(c, opts) });
+  if (api) tryList.push({ name: '接口(' + api.api + ')', run: () => sendViaApi(api, o) });
+  for (const c of accounts()) tryList.push({ name: c.user, run: () => sendOne(c, o) });
   if (!tryList.length) throw new Error('服务器还没配置邮箱服务');
 
   const errs = [];
@@ -284,4 +339,4 @@ async function sendMail(opts){
   throw new Error(errs.join('；'));
 }
 
-module.exports = { sendMail, isConfigured, accounts, apiConfig, buildMessage, ehloName };
+module.exports = { sendMail, isConfigured, accounts, apiConfig, buildMessage, buildHtml, ehloName };
