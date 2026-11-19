@@ -331,49 +331,7 @@ async function handleOauthReturn(){
   return false;
 }
 
-// —— 手机号验证码登录：短信服务没配就不显示 ——
-async function setupSms(){
-  try {
-    const cfg = await api('/api/config');
-    if (!cfg || !cfg.sms) return;
-    const row = $('smsRow');
-    if (!row) return;
-    row.classList.remove('hidden');
-    let left = 0, timer = null;
-    const sendBtn = $('smsSendBtn');
-    sendBtn.onclick = async () => {
-      if (left > 0) return;
-      const phone = ($('smsPhone').value || '').trim();
-      if (!phone){ $('authErr').textContent = t('phoneBad'); return; }
-      sendBtn.disabled = true;
-      try {
-        const r = await api('/api/sms/send', { method:'POST', body: JSON.stringify({ phone }) });
-        if (r && r.ok){
-          left = 60;
-          sendBtn.textContent = left + 's';
-          timer = setInterval(() => {
-            left--;
-            sendBtn.textContent = left > 0 ? left + 's' : t('sendCode');
-            if (left <= 0){ clearInterval(timer); sendBtn.disabled = false; }
-          }, 1000);
-        } else {
-          sendBtn.disabled = false;
-          $('authErr').textContent = (r && r.msg) || t('smsFail');
-        }
-      } catch (_) { sendBtn.disabled = false; }
-    };
-    $('smsLoginBtn').onclick = async () => {
-      const phone = ($('smsPhone').value || '').trim();
-      const code = ($('smsCode').value || '').trim();
-      if (!phone || !code){ $('authErr').textContent = t('smsFill'); return; }
-      try {
-        const r = await api('/api/phone-login', { method:'POST', body: JSON.stringify({ phone, code }) });
-        if (r && r.ok) saveAuth(r);
-        else $('authErr').textContent = (r && r.msg) || t('smsFail');
-      } catch (_) {}
-    };
-  } catch (_) {}
-}
+
 
 (async function init(){
   await detectLocalServer();  // file:// 时先探测本机 server
@@ -392,7 +350,6 @@ async function setupSms(){
   showPanel('auth');
   setupHcaptcha();
   setupOauth();
-  setupSms();
 })();
 
 // —— Cookie 提示条：只问一次，选择记在本地 ——
