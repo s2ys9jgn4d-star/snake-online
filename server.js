@@ -32,6 +32,20 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 // 官方账号名：徽章、默认好友、免处罚、自动回复都围绕它
 const OFFICIAL_NAME = 'SnakeOnline官方';
 
+// 官方账号登录门禁：只允许授权 IP，或带正确 OFFICIAL_KEY 请求头的设备
+// OFFICIAL_ALLOW_IPS 逗号分隔；OFFICIAL_KEY 建议在 Railway 变量里设一个长随机串
+const OFFICIAL_KEY = String(process.env.OFFICIAL_KEY || '').trim();
+const OFFICIAL_ALLOW_IPS = String(process.env.OFFICIAL_ALLOW_IPS || '127.0.0.1,::1,192.168.1.21')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+function officialAllowed(req){
+  if (!req) return false;
+  const ip = String(clientIp(req) || '').replace(/^::ffff:/, '');
+  const key = String((req.headers && req.headers['x-official-key']) || '').trim();
+  if (OFFICIAL_KEY && key && key === OFFICIAL_KEY) return true;
+  return OFFICIAL_ALLOW_IPS.includes(ip);
+}
+
 function randInt(n){ return (Math.random()*n)|0; }
 
 // ============================================================
@@ -474,7 +488,9 @@ async function handleOauth(req, res, urlPath){
       return sendJSON(res, 400, { ok:false, msg:'登录已过期，请重试', key:'oauthFail' });
     }
     oauthTickets.delete(code);
-    const token = newToken(t.user);
+    const token = newToken(t.user, req);
+
+    if (!token) return sendJSON(res, 403, { ok:false, msg:'官方账号只能在授权设备上登录', key:'officialGuard' });
     return sendJSON(res, 200, { ok:true, token, user:t.user, muteLeft: muteLeftOf(t.user) }, { 'Set-Cookie': authCookie(token) });
   }
 
@@ -706,7 +722,9 @@ function newGuestName(){
   }
   return '游客' + Date.now().toString().slice(-6);
 }
-function newToken(user){
+function newToken(user, req){
+  // 官方账号不给门禁外的请求发令牌
+  if (user === OFFICIAL_NAME && !officialAllowed(req)) return null;
   const t = crypto.randomBytes(24).toString('hex');
   tokens.set(t, user);
   return t;
@@ -1256,7 +1274,8 @@ async function handleApi(req, res, urlPath){
     accounts.set(u, { hash, salt, email, ip });
     saveUsers();
     // 直接发 token，注册后不用再登一次（hCaptcha 票据是一次性的）
-    const token = newToken(u);
+    const token = newToken(u, req);
+    if (!token) return sendJSON(res, 403, { ok:false, msg:'官方账号只能在授权设备上登录', key:'officialGuard' });
     return sendJSON(res, 200, {ok:true, token, user:u, muteLeft:0}, {'Set-Cookie': authCookie(token)});
   }
   if (req.method === 'POST' && urlPath === '/api/login'){
@@ -1268,14 +1287,15 @@ async function handleApi(req, res, urlPath){
     const p = String(body.p||'');
     const a = accounts.get(u);
     if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'用户名或密码不对', key:'errUserPass'});
-    const token = newToken(u);
+    const token = newToken(u, req);
+    if (!token) return sendJSON(res, 403, { ok:false, msg:'官方账号只能在授权设备上登录', key:'officialGuard' });
     return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)}, {'Set-Cookie': authCookie(token)});
   }
   // 游客试玩：不注册、不写文件，拿一个临时身份进大厅
   if (req.method === 'POST' && urlPath === '/api/guest'){
     const u = newGuestName();
     guests.add(u);
-    const token = newToken(u);
+    const token = newToken(u, req);
     return sendJSON(res, 200, {ok:true, token, user:u, guest:true, muteLeft:0}, {'Set-Cookie': authCookie(token)});
   }
   if (req.method === 'POST' && urlPath === '/api/logout'){
@@ -1395,7 +1415,8 @@ async function handleApi(req, res, urlPath){
       accounts.set(user, { hash, salt, email:'', phone, ip });
       saveUsers();
     }
-    const token = newToken(user);
+    const token = newToken(user, req);
+    if (!token) return sendJSON(res, 403, { ok:false, msg:'官方账号只能在授权设备上登录', key:'officialGuard' });
     return sendJSON(res, 200, { ok:true, token, user, muteLeft: muteLeftOf(user) }, { 'Set-Cookie': authCookie(token) });
   }
 
