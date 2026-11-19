@@ -206,6 +206,59 @@ function errMsg(r, fallback){
   return (r && r.msg) || fallback || '';
 }
 
+// 官方账号第二步：弹出管理员密钥输入框。确定返回字符串，取消返回 null。
+function askOfficialKey(message){
+  return new Promise(function(resolve){
+    var lang = (typeof getLang === 'function') ? String(getLang() || '') : '';
+    var en = lang.slice(0, 2) !== 'zh';
+    var L = en ? { title:'Admin key', tip:'This account needs an admin key.', cancel:'Cancel', ok:'Confirm' }
+               : { title:'管理员密钥', tip:'官方账号需要管理员密钥才能登录。', cancel:'取消', ok:'确定' };
+    var mask = document.createElement('div');
+    mask.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;';
+    var card = document.createElement('div');
+    card.style.cssText = 'box-sizing:border-box;width:100%;max-width:380px;background:#fff;border-radius:14px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.22);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1d1d1f;';
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:15px;font-weight:600;margin-bottom:6px;';
+    title.textContent = L.title;
+    var tip = document.createElement('div');
+    tip.style.cssText = 'font-size:13px;color:#6e6e73;margin-bottom:14px;';
+    tip.textContent = message || L.tip;
+    var input = document.createElement('input');
+    input.type = 'password';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.placeholder = L.title;
+    input.style.cssText = 'box-sizing:border-box;width:100%;height:44px;padding:0 12px;border:1px solid #d2d2d7;border-radius:10px;font-size:16px;outline:none;';
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px;';
+    var cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = L.cancel;
+    cancel.style.cssText = 'height:38px;padding:0 16px;border:1px solid #d2d2d7;background:#fff;color:#1d1d1f;border-radius:10px;font-size:14px;cursor:pointer;';
+    var ok = document.createElement('button');
+    ok.type = 'button';
+    ok.textContent = L.ok;
+    ok.style.cssText = 'height:38px;padding:0 18px;border:0;background:#0071e3;color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;';
+    row.appendChild(cancel); row.appendChild(ok);
+    card.appendChild(title); card.appendChild(tip); card.appendChild(input); card.appendChild(row);
+    mask.appendChild(card);
+    document.body.appendChild(mask);
+    input.focus();
+    function done(v){
+      document.removeEventListener('keydown', onKey, true);
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+      resolve(v);
+    }
+    function onKey(e){
+      if (e.key === 'Enter'){ e.preventDefault(); done(input.value.trim()); }
+      else if (e.key === 'Escape'){ e.preventDefault(); done(null); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    cancel.addEventListener('click', function(){ done(null); });
+    ok.addEventListener('click', function(){ done(input.value.trim()); });
+  });
+}
+
 async function doAuth(){
   const u = $('authUser').value.trim();
   const p = $('authPass').value;
@@ -227,6 +280,16 @@ async function doAuth(){
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
       method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p, hcaptcha: hcToken} : {u, p, email, code, cid: captchaId, captcha, hcaptcha: hcToken, agree: true})
     });
+    // 官方账号：密码对了，服务端回一次性票据，这里弹窗要管理员密钥
+    if (r && r.needOfficialKey){
+      const k = await askOfficialKey(r.msg || '');
+      if (k === null){ $('authErr').textContent = ''; return; }
+      if (!k){ $('authErr').textContent = r.msg || 'need key'; return; }
+      const ru = await api('/api/official/unlock', { method:'POST', body: JSON.stringify({ ticket: r.ticket, k }) });
+      if (!ru.ok){ $('authErr').textContent = errMsg(ru, 'official key error'); return; }
+      saveAuth(ru);
+      return;
+    }
     if (!r.ok){
       $('authErr').textContent = errMsg(r, t('opFailed'));
       if (window.hcaptcha && hcWidget !== null) window.hcaptcha.reset(hcWidget);
