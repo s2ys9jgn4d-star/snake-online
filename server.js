@@ -1391,6 +1391,8 @@ async function handleApi(req, res, urlPath){
       ok: true,
       siteKey: HCAPTCHA_SITE_KEY,
       captchaRequired: !!HCAPTCHA_SECRET && !!HCAPTCHA_SITE_KEY,
+      // 只暴露「有没有配管理员密钥」这个布尔值，不泄露密钥本身
+      officialKeyReady: !!OFFICIAL_KEY,
       oauthBase: OAUTH_BASE,
       oauth: {
         microsoft: oauthReady('microsoft'),
