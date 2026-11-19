@@ -15,6 +15,19 @@ const mail = require('./mail'); // 注册验证码邮件
 
 const PORT = Number(process.env.PORT) || 8180;
 const PUBLIC_DIR = path.join(__dirname, 'dist');
+// 页面里脚本的 ?v= 由这里自动填：谁最后改过 js/css，版本号就跟谁走，
+// 免得「代码已经发上去了，浏览器还在用缓存里的旧文件」。
+const ASSET_STAMP = (() => {
+  try {
+    let newest = 0;
+    for (const f of fs.readdirSync(PUBLIC_DIR)) {
+      if (!/\.(js|css)$/i.test(f)) continue;
+      const m = fs.statSync(path.join(PUBLIC_DIR, f)).mtimeMs;
+      if (m > newest) newest = m;
+    }
+    return newest ? String(Math.floor(newest)) : 'v1';
+  } catch { return 'v1'; }
+})();
 let DATA_DIR = path.join(__dirname, 'data');
 
 const COLS = 42, ROWS = 30;
@@ -2075,6 +2088,8 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath);
     const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Vary': 'Accept-Encoding' };
     // 页面每次校验（改了立刻生效）；脚本/样式带 ?v= 版本号，可以放心长缓存一天
+    // 页面里的 ?v= 改成静态资源时间戳，脚本一改、地址就变，浏览器必须重新取
+    if (ext === '.html') data = Buffer.from(data.toString('utf8').replace(/(\?v=)[0-9A-Za-z._-]+/g, '$1' + ASSET_STAMP));
     if (RELEASE_EXT.has(ext)) headers['Cache-Control'] = 'no-cache, must-revalidate';
     else if (ext === '.html') headers['Cache-Control'] = 'no-cache, must-revalidate';
     else headers['Cache-Control'] = 'public, max-age=86400';
