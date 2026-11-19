@@ -1232,25 +1232,25 @@ async function handleApi(req, res, urlPath){
     const p = String(body.p||'');
     const email = normalizeEmail(body.email);
     const code = String(body.code||'').trim();
-    if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
-    if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位'});
+    if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(res,400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文', key:'errUserFormat'});
+    if (p.length<4 || p.length>32) return sendJSON(res,400,{ok:false,msg:'密码 4-32 位', key:'errPassLen'});
     // 邮箱必填：即使发不了验证码也要填，用来追溯封号
     const needEmail = mailUsable();
-    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'邮箱格式不对，要像 abc@example.com 这样'});
-    if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧'});
-    if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在'});
-    if (guests.has(u)) return sendJSON(res,409,{ok:false,msg:'这个名字正被游客使用，换一个吧'});
-    for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了'});
+    if (!EMAIL_RE.test(email)) return sendJSON(res,400,{ok:false,msg:'邮箱格式不对，要像 abc@example.com 这样', key:'errEmailFormat'});
+    if (hasBannedWord(u)) return sendJSON(res,400,{ok:false,msg:'用户名含有不允许的字词，换一个吧', key:'errBannedWord'});
+    if (accounts.has(u)) return sendJSON(res,409,{ok:false,msg:'用户名已存在', key:'errUserExists'});
+    if (guests.has(u)) return sendJSON(res,409,{ok:false,msg:'这个名字正被游客使用，换一个吧', key:'errGuestName'});
+    for (const a of accounts.values()) if (a.email === email) return sendJSON(res,409,{ok:false,msg:'这个邮箱已经注册过账号了', key:'errEmailUsed'});
     const ip = clientIp(req);
     const hit = bannedHit(email, ip);
-    if (hit) return sendJSON(res, 403, {ok:false, msg:hit});
+    if (hit) return sendJSON(res, 403, {ok:false, msg:hit, key:'bannedMsg'});
     if (needEmail){
       const rec = emailCodes.get(email);
-      if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次'});
+      if (!rec || rec.exp < Date.now() || rec.code !== code) return sendJSON(res,400,{ok:false,msg:'验证码不对或已过期，重新发一次', key:'errCodeWrong'});
       emailCodes.delete(email);
     } else {
       // 没开邮箱验证时，用图片验证码兜底，防止机器人乱注册
-      if (!checkCaptcha(String(body.cid||''), body.captcha)) return sendJSON(res,400,{ok:false,msg:'验证码不对，点「换一张」再试'});
+      if (!checkCaptcha(String(body.cid||''), body.captcha)) return sendJSON(res,400,{ok:false,msg:'验证码不对，点「换一张」再试', key:'errBadCaptcha'});
     }
     const { hash, salt } = hashPass(p);
     accounts.set(u, { hash, salt, email, ip });
@@ -1267,7 +1267,7 @@ async function handleApi(req, res, urlPath){
     const u = String(body.u||'').trim();
     const p = String(body.p||'');
     const a = accounts.get(u);
-    if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'用户名或密码不对'});
+    if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'用户名或密码不对', key:'errUserPass'});
     const token = newToken(u);
     return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)}, {'Set-Cookie': authCookie(token)});
   }

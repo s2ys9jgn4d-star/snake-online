@@ -135,7 +135,7 @@ $('sendCodeBtn').addEventListener('click', async () => {
   try {
     const r = await api('/api/send-code', { method:'POST', body: JSON.stringify({ email, u }) });
     if (!r.ok){
-      $('authErr').textContent = r.msg || t('sendFailed');
+      $('authErr').textContent = errMsg(r, t('sendFailed'));
       btn.disabled = false; btn.textContent = t('sendCode');
       refreshMailReady();   // 发不出去就切到「免验证码注册」
       return;
@@ -203,6 +203,15 @@ async function setupHcaptcha(){
   } catch (_) { /* 脚本加载失败就不拦，服务端仍会校验 */ }
 }
 
+// 服务端错误提示：优先用返回的 key 翻译，翻不到再用中文原文
+function errMsg(r, fallback){
+  if (r && r.key){
+    const s = t(r.key);
+    if (s && s !== r.key) return s;
+  }
+  return (r && r.msg) || fallback || '';
+}
+
 async function doAuthAction(){
   const u = $('authUser').value.trim();
   const p = $('authPass').value;
@@ -225,7 +234,7 @@ async function doAuthAction(){
       method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p, hcaptcha: hcToken} : {u, p, email, code, cid: captchaId, captcha, hcaptcha: hcToken, agree: true})
     });
     if (!r.ok){
-      $('authErr').textContent = r.msg || t('opFailed');
+      $('authErr').textContent = errMsg(r, t('opFailed'));
       if (window.hcaptcha && hcWidget !== null) window.hcaptcha.reset(hcWidget);
       if (authTab === 'register' && mailReady === false) refreshCaptcha();
       return;
@@ -250,7 +259,7 @@ async function doAuthAction(){
         localStorage.setItem('snakeUser', authUser);
         enterLobby();
       } else {
-        $('authErr').textContent = r2.msg || t('regLoginFailed');
+        $('authErr').textContent = errMsg(r2, t('regLoginFailed'));
       }
     }
   } catch (e) { $('authErr').textContent = t('networkError'); }
@@ -262,7 +271,7 @@ $('guestBtn').addEventListener('click', async () => {
   $('authErr').textContent = '';
   try {
     const r = await api('/api/guest', { method:'POST' });
-    if (!r.ok){ $('authErr').textContent = r.msg || '游客进入失败，稍后再试'; return; }
+    if (!r.ok){ $('authErr').textContent = errMsg(r, t('opFailed')); return; }
     isGuestUser = true;
     authToken = r.token; authUser = r.user;
     localStorage.setItem('snakeToken', authToken);

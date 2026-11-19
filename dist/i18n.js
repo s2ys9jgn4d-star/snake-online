@@ -1769,6 +1769,31 @@
     if (!TRANSLATIONS[sk]) TRANSLATIONS[sk] = {};
     for (var skey in PATCH11[sk]) TRANSLATIONS[sk][skey] = PATCH11[sk][skey]; }
 
+  // PATCH12：登录/注册失败的提示
+  var PATCH12 = {
+    'zh-CN': {
+      errUserPass:'用户名或密码不对', errUserFormat:'用户名 1-16 字，只能用字母、数字或中文', errPassLen:'密码要 4-32 位',
+      errEmailFormat:'邮箱格式不对', errBannedWord:'用户名含有不允许的字词', errUserExists:'用户名已存在',
+      errGuestName:'这个名字正被游客使用', errEmailUsed:'这个邮箱已经注册过账号了', errCodeWrong:'验证码不对或已过期',
+      errBadCaptcha:'验证码不对', bannedMsg:'你已被封禁，暂时不能注册或登录'
+    },
+    'zh-TW': {
+      errUserPass:'使用者名稱或密碼不對', errUserFormat:'使用者名稱 1-16 字，只能用字母、數字或中文', errPassLen:'密碼要 4-32 位',
+      errEmailFormat:'電子郵件格式不對', errBannedWord:'使用者名稱含有不允許的字詞', errUserExists:'使用者名稱已存在',
+      errGuestName:'這個名字正被遊客使用', errEmailUsed:'這個電子郵件已經註冊過帳號了', errCodeWrong:'驗證碼不對或已過期',
+      errBadCaptcha:'驗證碼不對', bannedMsg:'你已被封禁，暫時不能註冊或登入'
+    },
+    'en': {
+      errUserPass:'Wrong username or password', errUserFormat:'1-16 chars, letters/numbers/Chinese only', errPassLen:'Password must be 4-32 characters',
+      errEmailFormat:'Invalid email address', errBannedWord:'Username contains a blocked word', errUserExists:'Username already taken',
+      errGuestName:'That name is in use by a guest', errEmailUsed:'This email is already registered', errCodeWrong:'Code is wrong or expired',
+      errBadCaptcha:'Wrong code', bannedMsg:'Your account has been blocked'
+    }
+  };
+  for (var pk in PATCH12){ if (!Object.prototype.hasOwnProperty.call(PATCH12, pk)) continue;
+    if (!TRANSLATIONS[pk]) TRANSLATIONS[pk] = {};
+    for (var pkey in PATCH12[pk]) TRANSLATIONS[pk][pkey] = PATCH12[pk][pkey]; }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
