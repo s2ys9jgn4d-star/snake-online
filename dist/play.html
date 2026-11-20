@@ -157,6 +157,7 @@ try {
       <div class="lobby-user">
         <span id="lobbyUserName">游客</span>
         <span id="lobbyBest">最高分 0</span>
+        <span id="adultCountdown" style="font-size:12px;opacity:.72;cursor:default"></span>
         <button id="settingsBtn" class="ghost-btn" data-i18n="settings">⚙️ 设置</button>
         <button id="adminBtn" onclick="window.open('admin.html','_blank')" data-i18n="admin">管理后台</button>
         <button id="logoutBtn" data-i18n="logout">退出</button>
@@ -345,6 +346,22 @@ try {
 
 </div>
 
+<script>
+(function(){
+  // 成年倒计时彩蛋：目标日 2036-03-26（本地零点）
+  var TARGET = new Date(2036, 2, 26, 0, 0, 0).getTime();
+  function tick(){
+    var el = document.getElementById('adultCountdown');
+    if (!el) return;
+    var left = TARGET - Date.now();
+    if (left <= 0){ el.textContent = '🎉 已成年'; el.title = '2036-03-26'; return; }
+    el.textContent = '⏳ 距离成年还有 ' + Math.floor(left / 86400000) + ' 天';
+    el.title = '目标日期：2036-03-26';
+  }
+  tick();
+  setInterval(tick, 600000);
+})();
+</script>
 <script src="i18n.js?v=20261120a"></script>
 <script src="game.js?v=20261120a"></script>
 <script src="groups.js?v=20261120a"></script>
