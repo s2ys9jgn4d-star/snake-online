@@ -361,7 +361,7 @@ function ensureRelease(tag, files) {
 function gitShip() {
   const isRepo = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { encoding: 'utf8' })
   if (isRepo.status !== 0) { log('  跳过 git：当前目录不是仓库'); return }
-  run('git', ['add', 'dist', '打包.js', 'package.json', '.gitignore'], { quiet: true })
+  run('git', ['add', 'dist', '打包.js', 'package.json', '.gitignore', 'LICENSE', 'mail.js', 'ios/SnakeOnline/Info.plist'], { quiet: true })
   const diff = spawnSync('git', ['diff', '--cached', '--quiet'])
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
