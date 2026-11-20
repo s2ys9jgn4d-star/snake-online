@@ -1249,10 +1249,17 @@ function isAdmin(req){
 
 async function handleApi(req, res, urlPath){
   if (req.method === 'OPTIONS'){
+    // 前端是带 Cookie 请求的（credentials:'include'），这时浏览器要求
+    // 预检的 Allow-Origin 必须回显具体来源，不能是 *，否则整条请求被判跨域失败
+    // （页面显示「网络错误」）。file:// 打开的客户端 Origin 是字符串 "null"，也要回显。
+    const origin = String(req.headers.origin || '');
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Max-Age': '600',
+      'Vary': 'Origin'
     });
     return res.end();
   }
