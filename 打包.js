@@ -89,6 +89,83 @@ function syncWeb(htmlDir) {
   }
 }
 
+// ---------- 图片瘦身（目标是每个包 ≤ 1 MB）----------
+const SRC_ICON = path.join(ROOT, 'ios', 'SnakeOnline', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon1024.png')
+
+const PY_SHRINK = `
+import sys
+from PIL import Image
+task = sys.argv[1]
+if task == 'png':
+    src, dst, px, colors = sys.argv[2], sys.argv[3], int(sys.argv[4]), int(sys.argv[5])
+    im = Image.open(src).convert('RGBA')
+    im.thumbnail((px, px), Image.LANCZOS)
+    im.convert('P', palette=Image.ADAPTIVE, colors=colors).save(dst, optimize=True)
+elif task == 'quant':
+    f, colors = sys.argv[2], int(sys.argv[3])
+    im = Image.open(f).convert('RGBA')
+    im.convert('P', palette=Image.ADAPTIVE, colors=colors).save(f, optimize=True)
+elif task == 'sizes':
+    src, outdir = sys.argv[2], sys.argv[3]
+    im = Image.open(src).convert('RGBA')
+    for px in (16, 32, 64, 128, 256):
+        im.resize((px, px), Image.LANCZOS).convert('P', palette=Image.ADAPTIVE, colors=256).save(outdir + '/d_%d.png' % px, optimize=True)
+elif task == 'ico':
+    src, dst = sys.argv[2], sys.argv[3]
+    im = Image.open(src).convert('RGBA')
+    im.save(dst, format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
+`
+const pyImg = (...args) => run('python3', ['-c', PY_SHRINK, ...args], { quiet: true })
+
+function shrinkPng(src, dst, px, colors = 256) {
+  pyImg('png', src, dst, String(px), String(colors))
+}
+
+// 网页里那张 121 KB 的 favicon → 128px 量化
+function shrinkFavicon(dir) {
+  const f = path.join(dir, 'favicon.png')
+  if (!fs.existsSync(f)) return
+  const tmp = f + '.tmp.png'
+  shrinkPng(f, tmp, 128, 128)
+  fs.renameSync(tmp, f)
+}
+
+// iOS 一堆 AppIcon*.png 逐个量化（尺寸不变，只减颜色和压缩率）
+function shrinkIpaIcons(appDir) {
+  for (const f of fs.readdirSync(appDir)) {
+    if (!/^AppIcon.*\.png$/.test(f)) continue
+    pyImg('quant', path.join(appDir, f), '256')
+  }
+}
+
+// macOS 的 snake.icns：用 1024 原图重做一套到 256，体积从 1.5 MB 掉到 ~150 KB
+function rebuildIcns(resDir) {
+  const set = path.join(WORK, 'Snake.iconset')
+  fs.rmSync(set, { recursive: true, force: true })
+  fs.mkdirSync(set, { recursive: true })
+  pyImg('sizes', SRC_ICON, set)
+  for (const px of [16, 32, 64, 128, 256]) {
+    fs.copyFileSync(path.join(set, `d_${px}.png`), path.join(set, `icon_${px}x${px}.png`))
+    if (px <= 128) fs.copyFileSync(path.join(set, `d_${px}.png`), path.join(set, `icon_${px}x${px}@2x.png`))
+  }
+  run('iconutil', ['-c', 'icns', set, '-o', path.join(resDir, 'snake.icns')], { quiet: true })
+}
+
+// Windows 壳自带的 icon.ico 282 KB，压到多尺寸 ICO
+function shrinkIco(file) {
+  if (!fs.existsSync(file) || !fs.existsSync(SRC_ICON)) return
+  const tmp = file + '.tmp.ico'
+  pyImg('ico', SRC_ICON, tmp)
+  fs.renameSync(tmp, file)
+}
+
+// 包里用不到的站点文件
+function dropSiteOnly(htmlDir) {
+  for (const f of ['robots.txt', 'admin.html']) {
+    fs.rmSync(path.join(htmlDir, f), { force: true })
+  }
+}
+
 // 各平台的壳都写死加载 index.html（那是官网下载页），
 // 所以打包时把 index.html 换成直接进游戏页的入口。
 const SITE = 'https://snake-online.up.railway.app'
@@ -115,6 +192,9 @@ function buildWin() {
   run('unzip', ['-q', path.join(BASE, PKG.win.file), '-d', dir], { quiet: true })
   syncWeb(path.join(dir, 'Snake-win64', 'html'))
   writeEntry(path.join(dir, 'Snake-win64', 'html'))
+  shrinkFavicon(path.join(dir, 'Snake-win64', 'html'))
+  dropSiteOnly(path.join(dir, 'Snake-win64', 'html'))
+  shrinkIco(path.join(dir, 'Snake-win64', 'icon.ico'))
   const out = path.join(DIST, PKG.win.file)
   fs.rmSync(out, { force: true })
   const cwd = process.cwd()
@@ -130,6 +210,9 @@ function buildIpa() {
   run('unzip', ['-q', path.join(BASE, PKG.ipa.file), '-d', dir], { quiet: true })
   syncWeb(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
   writeEntry(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
+  shrinkFavicon(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
+  dropSiteOnly(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
+  shrinkIpaIcons(path.join(dir, 'Payload', 'SnakeOnline.app'))
   const out = path.join(DIST, PKG.ipa.file)
   fs.rmSync(out, { force: true })
   const cwd = process.cwd()
@@ -152,6 +235,9 @@ function buildDmg() {
   }
   syncWeb(path.join(app, 'Contents', 'Resources', 'html'))
   writeEntry(path.join(app, 'Contents', 'Resources', 'html'))
+  shrinkFavicon(path.join(app, 'Contents', 'Resources', 'html'))
+  dropSiteOnly(path.join(app, 'Contents', 'Resources', 'html'))
+  rebuildIcns(path.join(app, 'Contents', 'Resources'))
   // 改过内容，原签名失效，重新临时签名
   try { fs.rmSync(path.join(app, 'Contents', '_CodeSignature'), { recursive: true, force: true }) } catch {}
   run('codesign', ['--force', '--deep', '--sign', '-', app], { quiet: true })
@@ -173,6 +259,7 @@ function buildApk() {
   run('unzip', ['-q', path.join(BASE, PKG.apk.file), '-d', dir], { quiet: true })
   syncWeb(path.join(dir, 'assets'))
   writeEntry(path.join(dir, 'assets'))
+  shrinkFavicon(path.join(dir, 'assets'))
   const tools = findApkTools()
   const raw = path.join(WORK, 'raw.apk')
   const aligned = path.join(WORK, 'aligned.apk')
