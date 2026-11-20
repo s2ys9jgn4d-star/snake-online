@@ -3,3 +3,6 @@ data/
 .wrangler/
 node_modules/
 *.log
+pack-base/
+release/
+*.idsig

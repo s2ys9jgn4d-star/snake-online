@@ -5,7 +5,7 @@
   "description": "Multiplayer snake game with accounts, rooms, leaderboard and chat",
   "scripts": {
     "start": "node server.js",
-    "pack": "node 打包tar.js"
+    "pack": "node 打包.js"
   },
   "engines": {
     "node": ">=18"
