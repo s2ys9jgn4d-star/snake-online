@@ -240,7 +240,9 @@ function gitShip() {
   if (isRepo.status !== 0) { log('  跳过 git：当前目录不是仓库'); return }
   run('git', ['add', 'dist', '打包.js', 'package.json', '.gitignore'], { quiet: true })
   const diff = spawnSync('git', ['diff', '--cached', '--quiet'])
-  const msg = `重新打包全平台安装包 ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const msg = `重新打包全平台安装包 ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
   if (diff.status !== 0) {
     run('git', ['-c', 'user.name=niemac13', '-c', 'user.email=niemac13@users.noreply.github.com', 'commit', '-q', '-m', msg], { quiet: true })
     log('  已提交：' + msg)
