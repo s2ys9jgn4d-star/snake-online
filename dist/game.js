@@ -68,6 +68,8 @@ async function api(path, opts={}){
   const r = await fetch(API_BASE + path, { headers:h, credentials:'include', ...opts });
   return r.json();
 }
+// 皮肤商店（shop.js）复用同一套登录态与服务器地址
+window.SNAKE = { api, token: () => authToken, user: () => authUser, isGuest: () => isGuestUser };
 
 // —— 登录/注册标签切换 ——
 let authTab = 'login';
@@ -796,6 +798,17 @@ function joinRoom(room){
 // 单人模式：服务器会开一间私密房并塞进一个豆包
 const soloBtnEl = $('soloBtn');
 if (soloBtnEl) soloBtnEl.addEventListener('click', () => sendWS({ t:'solo' }));
+// 深链接 #solo：自动开一局单人模式并进入（演示 / 截图用）
+if (location.hash === '#solo'){
+  setTimeout(() => { try { soloBtnEl && soloBtnEl.click(); } catch(_){} }, 1200);
+  let tries = 0;
+  const t = setInterval(() => {
+    const m = document.getElementById('menu');
+    const b = document.getElementById('enterBtn');
+    if (b && m && !m.classList.contains('hidden')) { b.click(); }
+    if (++tries > 12) clearInterval(t);
+  }, 500);
+}
 
 $('createRoomBtn').addEventListener('click', () => {
   const name = $('newRoomName').value.trim();
@@ -1173,6 +1186,7 @@ function render(){
 const frac = Math.min(1.05, Math.max(0, (now - curAt - Math.min(40, _T*0.25)) / _T));
   for (const p of players.values()){
     const color = p.alive ? p.color : 'rgba(107,114,128,.45)';
+    const skinId = p.skin || 'classic';
     // 本地预测：自己的蛇头朝 pendingTurns[0] 弯
     let bend = null;
     // 本地预测只在低延迟时启用，避免高延迟下服务器状态到达时回弹（蛇头抽搐）
@@ -1192,16 +1206,24 @@ const frac = Math.min(1.05, Math.max(0, (now - curAt - Math.min(40, _T*0.25)) / 
       return [cells[i][0] + (prev[0]-cells[i][0])*frac, cells[i][1] + (prev[1]-cells[i][1])*frac];
     };
     const cell = Math.min(cw, ch);
+    // 光晕皮肤（黄金 / 玫瑰 / 墨影）
+    if (p.alive && (skinId==='gold' || skinId==='rose' || skinId==='shadow')){
+      ctx.shadowBlur = cell * 0.9;
+      ctx.shadowColor = color;
+    }
     // 蛇身圆点（从尾画到头，让头在上层）
     for (let i=cells.length-1; i>=0; i--){
       const g = lerpSeg(i);
       const x = g[0]*cw + cw/2, y = g[1]*ch + ch/2;
-      ctx.fillStyle = color;
+      ctx.fillStyle = (p.alive && skinId==='rainbow')
+        ? 'hsl(' + ((i*22 + Math.floor(now/90)) % 360) + ',92%,64%)'
+        : color;
       ctx.beginPath();
       ctx.arc(x, y, cell * (i===0 ? 0.46 : 0.4), 0, Math.PI*2);
       ctx.fill();
     }
     // 眼睛（按朝向偏移）
+    ctx.shadowBlur = 0;
     if (p.alive){
       const h = lerpSeg(0);
       const hx = h[0]*cw + cw/2, hy = h[1]*ch + ch/2;

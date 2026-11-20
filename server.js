@@ -38,6 +38,43 @@ const COLORS = [
   '#ef4444','#3b82f6','#22c55e','#eab308','#a855f7','#f97316',
   '#06b6d4','#ec4899','#84cc16','#6366f1','#14b8a6','#f43f5e'
 ];
+// —— 皮肤商店目录（服务端是唯一权威，价格/颜色都以这里为准）——
+const SKINS = [
+  { id:'classic', name:'经典原色', price:0,   color:null,      desc:'系统分配的颜色，免费' },
+  { id:'neon',    name:'霓虹紫',   price:25,  color:'#a855f7', desc:'紫得发光' },
+  { id:'ice',     name:'冰蓝',     price:25,  color:'#38bdf8', desc:'冷静的水蓝' },
+  { id:'lime',    name:'柠檬绿',   price:40,  color:'#a3e635', desc:'比草地更亮一等' },
+  { id:'gold',    name:'黄金',     price:80,  color:'#facc15', glow:1, desc:'自带金边光晕' },
+  { id:'rose',    name:'玫瑰',     price:80,  color:'#fb7185', glow:1, desc:'带光晕的粉' },
+  { id:'rainbow', name:'彩虹',     price:150, color:'#f472b6', rainbow:1, desc:'每一节换一个颜色' },
+  { id:'shadow',  name:'墨影',     price:200, color:'#f8fafc', glow:1, desc:'黑底上的白色残影' }
+];
+const SKIN_MAP = new Map(SKINS.map(s => [s.id, s]));
+function skinById(id){ return SKIN_MAP.get(String(id||'')) || null; }
+// 账号身上的皮肤（没买过/没装备就是 classic）
+function skinOfUser(u){
+  const a = accounts.get(u);
+  return skinById(a && a.skin) || SKINS[0];
+}
+function skinIdOfUser(u){ return skinOfUser(u).id; }
+function colorOfUser(u){ return skinOfUser(u).color; }
+// 北京时间「今天」，签到按自然日算
+function dayKey(d){
+  const t = new Date((d ? d.getTime() : Date.now()) + 8 * 3600 * 1000);
+  return t.toISOString().slice(0, 10);
+}
+function prevDayKey(key){
+  const t = new Date(key + 'T00:00:00Z');
+  t.setUTCDate(t.getUTCDate() - 1);
+  return t.toISOString().slice(0, 10);
+}
+// 签到奖励：基础 10，连签 3 天起 +5，连签 7 天起再 +5（封顶 20/天）
+function checkinReward(streak){
+  if (streak >= 7) return 20;
+  if (streak >= 3) return 15;
+  return 10;
+}
+
 const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
 const OPPOSITE = { up:'down', down:'up', left:'right', right:'left' };
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -65,7 +102,7 @@ function randInt(n){ return (Math.random()*n)|0; }
 // ============================================================
 // 有些托管环境的代码目录是只读的，建不了也写不了 data/，就退到系统临时目录
 function pickDataDir(){
-  const candidates = [path.join(__dirname, 'data'), path.join(os.tmpdir(), 'snake-online-data')];
+  const candidates = [process.env.SNAKE_DATA_DIR, path.join(__dirname, 'data'), path.join(os.tmpdir(), 'snake-online-data')].filter(Boolean);
   for (const dir of candidates){
     try {
       fs.mkdirSync(dir, { recursive: true });
@@ -87,7 +124,7 @@ let leaderboard = []; // [{u, s}]
 function loadUsers(){
   try {
     const raw = JSON.parse(fs.readFileSync(USERS_FILE,'utf8'));
-    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0, email:a.e||'', ip:a.i||'' }]));
+    accounts = new Map(raw.map(a => [a.u, { hash:a.h, salt:a.s, strikes:a.n||0, muteUntil:a.m||0, email:a.e||'', ip:a.i||'', coins:a.c||0, lastCheckin:a.l||'', streak:a.st||0, owned:Array.isArray(a.o)?a.o.slice():[], skin:a.k||'classic' }]));
   } catch { accounts = new Map(); }
 }
 function loadScores(){
@@ -178,7 +215,7 @@ function cloudBackup(){
   }, 5000);
 }
 
-function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0, e:a.email||'', i:a.ip||''}))); cloudBackup(); }
+function saveUsers(){ atomicWrite(USERS_FILE, [...accounts.entries()].map(([u,a])=>({u, h:a.hash, s:a.salt, n:a.strikes||0, m:a.muteUntil||0, e:a.email||'', i:a.ip||'', c:a.coins||0, l:a.lastCheckin||'', st:a.streak||0, o:a.owned||[], k:a.skin||'classic'}))); cloudBackup(); }
 function saveScores(){ atomicWrite(SCORES_FILE, leaderboard); cloudBackup(); }
 
 // ============================================================
@@ -976,7 +1013,7 @@ class Room {
       tick: this.tick,
       tickMs: this.tickMs,
       players: [...this.players.values()].map(p => ({
-        id: p.id, name: p.name, color: p.color, score: p.score,
+        id: p.id, name: p.name, color: p.color, skin: p.skin || 'classic', score: p.score,
         alive: p.alive, dir: p.dir, seq: p.lastSeq||0,
         deathReason: p.deathReason,
         body: p.alive ? p.body.map(s=>[s.x,s.y]) : []
@@ -997,7 +1034,7 @@ class Room {
     }
     const id = this.nextPlayerId++;
     const p = {
-      id, ws, name: username, color: COLORS[(id-1)%COLORS.length],
+      id, ws, name: username, color: colorOfUser(username) || COLORS[(id-1)%COLORS.length], skin: skinIdOfUser(username),
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null
     };
     this.resetPlayer(p);
@@ -1013,7 +1050,7 @@ class Room {
     const id = this.nextPlayerId++;
     const stub = { sendText(){}, ping(){}, close(){}, lastSeen: Infinity, playerId: id, room: this };
     const p = {
-      id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length],
+      id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length], skin: 'classic',
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
       isBot: true
     };
@@ -1450,6 +1487,72 @@ async function handleApi(req, res, urlPath){
     if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
     const score = leaderboard.find(x=>x.u===u);
     return sendJSON(res, 200, {ok:true, user:u, best: score ? score.s : 0, muteLeft: muteLeftOf(u), guest:isGuest(u), official: u === OFFICIAL_NAME});
+  }
+  // —— 皮肤商店 / 签到 / 金币 ——
+  if (req.method === 'GET' && urlPath === '/api/shop'){
+    const u = authFromReq(req);
+    if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    if (isGuest(u)) return sendJSON(res, 200, {ok:true, guest:true, coins:0, skin:'classic', owned:[], checkedToday:false, streak:0, skins:SKINS});
+    const a = accounts.get(u);
+    const today = dayKey();
+    return sendJSON(res, 200, {
+      ok:true, guest:false,
+      coins: a.coins || 0,
+      skin: a.skin || 'classic',
+      owned: a.owned || [],
+      streak: a.lastCheckin ? (a.streak || 0) : 0,
+      checkedToday: a.lastCheckin === today,
+      skins: SKINS
+    });
+  }
+  if (req.method === 'POST' && urlPath === '/api/shop/checkin'){
+    const u = authFromReq(req);
+    if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    if (isGuest(u)) return sendJSON(res, 403, {ok:false,msg:'游客不能领金币，注册个账号再来', key:'guestNoCoin'});
+    const a = accounts.get(u);
+    const today = dayKey();
+    if (a.lastCheckin === today) return sendJSON(res, 400, {ok:false,msg:'今天已经签到过了，明天再来', key:'checkedToday', coins:a.coins||0});
+    const streak = a.lastCheckin === prevDayKey(today) ? (a.streak || 0) + 1 : 1;
+    const reward = checkinReward(streak);
+    a.streak = streak;
+    a.lastCheckin = today;
+    a.coins = (a.coins || 0) + reward;
+    saveUsers();
+    return sendJSON(res, 200, {ok:true, reward, coins:a.coins, streak, checkedToday:true});
+  }
+  if (req.method === 'POST' && urlPath === '/api/shop/buy'){
+    const u = authFromReq(req);
+    if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    if (isGuest(u)) return sendJSON(res, 403, {ok:false,msg:'游客不能买皮肤，注册个账号再来', key:'guestNoSkin'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const sk = skinById(body.id);
+    if (!sk) return sendJSON(res, 404, {ok:false,msg:'没有这个皮肤'});
+    const a = accounts.get(u);
+    a.owned = a.owned || [];
+    if (a.owned.includes(sk.id) || sk.id === 'classic')
+      return sendJSON(res, 400, {ok:false,msg:'这个皮肤你已经有了', key:'alreadyOwned'});
+    if ((a.coins || 0) < sk.price)
+      return sendJSON(res, 400, {ok:false,msg:'金币不够，还差 ' + (sk.price - (a.coins||0)) + ' 个', key:'noEnoughCoins'});
+    a.coins = (a.coins || 0) - sk.price;
+    a.owned.push(sk.id);
+    a.skin = sk.id;             // 买完直接穿上
+    saveUsers();
+    return sendJSON(res, 200, {ok:true, coins:a.coins, skin:a.skin, owned:a.owned});
+  }
+  if (req.method === 'POST' && urlPath === '/api/shop/equip'){
+    const u = authFromReq(req);
+    if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const sk = skinById(body.id);
+    if (!sk) return sendJSON(res, 404, {ok:false,msg:'没有这个皮肤'});
+    const a = accounts.get(u) || {};
+    if (sk.id !== 'classic' && !(a.owned||[]).includes(sk.id))
+      return sendJSON(res, 403, {ok:false,msg:'还没买这个皮肤', key:'notOwned'});
+    a.skin = sk.id;
+    if (!isGuest(u)) { accounts.set(u, a); saveUsers(); }
+    return sendJSON(res, 200, {ok:true, skin:sk.id});
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20).map(x => ({ ...x, off: isOfficial(x.u) }))});
