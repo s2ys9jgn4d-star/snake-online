@@ -159,6 +159,16 @@ function shrinkIco(file) {
   fs.renameSync(tmp, file)
 }
 
+// 应用包版权（Info.plist 的 NSHumanReadableCopyright）
+function stampCopyright(plist) {
+  if (!fs.existsSync(plist)) return
+  const v = '© 2026 Nie Qizhong, Inc.'
+  const pb = '/usr/libexec/PlistBuddy'
+  spawnSync(pb, ['-c', 'Set :NSHumanReadableCopyright ' + v, plist], { encoding: 'utf8' })
+  const ok = spawnSync(pb, ['-c', 'Print :NSHumanReadableCopyright', plist], { encoding: 'utf8' })
+  if (ok.status !== 0) spawnSync(pb, ['-c', 'Add :NSHumanReadableCopyright string ' + v, plist], { encoding: 'utf8' })
+}
+
 // 包里用不到的站点文件
 function dropSiteOnly(htmlDir) {
   for (const f of ['robots.txt', 'admin.html']) {
@@ -213,6 +223,7 @@ function buildIpa() {
   shrinkFavicon(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
   dropSiteOnly(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
   shrinkIpaIcons(path.join(dir, 'Payload', 'SnakeOnline.app'))
+  stampCopyright(path.join(dir, 'Payload', 'SnakeOnline.app', 'Info.plist'))
   const out = path.join(DIST, PKG.ipa.file)
   fs.rmSync(out, { force: true })
   const cwd = process.cwd()
@@ -238,6 +249,7 @@ function buildDmg() {
   shrinkFavicon(path.join(app, 'Contents', 'Resources', 'html'))
   dropSiteOnly(path.join(app, 'Contents', 'Resources', 'html'))
   rebuildIcns(path.join(app, 'Contents', 'Resources'))
+  stampCopyright(path.join(app, 'Contents', 'Info.plist'))
   // 改过内容，原签名失效，重新临时签名
   try { fs.rmSync(path.join(app, 'Contents', '_CodeSignature'), { recursive: true, force: true }) } catch {}
   run('codesign', ['--force', '--deep', '--sign', '-', app], { quiet: true })
