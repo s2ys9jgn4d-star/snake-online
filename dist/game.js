@@ -551,7 +551,10 @@ function handleWs(msg){
     case 'state': onState(msg); break;
     case 'pong': onPong(msg); break;
     case 'need_room': break;  // server 提示，忽略
-    default: console.log('未知消息类型', msg.t);
+    default:
+      // 群组事件交给 groups.js 处理
+      if (window.Groups && String(msg.t||'').indexOf('group_') === 0) Groups.onEvent(msg);
+      else console.log('未知消息类型', msg.t);
   }
 }
 

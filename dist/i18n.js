@@ -1822,6 +1822,31 @@
     if (!TRANSLATIONS[qk]) TRANSLATIONS[qk] = {};
     for (var qkey in PATCH13[qk]) TRANSLATIONS[qk][qkey] = PATCH13[qk][qkey]; }
 
+  // PATCH14：群组相关提示
+  var PATCH14 = {
+    'zh-CN': {
+      groupMax:'每人最多创建 5 个群，请先删除几个群', groupGuest:'游客不能建群，先注册一个账号吧',
+      groupNameBad:'群名不能为空或含有不允许的字词', groupNotFound:'群不存在，可能已经解散了',
+      groupNotMember:'你还不是这个群的成员', groupNotOwner:'只有群主能做这个操作',
+      groupNoReq:'没有这条申请', groupOwnerLeave:'群主不能退出，请直接解散群'
+    },
+    'zh-TW': {
+      groupMax:'每人最多建立 5 個群組，請先刪除幾個群組', groupGuest:'遊客不能建立群組，先註冊一個帳號吧',
+      groupNameBad:'群組名稱不能為空或含有不允許的字詞', groupNotFound:'群組不存在，可能已經解散了',
+      groupNotMember:'你還不是這個群組的成員', groupNotOwner:'只有群主能做這個操作',
+      groupNoReq:'沒有這條申請', groupOwnerLeave:'群主不能退出，請直接解散群組'
+    },
+    'en': {
+      groupMax:'You can own at most 5 groups, please delete some first', groupGuest:'Guests cannot create groups, please register first',
+      groupNameBad:'Group name is empty or contains a blocked word', groupNotFound:'Group not found, it may have been deleted',
+      groupNotMember:'You are not a member of this group', groupNotOwner:'Only the owner can do that',
+      groupNoReq:'No such request', groupOwnerLeave:'The owner cannot leave, delete the group instead'
+    }
+  };
+  for (var rk in PATCH14){ if (!Object.prototype.hasOwnProperty.call(PATCH14, rk)) continue;
+    if (!TRANSLATIONS[rk]) TRANSLATIONS[rk] = {};
+    for (var rkey in PATCH14[rk]) TRANSLATIONS[rk][rkey] = PATCH14[rk][rkey]; }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
