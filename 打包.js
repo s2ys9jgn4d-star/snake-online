@@ -89,11 +89,32 @@ function syncWeb(htmlDir) {
   }
 }
 
+// 各平台的壳都写死加载 index.html（那是官网下载页），
+// 所以打包时把 index.html 换成直接进游戏页的入口。
+const SITE = 'https://snake-online.up.railway.app'
+
+function writeEntry(htmlDir) {
+  const html = `<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>贪吃蛇</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>html,body{margin:0;height:100%;background:#ABCDEF;color:#123;font:16px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}</style>
+</head><body><div><p>正在进入联机贪吃蛇…</p><p><a id="l" href="${SITE}/play.html">没反应？点这里</a></p></div>
+<script>
+var phone = /Android|iPhone|iPad|iPod|HarmonyOS/i.test(navigator.userAgent) || Math.min(screen.width, screen.height) < 700;
+var url = "${SITE}/" + (phone ? "mobile.html" : "play.html");
+document.getElementById("l").href = url;
+location.replace(url);
+</script></body></html>`
+  fs.writeFileSync(path.join(htmlDir, 'index.html'), html)
+}
+
 // ---------- 3. 五个包 ----------
 function buildWin() {
   const dir = path.join(WORK, 'win')
   run('unzip', ['-q', path.join(BASE, PKG.win.file), '-d', dir], { quiet: true })
   syncWeb(path.join(dir, 'Snake-win64', 'html'))
+  writeEntry(path.join(dir, 'Snake-win64', 'html'))
   const out = path.join(DIST, PKG.win.file)
   fs.rmSync(out, { force: true })
   const cwd = process.cwd()
@@ -108,6 +129,7 @@ function buildIpa() {
   const dir = path.join(WORK, 'ipa')
   run('unzip', ['-q', path.join(BASE, PKG.ipa.file), '-d', dir], { quiet: true })
   syncWeb(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
+  writeEntry(path.join(dir, 'Payload', 'SnakeOnline.app', 'html'))
   const out = path.join(DIST, PKG.ipa.file)
   fs.rmSync(out, { force: true })
   const cwd = process.cwd()
@@ -129,6 +151,7 @@ function buildDmg() {
     run('hdiutil', ['detach', '-quiet', mnt], { quiet: true })
   }
   syncWeb(path.join(app, 'Contents', 'Resources', 'html'))
+  writeEntry(path.join(app, 'Contents', 'Resources', 'html'))
   // 改过内容，原签名失效，重新临时签名
   try { fs.rmSync(path.join(app, 'Contents', '_CodeSignature'), { recursive: true, force: true }) } catch {}
   run('codesign', ['--force', '--deep', '--sign', '-', app], { quiet: true })
@@ -149,6 +172,7 @@ function buildApk() {
   const dir = path.join(WORK, 'apk')
   run('unzip', ['-q', path.join(BASE, PKG.apk.file), '-d', dir], { quiet: true })
   syncWeb(path.join(dir, 'assets'))
+  writeEntry(path.join(dir, 'assets'))
   const tools = findApkTools()
   const raw = path.join(WORK, 'raw.apk')
   const aligned = path.join(WORK, 'aligned.apk')
