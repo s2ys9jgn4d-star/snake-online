@@ -430,6 +430,9 @@
     }
   }
 
+  // 样式在脚本加载时就注入：入口按钮 #groupBtn 一出现就有样式，不必等点开面板
+  injectCss();
+
   window.Groups = { open: open, onEvent: onEvent };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addEntry);
   else addEntry();
