@@ -55,37 +55,52 @@
     return [base, base, base, base];
   };
 
-  let data = null;
+  let data = null; let dataAt = 0;
 
-  async function load(){
+  async function load(force){
     const api = window.SNAKE.api;
+    // 两分钟内的数据直接用缓存，打开商店不必再等接口
+    if (!force && data && data.ok && Date.now() - dataAt < 120000){ render(); return; }
     data = await api('/api/shop');
     if (!data || !data.ok){
       if (data && data.msg) toast(data.msg);
       return;
     }
+    dataAt = Date.now();
     render();
+  }
+
+  // 进大厅后后台预取一次，把首次打开商店的等待挪到用户不注意的时候
+  function prefetch(){
+    setTimeout(async () => {
+      if (!window.SNAKE || !window.SNAKE.user()) return;
+      if (data && data.ok) return;
+      try {
+        const d = await window.SNAKE.api('/api/shop');
+        if (d && d.ok){ data = d; dataAt = Date.now(); }
+      } catch (e) {}
+    }, 1200);
   }
 
   async function checkin(){
     const r = await window.SNAKE.api('/api/shop/checkin', { method:'POST', body:'{}' });
     if (!r || !r.ok){ toast((r && r.msg) || '签到失败'); return; }
     toast('签到成功，+ ' + r.reward + ' 金币（连续 ' + r.streak + ' 天）');
-    await load();
+    await load(true);
   }
 
   async function buy(id){
     const r = await window.SNAKE.api('/api/shop/buy', { method:'POST', body: JSON.stringify({ id }) });
     if (!r || !r.ok){ toast((r && r.msg) || '购买失败'); return; }
     toast('买到了，已经自动穿上');
-    await load();
+    await load(true);
   }
 
   async function equip(id){
     const r = await window.SNAKE.api('/api/shop/equip', { method:'POST', body: JSON.stringify({ id }) });
     if (!r || !r.ok){ toast((r && r.msg) || '切换失败'); return; }
     toast('已换上，下一局生效');
-    await load();
+    await load(true);
   }
 
   function render(){
@@ -196,10 +211,10 @@
     if (location.hash !== '#shop') return;
     const mask = document.getElementById('shopMask');
     if (!mask) return;
-    if (!window.SNAKE || !window.SNAKE.token()) return;
+    if (!window.SNAKE || !window.SNAKE.user()) return;
     mask.classList.add('open');
     load();
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { build(); setTimeout(autoOpen, 900); });
-  else { build(); setTimeout(autoOpen, 900); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { build(); setTimeout(autoOpen, 900); prefetch(); });
+  else { build(); setTimeout(autoOpen, 900); prefetch(); }
 })();
