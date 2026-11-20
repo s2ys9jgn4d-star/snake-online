@@ -468,7 +468,20 @@ async function handleOauthReturn(){
   // 浏览器里登录态存在 httpOnly Cookie 里，页面读不到，只能问一次服务器
   if (!authToken) {
     const c = await api('/api/me');
-    if (c.ok && c.user){ authUser = c.user; isGuestUser = !!c.guest; enterLobby(); return; }
+    if (c.ok && c.user){
+      // 只有 Cookie 没有 token：先换一个 token，WebSocket 和商店都要用它
+      const t = await api('/api/token', { method:'POST', body:'{}' });
+      if (t && t.ok && t.token){
+        authToken = t.token; authUser = t.user || c.user;
+        localStorage.setItem('snakeToken', authToken);
+        localStorage.setItem('snakeUser', authUser);
+      } else {
+        console.warn('Cookie 换 token 失败：' + ((t && t.msg) || '未知原因'));
+      }
+      isGuestUser = !!c.guest;
+      enterLobby();
+      return;
+    }
   }
   if (!authToken) {
     // 先显示登录面板再渲染 hCaptcha，避免在隐藏容器里渲染尺寸异常

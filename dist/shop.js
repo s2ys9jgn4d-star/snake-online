@@ -182,7 +182,8 @@
     btn.className = 'ghost-btn';
     btn.textContent = '🎨 皮肤商店';
     btn.onclick = async () => {
-      if (!window.SNAKE || !window.SNAKE.token()){ toast('先登录再来逛商店'); return; }
+      // Cookie 身份也算登录：接口范层面会用 Cookie 校验，前端不拦
+      if (!window.SNAKE || !window.SNAKE.user()){ toast('先登录再来逛商店'); return; }
       mask.classList.add('open');
       await load();
     };

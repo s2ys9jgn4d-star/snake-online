@@ -1554,6 +1554,14 @@ async function handleApi(req, res, urlPath){
     if (!isGuest(u)) { accounts.set(u, a); saveUsers(); }
     return sendJSON(res, 200, {ok:true, skin:sk.id});
   }
+  // 用 Cookie 换一个能用的 token：页面读不到 httpOnly Cookie 时靠它恢复 WebSocket 身份
+  if (req.method === 'POST' && urlPath === '/api/token'){
+    const u = authFromReq(req);
+    if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const token = newToken(u, req);
+    if (!token) return sendJSON(res, 403, {ok:false,msg:'官方账号只能在授权设备上登录', key:'officialGuard'});
+    return sendJSON(res, 200, {ok:true, token, user:u, muteLeft:muteLeftOf(u), guest:isGuest(u)}, {'Set-Cookie': authCookie(token)});
+  }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20).map(x => ({ ...x, off: isOfficial(x.u) }))});
   }
