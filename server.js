@@ -2271,8 +2271,9 @@ const RELEASE_EXT = new Set(['.dmg','.zip','.apk','.ipa','.deb','.hap','.exe','.
 const gzipCache = new Map();
 
 // 安装包不再由本站占流量：命中下面的文件名就 302 到 GitHub Releases（免费、无限流量）
+// 用 latest/download 而不是写死某个版本号，发新版后站点自动跟上
 const RELEASES_BASE = process.env.RELEASES_URL
-  || 'https://github.com/s2ys9jgn4d-star/snake-online/releases/download/v1.0.2';
+  || 'https://github.com/s2ys9jgn4d-star/snake-online/releases/latest/download';
 const RELEASE_ASSET = {
   '贪吃蛇.dmg': 'snake-online.dmg',
   '贪吃蛇-unsigned.ipa': 'snake-online-unsigned.ipa',
