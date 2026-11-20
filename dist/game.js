@@ -219,6 +219,9 @@ function askOfficialCode(message, email){
     var L = { title: tx('officialCodeTitle','Email code'),
               tip: tx('needOfficialCode','A 6-digit code was sent to the official mailbox.'),
               cancel: tx('cancel','Cancel'), ok: tx('ok','Confirm') };
+    // 这个弹窗以前用了没定义的 en，官方登录一弹就抛 ReferenceError，
+    // 被外层 catch 当成「网络错误」。语言判断统一在这里做。
+    var isEn = (typeof getLang === 'function') && getLang() === 'en';
     var mask = document.createElement('div');
     mask.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;';
     var card = document.createElement('div');
@@ -232,7 +235,7 @@ function askOfficialCode(message, email){
     if (email){
       var to = document.createElement('div');
       to.style.cssText = 'font-size:12px;color:#86868b;margin:-8px 0 12px;';
-      to.textContent = (en ? 'Sent to ' : '发到：') + email;
+      to.textContent = (isEn ? 'Sent to ' : '发到：') + email;
       card.appendChild(title); card.appendChild(tip); card.appendChild(to);
     } else {
       card.appendChild(title); card.appendChild(tip);
@@ -243,7 +246,7 @@ function askOfficialCode(message, email){
     input.maxLength = 6;
     input.autocomplete = 'one-time-code';
     input.spellcheck = false;
-    input.placeholder = en ? '6-digit code' : '6 位数字';
+    input.placeholder = isEn ? '6-digit code' : '6 位数字';
     input.style.cssText = 'box-sizing:border-box;width:100%;height:46px;padding:0 12px;border:1px solid #d2d2d7;border-radius:10px;font-size:22px;letter-spacing:6px;text-align:center;outline:none;';
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px;';
