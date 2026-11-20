@@ -110,7 +110,7 @@ function buildHtml({ code, purpose, site }){
     '<tr><td align="center" style="font-family:' + font + ';font-size:14px;line-height:1.5;color:#1d1d1f;padding:0 0 8px;">请在 10 分钟内进行使用</td></tr>',
     '<tr><td align="center" style="font-family:' + font + ';font-size:13px;line-height:1.5;color:#86868b;">如非本人操作，请忽略此邮件。</td></tr>',
     '</table></td></tr>',
-    '<tr><td align="center" style="padding:28px 8px 0;font-family:' + font + ';font-size:12px;line-height:1.5;color:#86868b;">Copyright © 联机贪吃蛇</td></tr>',
+    '<tr><td align="center" style="padding:28px 8px 0;font-family:' + font + ';font-size:12px;line-height:1.5;color:#86868b;">© 2026 Nie Qizhong, Inc.</td></tr>',
     '</table></td></tr></table></body></html>'
   ].join('\n');
 }
