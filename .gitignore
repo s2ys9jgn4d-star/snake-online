@@ -6,3 +6,5 @@ node_modules/
 pack-base/
 release/
 *.idsig
+ios/**/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
