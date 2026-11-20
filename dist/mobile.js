@@ -209,10 +209,10 @@ function errMsg(r, fallback){
 // 官方账号第二步：弹出邮箱验证码输入框。确定返回字符串，取消返回 null。
 function askOfficialCode(message, email){
   return new Promise(function(resolve){
-    var lang = (typeof getLang === 'function') ? String(getLang() || '') : '';
-    var en = lang.slice(0, 2) !== 'zh';
-    var L = en ? { title:'Email code', tip:'A 6-digit code was sent to the official mailbox.', cancel:'Cancel', ok:'Confirm' }
-               : { title:'邮箱验证码', tip:'验证码已发到官方邮箱，10 分钟内有效。', cancel:'取消', ok:'确定' };
+    var tx = function(k, fb){ var s = (typeof t === 'function') ? t(k) : k; return (s && s !== k) ? s : fb; };
+    var L = { title: tx('officialCodeTitle','Email code'),
+              tip: tx('needOfficialCode','A 6-digit code was sent to the official mailbox.'),
+              cancel: tx('cancel','Cancel'), ok: tx('ok','Confirm') };
     var mask = document.createElement('div');
     mask.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;';
     var card = document.createElement('div');

@@ -1794,6 +1794,34 @@
     if (!TRANSLATIONS[pk]) TRANSLATIONS[pk] = {};
     for (var pkey in PATCH12[pk]) TRANSLATIONS[pk][pkey] = PATCH12[pk][pkey]; }
 
+  // PATCH13：官方账号邮箱验证码登录
+  var PATCH13 = {
+    'zh-CN': {
+      officialCodeTitle:'邮箱验证码', ok:'确定', cancel:'取消',
+      needOfficialCode:'验证码已发到官方邮箱，10 分钟内有效', needOfficialKey:'官方账号需要管理员密钥',
+      officialGuard:'官方账号只能在授权设备上登录', officialNoMail:'邮箱服务暂时不可用，官方账号这会儿登不了',
+      officialMailFail:'验证码没发出去，稍后再试一次', officialTicketExpired:'验证码已过期，请重新登录',
+      officialCodeLocked:'验证码错太多次了，重新登录再来', officialCodeWrong:'验证码不对'
+    },
+    'zh-TW': {
+      officialCodeTitle:'電子郵件驗證碼', ok:'確定', cancel:'取消',
+      needOfficialCode:'驗證碼已寄到官方信箱，10 分鐘內有效', needOfficialKey:'官方帳號需要管理員金鑰',
+      officialGuard:'官方帳號只能在授權裝置上登入', officialNoMail:'郵件服務暫時無法使用，官方帳號目前無法登入',
+      officialMailFail:'驗證碼沒寄出，請稍後再試', officialTicketExpired:'驗證碼已過期，請重新登入',
+      officialCodeLocked:'驗證碼錯誤次數過多，請重新登入', officialCodeWrong:'驗證碼不對'
+    },
+    'en': {
+      officialCodeTitle:'Email code', ok:'Confirm', cancel:'Cancel',
+      needOfficialCode:'A 6-digit code was sent to the official mailbox', needOfficialKey:'Admin key required for the official account',
+      officialGuard:'The official account can only sign in on authorized devices', officialNoMail:'Mail service is unavailable, the official account cannot sign in right now',
+      officialMailFail:'The code was not sent, please try again later', officialTicketExpired:'The code expired, please sign in again',
+      officialCodeLocked:'Too many wrong attempts, please sign in again', officialCodeWrong:'Wrong code'
+    }
+  };
+  for (var qk in PATCH13){ if (!Object.prototype.hasOwnProperty.call(PATCH13, qk)) continue;
+    if (!TRANSLATIONS[qk]) TRANSLATIONS[qk] = {};
+    for (var qkey in PATCH13[qk]) TRANSLATIONS[qk][qkey] = PATCH13[qk][qkey]; }
+
   global.LANG_LIST = LANG_LIST;
   global.TRANSLATIONS = TRANSLATIONS;
   global.setLang = setLang;
