@@ -45,8 +45,11 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 // 官方账号名：徽章、默认好友、免处罚、自动回复都围绕它
 const OFFICIAL_NAME = 'SnakeOnline官方';
 
-// 官方账号登录门禁：只允许授权 IP，或带正确 OFFICIAL_KEY 请求头的设备
-// OFFICIAL_ALLOW_IPS 逗号分隔；OFFICIAL_KEY 建议在 Railway 变量里设一个长随机串
+// 官方账号登录门禁：密码对了之后，还要往「官方邮箱」发一封 6 位验证码，收得到才算本人
+// OFFICIAL_EMAIL 可换收件人；OFFICIAL_ALLOW_IPS 里的本机/局域网地址直接放行
+const OFFICIAL_EMAIL = String(process.env.OFFICIAL_EMAIL || 'nqzyy@hotmail.com').trim();
+const OFFICIAL_CODE_TTL = 10 * 60 * 1000;   // 验证码 10 分钟有效
+// 兜底：带正确 OFFICIAL_KEY 请求头的设备可以直接过，不用走邮箱验证码
 const OFFICIAL_KEY = String(process.env.OFFICIAL_KEY || '').trim();
 const OFFICIAL_ALLOW_IPS = String(process.env.OFFICIAL_ALLOW_IPS || '127.0.0.1,::1,192.168.1.21')
   .split(',').map(s => s.trim()).filter(Boolean);
@@ -199,6 +202,9 @@ let mailBrokenUntil = 0;
 const MAIL_BROKEN_MS = 10 * 60 * 1000;
 // 邮箱验证码：REQUIRE_EMAIL_CODE=0 强制关；配了 HTTPS 发信接口自动开；只有 SMTP 时要 =1 才开
 const REQUIRE_EMAIL_CODE = process.env.REQUIRE_EMAIL_CODE;
+// 能不能真的发信（官方验证码不看 REQUIRE_EMAIL_CODE，永远要发）
+function mailSendable(){ return !!(mail.apiConfig() || mail.isConfigured()); }
+
 function mailUsable(){
   if (REQUIRE_EMAIL_CODE === '0') return false;
   if (Date.now() < mailBrokenUntil) return false;
@@ -1302,40 +1308,58 @@ async function handleApi(req, res, urlPath){
     const p = String(body.p||'');
     const a = accounts.get(u);
     if (!a || !verifyPass(p, a.salt, a.hash)) return sendJSON(res,401,{ok:false,msg:'用户名或密码不对', key:'errUserPass'});
-    // 官方账号：密码对了也先不发令牌，回一次性票据让前端弹窗要管理员密钥
+    // 官方账号：密码对了也先不发令牌，先往官方邮箱发一封验证码，前端弹窗让人填
     if (u === OFFICIAL_NAME && !officialAllowed(req)){
+      if (!mailSendable())
+        return sendJSON(res, 503, { ok:false, msg:'邮箱服务暂时不可用，官方账号这会儿登不了', key:'officialNoMail' });
       const ticket = crypto.randomBytes(16).toString('hex');
-      officialTickets.set(ticket, { user: u, exp: Date.now() + 3 * 60 * 1000, tries: 0 });
+      const code = String(crypto.randomInt(100000, 1000000));
+      officialTickets.set(ticket, { user: u, code, exp: Date.now() + OFFICIAL_CODE_TTL, tries: 0 });
       // 顺手清掉过期的票据，别让 Map 一直长
       for (const [k, v] of officialTickets) if (v.exp < Date.now()) officialTickets.delete(k);
-      return sendJSON(res, 200, { ok:false, needOfficialKey:true, ticket, msg:'官方账号需要管理员密钥', key:'needOfficialKey' });
+      try {
+        await mail.sendMail({
+          to: OFFICIAL_EMAIL,
+          subject: '联机贪吃蛇 · 官方账号登录验证码',
+          text: '你的官方账号登录验证码是：' + code + '\n\n10 分钟内有效，只能用来登录官方账号。\n'
+              + '如果这不是你本人操作，请立刻改密码。'
+        });
+      } catch (e){
+        officialTickets.delete(ticket);
+        console.log('官方验证码发信失败：' + e.message);
+        return sendJSON(res, 503, { ok:false, msg:'验证码没发出去，稍后再试一次', key:'officialMailFail' });
+      }
+      if (process.env.OFFICIAL_DEV_PRINT === '1') console.log('[official-dev] 验证码 ' + code + ' → ' + OFFICIAL_EMAIL);
+      return sendJSON(res, 200, {
+        ok:false, needOfficialCode:true, ticket, email: OFFICIAL_EMAIL,
+        msg:'验证码已发到官方邮箱，10 分钟内有效', key:'needOfficialCode'
+      });
     }
     const token = newToken(u, req);
     if (!token) return sendJSON(res, 403, { ok:false, msg:'官方账号只能在授权设备上登录', key:'officialGuard' });
     return sendJSON(res, 200, {ok:true, token, user:u, muteLeft: muteLeftOf(u)}, {'Set-Cookie': authCookie(token)});
   }
-  // 官方账号第二步：一次性票据 + 管理员密钥 → 换令牌
-  if (req.method === 'POST' && urlPath === '/api/official/unlock'){
+  // 官方账号第二步：一次性票据 + 邮箱验证码 → 换令牌
+  if (req.method === 'POST' && urlPath === '/api/official/code'){
     const body = await readBody(req);
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const ticket = String(body.ticket || '').trim();
-    const k = String(body.k || '').trim();
+    const code = String(body.code || '').replace(/[^0-9]/g, '');
     const rec = officialTickets.get(ticket);
     if (!rec || rec.exp < Date.now()){
       officialTickets.delete(ticket);
-      return sendJSON(res, 400, {ok:false,msg:'密钥验证已过期，请重新登录', key:'officialTicketExpired'});
+      return sendJSON(res, 400, {ok:false,msg:'验证码已过期，请重新登录', key:'officialTicketExpired'});
     }
-    if (!OFFICIAL_KEY) return sendJSON(res, 403, {ok:false,msg:'服务器还没配置管理员密钥，官方账号暂时不能登录', key:'officialNoKey'});
     // 定长比较，别用 === 泄露长度差异
-    const kb = Buffer.from(k), ob = Buffer.from(OFFICIAL_KEY);
-    const same = kb.length === ob.length && crypto.timingSafeEqual(kb, ob);
+    const cb = Buffer.from(code), ob = Buffer.from(String(rec.code || ''));
+    const same = cb.length === ob.length && crypto.timingSafeEqual(cb, ob);
     if (!same){
       rec.tries = (rec.tries || 0) + 1;
       if (rec.tries >= 5){
         officialTickets.delete(ticket);
-        return sendJSON(res, 429, {ok:false,msg:'密钥错太多次了，重新登录再来', key:'officialKeyLocked'});
+        return sendJSON(res, 429, {ok:false,msg:'验证码错太多次了，重新登录再来', key:'officialCodeLocked'});
       }
-      return sendJSON(res, 403, {ok:false,msg:'管理员密钥不对', key:'officialKeyWrong'});
+      return sendJSON(res, 403, {ok:false,msg:'验证码不对', key:'officialCodeWrong'});
     }
     officialTickets.delete(ticket);
     const token = newToken(rec.user, req, true);
@@ -1406,6 +1430,7 @@ async function handleApi(req, res, urlPath){
       captchaRequired: !!HCAPTCHA_SECRET && !!HCAPTCHA_SITE_KEY,
       // 只暴露「有没有配管理员密钥」这个布尔值，不泄露密钥本身
       officialKeyReady: !!OFFICIAL_KEY,
+      officialCodeReady: mailSendable(),
       oauthBase: OAUTH_BASE,
       oauth: {
         microsoft: oauthReady('microsoft'),

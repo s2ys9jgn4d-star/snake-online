@@ -206,13 +206,13 @@ function errMsg(r, fallback){
   return (r && r.msg) || fallback || '';
 }
 
-// 官方账号第二步：弹出管理员密钥输入框。确定返回字符串，取消返回 null。
-function askOfficialKey(message){
+// 官方账号第二步：弹出邮箱验证码输入框。确定返回字符串，取消返回 null。
+function askOfficialCode(message, email){
   return new Promise(function(resolve){
     var lang = (typeof getLang === 'function') ? String(getLang() || '') : '';
     var en = lang.slice(0, 2) !== 'zh';
-    var L = en ? { title:'Admin key', tip:'This account needs an admin key.', cancel:'Cancel', ok:'Confirm' }
-               : { title:'管理员密钥', tip:'官方账号需要管理员密钥才能登录。', cancel:'取消', ok:'确定' };
+    var L = en ? { title:'Email code', tip:'A 6-digit code was sent to the official mailbox.', cancel:'Cancel', ok:'Confirm' }
+               : { title:'邮箱验证码', tip:'验证码已发到官方邮箱，10 分钟内有效。', cancel:'取消', ok:'确定' };
     var mask = document.createElement('div');
     mask.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;';
     var card = document.createElement('div');
@@ -223,12 +223,22 @@ function askOfficialKey(message){
     var tip = document.createElement('div');
     tip.style.cssText = 'font-size:13px;color:#6e6e73;margin-bottom:14px;';
     tip.textContent = message || L.tip;
+    if (email){
+      var to = document.createElement('div');
+      to.style.cssText = 'font-size:12px;color:#86868b;margin:-8px 0 12px;';
+      to.textContent = (en ? 'Sent to ' : '发到：') + email;
+      card.appendChild(title); card.appendChild(tip); card.appendChild(to);
+    } else {
+      card.appendChild(title); card.appendChild(tip);
+    }
     var input = document.createElement('input');
-    input.type = 'password';
-    input.autocomplete = 'off';
+    input.type = 'text';
+    input.inputMode = 'numeric';
+    input.maxLength = 6;
+    input.autocomplete = 'one-time-code';
     input.spellcheck = false;
-    input.placeholder = L.title;
-    input.style.cssText = 'box-sizing:border-box;width:100%;height:44px;padding:0 12px;border:1px solid #d2d2d7;border-radius:10px;font-size:16px;outline:none;';
+    input.placeholder = en ? '6-digit code' : '6 位数字';
+    input.style.cssText = 'box-sizing:border-box;width:100%;height:46px;padding:0 12px;border:1px solid #d2d2d7;border-radius:10px;font-size:22px;letter-spacing:6px;text-align:center;outline:none;';
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px;';
     var cancel = document.createElement('button');
@@ -240,7 +250,7 @@ function askOfficialKey(message){
     ok.textContent = L.ok;
     ok.style.cssText = 'height:38px;padding:0 18px;border:0;background:#0071e3;color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;';
     row.appendChild(cancel); row.appendChild(ok);
-    card.appendChild(title); card.appendChild(tip); card.appendChild(input); card.appendChild(row);
+    card.appendChild(input); card.appendChild(row);
     mask.appendChild(card);
     document.body.appendChild(mask);
     input.focus();
@@ -250,12 +260,12 @@ function askOfficialKey(message){
       resolve(v);
     }
     function onKey(e){
-      if (e.key === 'Enter'){ e.preventDefault(); done(input.value.trim()); }
+      if (e.key === 'Enter'){ e.preventDefault(); done(input.value.replace(/[^0-9]/g, '')); }
       else if (e.key === 'Escape'){ e.preventDefault(); done(null); }
     }
     document.addEventListener('keydown', onKey, true);
     cancel.addEventListener('click', function(){ done(null); });
-    ok.addEventListener('click', function(){ done(input.value.trim()); });
+    ok.addEventListener('click', function(){ done(input.value.replace(/[^0-9]/g, '')); });
   });
 }
 
@@ -280,13 +290,13 @@ async function doAuth(){
     const r = await api(authTab === 'login' ? '/api/login' : '/api/register', {
       method:'POST', body: JSON.stringify(authTab === 'login' ? {u, p, hcaptcha: hcToken} : {u, p, email, code, cid: captchaId, captcha, hcaptcha: hcToken, agree: true})
     });
-    // 官方账号：密码对了，服务端回一次性票据，这里弹窗要管理员密钥
-    if (r && r.needOfficialKey){
-      const k = await askOfficialKey(r.msg || '');
-      if (k === null){ $('authErr').textContent = ''; return; }
-      if (!k){ $('authErr').textContent = r.msg || 'need key'; return; }
-      const ru = await api('/api/official/unlock', { method:'POST', body: JSON.stringify({ ticket: r.ticket, k }) });
-      if (!ru.ok){ $('authErr').textContent = errMsg(ru, 'official key error'); return; }
+    // 官方账号：密码对了，服务端已往官方邮箱发验证码，这里弹窗让人填
+    if (r && r.needOfficialCode){
+      const c = await askOfficialCode(r.msg || '', r.email || '');
+      if (c === null){ $('authErr').textContent = ''; return; }
+      if (!c){ $('authErr').textContent = '请输入 6 位验证码'; return; }
+      const ru = await api('/api/official/code', { method:'POST', body: JSON.stringify({ ticket: r.ticket, code: c }) });
+      if (!ru.ok){ $('authErr').textContent = errMsg(ru, '验证码不对'); return; }
       saveAuth(ru);
       return;
     }
