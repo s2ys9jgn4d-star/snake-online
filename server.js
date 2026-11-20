@@ -49,16 +49,12 @@ const OFFICIAL_NAME = 'SnakeOnline官方';
 // OFFICIAL_EMAIL 可换收件人；OFFICIAL_ALLOW_IPS 里的本机/局域网地址直接放行
 const OFFICIAL_EMAIL = String(process.env.OFFICIAL_EMAIL || 'nqzyy@hotmail.com').trim();
 const OFFICIAL_CODE_TTL = 10 * 60 * 1000;   // 验证码 10 分钟有效
-// 兜底：带正确 OFFICIAL_KEY 请求头的设备可以直接过，不用走邮箱验证码
-const OFFICIAL_KEY = String(process.env.OFFICIAL_KEY || '').trim();
 const OFFICIAL_ALLOW_IPS = String(process.env.OFFICIAL_ALLOW_IPS || '127.0.0.1,::1,192.168.1.21')
   .split(',').map(s => s.trim()).filter(Boolean);
 
 function officialAllowed(req){
   if (!req) return false;
   const ip = String(clientIp(req) || '').replace(/^::ffff:/, '');
-  const key = String((req.headers && req.headers['x-official-key']) || '').trim();
-  if (OFFICIAL_KEY && key && key === OFFICIAL_KEY) return true;
   return OFFICIAL_ALLOW_IPS.includes(ip);
 }
 
@@ -287,6 +283,8 @@ function maybeOfficialReply(from){
   officialReplyAt.set(from, Date.now());
   const k = pairKey(from, OFFICIAL_NAME);
   const arr = social.msgs[k] = social.msgs[k] || [];
+  // 欢迎语在打开聊天时就已经放进去了，这里再回一次就是重复的同一条
+  if (arr.some(m => m.from === OFFICIAL_NAME && m.text === OFFICIAL_AUTO_REPLY)) return;
   const item = { from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
   arr.push(item);
   if (arr.length > 100) arr.splice(0, arr.length - 100);
@@ -305,6 +303,49 @@ function cleanupSocial(u){
   }
   for (const k of Object.keys(social.msgs)) if (k.split('|').includes(u)) delete social.msgs[k];
   saveSocial();
+}
+
+// ============================================================
+//  群组：每人最多建 5 个群，加入要申请，群主可踢人/解散
+// ============================================================
+const GROUPS_FILE = path.join(DATA_DIR, 'groups.json');
+let groups = {};
+function loadGroups(){
+  try { groups = JSON.parse(fs.readFileSync(GROUPS_FILE, 'utf8')) || {}; } catch { groups = {}; }
+}
+loadGroups();
+function saveGroups(){ atomicWrite(GROUPS_FILE, groups); }
+const GROUP_MAX_OWNED = 5;
+const GROUP_MSG_KEEP = 200;
+function groupsOwnedBy(u){ return Object.values(groups).filter(g => g.owner === u); }
+function isGroupMember(g, u){ return !!g && (g.members || []).includes(u); }
+function groupBrief(g, u){
+  return { id: g.id, name: g.name, owner: g.owner, count: (g.members || []).length,
+           isOwner: g.owner === u, reqs: g.owner === u ? (g.reqs || []).length : 0 };
+}
+function newGroupId(){
+  let id;
+  do { id = 'g' + Math.random().toString(36).slice(2, 8); } while (groups[id]);
+  return id;
+}
+function pushGroupMembers(g, msg, except){
+  for (const m of g.members || []) if (m !== except) pushToUser(m, msg);
+}
+// 账号注销时把群里的痕迹清理干净：退群、撤回申请，群主注销则解散
+function cleanupGroups(u){
+  for (const id of Object.keys(groups)){
+    const g = groups[id];
+    if (g.owner === u){
+      delete groups[id];
+      pushGroupMembers(g, { t:'group_delete', id, name: g.name });
+      continue;
+    }
+    const before = (g.members || []).length;
+    g.members = (g.members || []).filter(x => x !== u);
+    g.reqs = (g.reqs || []).filter(r => r.from !== u);
+    if (g.members.length !== before) pushGroupMembers(g, { t:'group_member', id, name: g.name, from: u });
+  }
+  saveGroups();
 }
 // ============================================================
 //  黑名单：封号时记下邮箱和注册 IP，禁止再用同一邮箱/IP 注册
@@ -1166,6 +1207,7 @@ function punishBannedWord(user){
     accounts.delete(user);
     saveUsers();
     cleanupSocial(user);
+    cleanupGroups(user);
     leaderboard = leaderboard.filter(x => x.u !== user);
     saveScores();
     for (const [t, u2] of [...tokens.entries()]) if (u2 === user) tokens.delete(t);
@@ -1390,6 +1432,7 @@ async function handleApi(req, res, urlPath){
     accounts.delete(u);
     saveUsers();
     cleanupSocial(u);
+    cleanupGroups(u);
     leaderboard = leaderboard.filter(x=>x.u!==u);
     saveScores();
     for (const [t, user] of [...tokens.entries()]) if (user===u) tokens.delete(t);
@@ -1428,8 +1471,6 @@ async function handleApi(req, res, urlPath){
       ok: true,
       siteKey: HCAPTCHA_SITE_KEY,
       captchaRequired: !!HCAPTCHA_SECRET && !!HCAPTCHA_SITE_KEY,
-      // 只暴露「有没有配管理员密钥」这个布尔值，不泄露密钥本身
-      officialKeyReady: !!OFFICIAL_KEY,
       officialCodeReady: mailSendable(),
       oauthBase: OAUTH_BASE,
       oauth: {
@@ -1601,7 +1642,16 @@ async function handleApi(req, res, urlPath){
     if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
     const withWho = String(body.with||'').trim();
     if (!areFriends(me, withWho)) return sendJSON(res, 403, {ok:false,msg:'你们还不是好友'});
-    return sendJSON(res, 200, {ok:true, items: (social.msgs[pairKey(me, withWho)] || []).slice(-100)});
+    const k = pairKey(me, withWho);
+    let items = social.msgs[k] || [];
+    // 打开和官方的私聊就先把欢迎语放进去，不用等对方先说话
+    if (withWho === OFFICIAL_NAME && !items.length){
+      const greeting = { from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
+      items = [greeting];
+      social.msgs[k] = items;
+      saveSocial();
+    }
+    return sendJSON(res, 200, {ok:true, items: items.slice(-100)});
   }
   // 发私聊消息
   if (req.method === 'POST' && urlPath === '/api/friend/chat'){
@@ -1777,10 +1827,156 @@ async function handleApi(req, res, urlPath){
     accounts.delete(u);
     saveUsers();
     cleanupSocial(u);
+    cleanupGroups(u);
     leaderboard = leaderboard.filter(x=>x.u!==u);
     saveScores();
     for (const [t, user] of [...tokens.entries()]) if (user===u) tokens.delete(t);
     return sendJSON(res, 200, {ok:true});
+  }
+  // ========== 群组 ==========
+  if (req.method === 'GET' && urlPath === '/api/groups'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const items = Object.values(groups).filter(g => (g.members||[]).includes(me)).map(g => groupBrief(g, me));
+    return sendJSON(res, 200, {ok:true, items, max:GROUP_MAX_OWNED, owned: groupsOwnedBy(me).length});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/create'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    if (guests.has(me)) return sendJSON(res, 403, {ok:false,msg:'游客不能建群，先注册吧', key:'groupGuest'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const name = String(body.name||'').trim().slice(0,16);
+    if (!name) return sendJSON(res, 400, {ok:false,msg:'群名不能为空', key:'groupNameBad'});
+    if (hasBannedWord(name)) return sendJSON(res, 400, {ok:false,msg:'群名含有不允许的字词', key:'groupNameBad'});
+    if (groupsOwnedBy(me).length >= GROUP_MAX_OWNED)
+      return sendJSON(res, 400, {ok:false,msg:'每人最多创建 5 个群，请先删除几个群', key:'groupMax'});
+    const id = newGroupId();
+    groups[id] = { id, name, owner: me, members:[me], reqs:[], msgs:[], ts: Date.now() };
+    saveGroups();
+    return sendJSON(res, 200, {ok:true, group: groupBrief(groups[id], me)});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/find'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const q = String(body.q||'').trim().toLowerCase();
+    if (!q) return sendJSON(res, 200, {ok:true, items:[]});
+    const items = Object.values(groups)
+      .filter(g => g.name.toLowerCase().includes(q) || g.id === q)
+      .slice(0, 20)
+      .map(g => ({ id:g.id, name:g.name, count:(g.members||[]).length,
+        joined:(g.members||[]).includes(me), applied:(g.reqs||[]).some(r => r.from === me) }));
+    return sendJSON(res, 200, {ok:true, items});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/apply'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if ((g.members||[]).includes(me)) return sendJSON(res, 200, {ok:true, already:true, msg:'你已经在这个群里了'});
+    if ((g.reqs||[]).some(r => r.from === me)) return sendJSON(res, 200, {ok:true, applied:true, msg:'已经申请过了，等群主同意'});
+    g.reqs = g.reqs || [];
+    g.reqs.push({ from: me, ts: Date.now() });
+    saveGroups();
+    pushToUser(g.owner, { t:'group_req', id:g.id, name:g.name, from:me });
+    return sendJSON(res, 200, {ok:true});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/detail'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (!(g.members||[]).includes(me)) return sendJSON(res, 403, {ok:false,msg:'你还不是这个群的成员', key:'groupNotMember'});
+    return sendJSON(res, 200, {ok:true, group:{
+      id:g.id, name:g.name, owner:g.owner, members:g.members.slice(),
+      reqs: g.owner === me ? (g.reqs||[]) : [],
+      msgs: (g.msgs||[]).slice(-100)
+    }});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/accept'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (g.owner !== me) return sendJSON(res, 403, {ok:false,msg:'只有群主能同意申请', key:'groupNotOwner'});
+    const from = String(body.user||'').trim();
+    if (!(g.reqs||[]).some(r => r.from === from)) return sendJSON(res, 404, {ok:false,msg:'没有这条申请', key:'groupNoReq'});
+    g.reqs = g.reqs.filter(r => r.from !== from);
+    if (!(g.members||[]).includes(from)) g.members.push(from);
+    saveGroups();
+    pushToUser(from, { t:'group_join', id:g.id, name:g.name });
+    pushGroupMembers(g, { t:'group_member', id:g.id, name:g.name, from }, from);
+    return sendJSON(res, 200, {ok:true});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/reject'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (g.owner !== me) return sendJSON(res, 403, {ok:false,msg:'只有群主能拒绝申请', key:'groupNotOwner'});
+    const from = String(body.user||'').trim();
+    g.reqs = (g.reqs||[]).filter(r => r.from !== from);
+    saveGroups();
+    return sendJSON(res, 200, {ok:true});
+  }
+  if (req.method === 'POST' && (urlPath === '/api/group/kick' || urlPath === '/api/group/leave')){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (!(g.members||[]).includes(me)) return sendJSON(res, 403, {ok:false,msg:'你还不是这个群的成员', key:'groupNotMember'});
+    const isKick = urlPath === '/api/group/kick';
+    const target = isKick ? String(body.user||'').trim() : me;
+    if (isKick && g.owner !== me) return sendJSON(res, 403, {ok:false,msg:'只有群主能踢人', key:'groupNotOwner'});
+    if (target === g.owner) return sendJSON(res, 400, {ok:false,msg:'群主不能退出，请直接解散群', key:'groupOwnerLeave'});
+    g.members = g.members.filter(x => x !== target);
+    saveGroups();
+    if (isKick) pushToUser(target, { t:'group_kick', id:g.id, name:g.name });
+    pushGroupMembers(g, { t:'group_member', id:g.id, name:g.name, from:target }, target);
+    return sendJSON(res, 200, {ok:true});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/delete'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (g.owner !== me) return sendJSON(res, 403, {ok:false,msg:'只有群主能解散群', key:'groupNotOwner'});
+    delete groups[g.id];
+    saveGroups();
+    pushGroupMembers(g, { t:'group_delete', id:g.id, name:g.name });
+    return sendJSON(res, 200, {ok:true});
+  }
+  if (req.method === 'POST' && urlPath === '/api/group/chat'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (!(g.members||[]).includes(me)) return sendJSON(res, 403, {ok:false,msg:'你还不是这个群的成员', key:'groupNotMember'});
+    const text = String(body.text||'').trim().slice(0, 200);
+    if (!text) return sendJSON(res, 400, {ok:false,msg:'不能发空消息'});
+    const item = { from: me, text, ts: Date.now() };
+    g.msgs = g.msgs || [];
+    g.msgs.push(item);
+    if (g.msgs.length > GROUP_MSG_KEEP) g.msgs.splice(0, g.msgs.length - GROUP_MSG_KEEP);
+    saveGroups();
+    pushGroupMembers(g, { t:'group_msg', id:g.id, from:me, text, ts:item.ts }, me);
+    return sendJSON(res, 200, {ok:true, item});
   }
   sendJSON(res, 404, {ok:false,msg:'未找到'});
 }
