@@ -51,6 +51,13 @@ const SKINS = [
 ];
 const SKIN_MAP = new Map(SKINS.map(s => [s.id, s]));
 function skinById(id){ return SKIN_MAP.get(String(id||'')) || null; }
+// 官方账号是展示号：全部皮肤默认解锁，不用签到攒金币
+function ownedSkinsOf(u, a){
+  const base = new Set((a && Array.isArray(a.owned)) ? a.owned.slice() : []);
+  base.add('classic');
+  if (isOfficial(u)) SKINS.forEach(s => base.add(s.id));
+  return [...base];
+}
 // 账号身上的皮肤（没买过/没装备就是 classic）
 function skinOfUser(u){
   const a = accounts.get(u);
@@ -1523,7 +1530,7 @@ async function handleApi(req, res, urlPath){
       ok:true, guest:false,
       coins: a.coins || 0,
       skin: a.skin || 'classic',
-      owned: a.owned || [],
+      owned: ownedSkinsOf(u, a),
       streak: a.lastCheckin ? (a.streak || 0) : 0,
       checkedToday: a.lastCheckin === today,
       skins: SKINS
@@ -1554,6 +1561,8 @@ async function handleApi(req, res, urlPath){
     if (!sk) return sendJSON(res, 404, {ok:false,msg:'没有这个皮肤'});
     const a = accounts.get(u);
     a.owned = a.owned || [];
+    if (isOfficial(u))
+      return sendJSON(res, 400, {ok:false,msg:'官方账号皮肤全部解锁，直接换就行', key:'officialAllSkins'});
     if (a.owned.includes(sk.id) || sk.id === 'classic')
       return sendJSON(res, 400, {ok:false,msg:'这个皮肤你已经有了', key:'alreadyOwned'});
     if ((a.coins || 0) < sk.price)
@@ -1572,7 +1581,7 @@ async function handleApi(req, res, urlPath){
     const sk = skinById(body.id);
     if (!sk) return sendJSON(res, 404, {ok:false,msg:'没有这个皮肤'});
     const a = accounts.get(u) || {};
-    if (sk.id !== 'classic' && !(a.owned||[]).includes(sk.id))
+    if (!ownedSkinsOf(u, a).includes(sk.id))
       return sendJSON(res, 403, {ok:false,msg:'还没买这个皮肤', key:'notOwned'});
     a.skin = sk.id;
     if (!isGuest(u)) { accounts.set(u, a); saveUsers(); }
