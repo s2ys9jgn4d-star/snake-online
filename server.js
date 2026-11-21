@@ -1109,6 +1109,18 @@ const lobbyHistory = [];
 // ============================================================
 //  HTTP API（注册/登录/排行榜）
 // ============================================================
+// 按请求头 UA 判断设备，下载页用服务端的结果（跟 KukeChat 一样的思路）
+function detectPlatform(ua){
+  ua = String(ua || '');
+  if (/Android/i.test(ua)) return 'android';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  if (/Windows NT|Win64|WOW64|WindowsPhone/i.test(ua)) return 'win';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'mac';
+  if (/CrOS/i.test(ua)) return 'linux';
+  if (/Linux|X11/i.test(ua)) return 'linux';
+  return '';
+}
+
 function sendJSON(res, code, obj, extraHeaders){
   const body = JSON.stringify(obj);
   // 登录态放在 httpOnly Cookie 里，前端挂了 withCredentials，所以不能用 *
@@ -1555,6 +1567,9 @@ async function handleApi(req, res, urlPath){
     return sendJSON(res, 200, {ok:true, skin:sk.id});
   }
   // 用 Cookie 换一个能用的 token：页面读不到 httpOnly Cookie 时靠它恢复 WebSocket 身份
+  if (req.method === 'GET' && urlPath === '/api/platform'){
+    return sendJSON(res, 200, {ok:true, platform:detectPlatform(req.headers['user-agent']), ua:String(req.headers['user-agent'] || '').slice(0, 240)}, {'Cache-Control':'no-store'});
+  }
   if (req.method === 'POST' && urlPath === '/api/token'){
     const u = authFromReq(req);
     if (!u) return sendJSON(res, 401, {ok:false,msg:'未登录'});

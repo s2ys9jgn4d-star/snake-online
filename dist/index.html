@@ -320,18 +320,23 @@
     });
   }
 
-  /* ---------- 识别当前设备 ---------- */
-  var ua = navigator.userAgent || '';
-  var pf = navigator.platform || '';
-  var touch = navigator.maxTouchPoints || 0;
-  var plat = '';
-  if (/Android/i.test(ua)) plat = 'android';
-  else if (/iPhone|iPad|iPod/i.test(ua)) plat = 'ios';
-  // iPadOS 13+ 的默认 UA 伪装成 Mac，靠触摸点数区分
-  else if (/Mac/i.test(pf) && touch > 1) plat = 'ios';
-  else if (/Windows/i.test(ua) || /^Win/i.test(pf)) plat = 'win';
-  else if (/Mac/i.test(ua) || /Mac/i.test(pf)) plat = 'mac';
-  else if (/Linux|X11/i.test(ua) || /Linux/i.test(pf)) plat = 'linux';
+  /* ---------- 识别当前设备：以服务端按请求头 UA 判断的结果为准 ---------- */
+  function detectLocal(){
+    var ua = navigator.userAgent || '';
+    var pf = navigator.platform || '';
+    var touch = navigator.maxTouchPoints || 0;
+    if (/Android/i.test(ua)) return 'android';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+    // iPadOS 13+ 的默认 UA 伪装成 Mac，靠触摸点数区分
+    if (/Mac/i.test(pf) && touch > 1) return 'ios';
+    if (/Windows/i.test(ua) || /^Win/i.test(pf)) return 'win';
+    if (/Mac/i.test(ua) || /Mac/i.test(pf)) return 'mac';
+    if (/Linux|X11/i.test(ua) || /Linux/i.test(pf)) return 'linux';
+    return '';
+  }
+
+  // 调试用：?plat=win|mac|linux|android|ios 直接指定平台，在任意设备上都能预览各平台样式
+  var qplat = (new URLSearchParams(location.search).get('plat') || '').toLowerCase();
 
   // 安装包统一走线上地址，避免静态托管站点缺文件
   var BASE = 'https://snake-online.up.railway.app/';
@@ -342,16 +347,17 @@
     android: { name: 'Android', icon: '🤖', href: BASE + '贪吃蛇.apk?v=20261118d',         ext: 'APK' },
     ios:     { name: 'iOS',     icon: '📱', href: BASE + '贪吃蛇-unsigned.ipa?v=20261118d', ext: 'IPA' }
   };
-  var info = MAP[plat];
+  function applyPlat(plat){
+    var info = MAP[plat];
 
-  // 给对应卡片打上「适合你的设备」标记
-  var cards = document.querySelectorAll('.card[data-platform]');
-  for (var c = 0; c < cards.length; c++) {
-    if (cards[c].getAttribute('data-platform') === plat) cards[c].classList.add('fit');
-  }
+    // 给对应卡片打上「适合你的设备」标记
+    var cards = document.querySelectorAll('.card[data-platform]');
+    for (var c = 0; c < cards.length; c++) {
+      cards[c].classList.toggle('fit', cards[c].getAttribute('data-platform') === plat);
+    }
 
-  var box = document.getElementById('smartBox');
-  if (box) {
+    var box = document.getElementById('smartBox');
+    if (!box) return;
     if (info) {
       document.getElementById('smartIcon').textContent = info.icon;
       document.getElementById('smartName').innerHTML = '<bdi>' + info.name + '</bdi>';
@@ -368,6 +374,21 @@
       tip.setAttribute('data-i18n', 'dlSmartUnknown');
       if (window.applyI18n) applyI18n(box);
     }
+  }
+
+  var isQ = (qplat === 'mac' || qplat === 'win' || qplat === 'linux' || qplat === 'android' || qplat === 'ios');
+  if (isQ) { applyPlat(qplat); }
+  else {
+    // 先按浏览器自己的判断画一遍，免得等接口时是空白
+    var local = detectLocal();
+    if (local) applyPlat(local);
+    // 再问服务端：它按请求头 UA 判断，KukeChat 就是这么认设备的
+    fetch('/api/platform', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok || !j.platform) return;
+      // iPadOS 的 UA 会伪装成 Mac，客户端能靠触摸点数认出 iOS，这种别被服务端改回去
+      var keepIos = (local === 'ios' && j.platform === 'mac');
+      if (j.platform !== local && !keepIos) applyPlat(j.platform);
+    }).catch(function () {});
   }
 
   /* ---------- 防连点：同一个下载 2.5 秒内只触发一次 ---------- */
