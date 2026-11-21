@@ -13,6 +13,10 @@ tag = "v1"
 new_sqlite_classes = ["Hub"]
 
 # 静态页面直接用 ../dist 里现成的那套，和 Node 版同一份文件
+[vars]
+# 对外地址：OAuth 回调必须和 Google 控制台里登记的一致
+SITE_ORIGIN = "https://snakes-online.pages.dev"
+
 [assets]
 directory = "../dist"
 binding = "ASSETS"

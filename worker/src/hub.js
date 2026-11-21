@@ -28,6 +28,13 @@ const SKINS = [
 ];
 const SKIN_MAP = new Map(SKINS.map(s => [s.id, s]));
 const OFFICIAL_NAME = 'SnakeOnline官方';
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
+const normalizeEmail = e => String(e || '').trim().toLowerCase();
+function randHex(n){
+  const b = new Uint8Array(n);
+  crypto.getRandomValues(b);
+  return [...b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
 // 官方账号自动拥有全部皮肤
 function ownedSkinsOf(u, a){
   const base = new Set((a && Array.isArray(a.owned)) ? a.owned.slice() : []);
@@ -473,6 +480,8 @@ export class Hub {
     this.tokens = new Map();           // token -> username
     this.saveTimer = null;
     this.guests = new Set();
+    this.oauthStates = new Map();    // state -> {p, ret, exp}
+    this.oauthTickets = new Map();   // 一次性票据 -> {user, exp}
 
     state.blockConcurrencyWhile(async () => {
       let users = await state.storage.get('users');
@@ -511,6 +520,132 @@ export class Hub {
       this.saveTimer = null;
       this.persist().catch(() => {});
     }, 300);
+  }
+
+  // ——— 第三方登录（目前只接 Google） ———
+  siteOrigin(){
+    return (this.env && this.env.SITE_ORIGIN) || 'https://snakes-online.pages.dev';
+  }
+  oauthConf(p){
+    const env = this.env || {};
+    if (p === 'google'){
+      return {
+        id: env.GOOGLE_CLIENT_ID || '',
+        secret: env.GOOGLE_CLIENT_SECRET || '',
+        authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenUrl: 'https://oauth2.googleapis.com/token',
+        scope: 'openid email profile'
+      };
+    }
+    return null;
+  }
+  oauthReady(p){ const c = this.oauthConf(p); return !!(c && c.id && c.secret); }
+  accountByEmail(email){
+    if (!email) return '';
+    for (const [u, a] of this.accounts) if (a.email === email) return u;
+    return '';
+  }
+  usernameFromEmail(email, name){
+    let base = String(name || email.split('@')[0] || '').replace(/[^0-9A-Za-z_\u4e00-\u9fa5]/g, '');
+    if (base.length < 2) base = email.split('@')[0].replace(/[^0-9A-Za-z_]/g, '');
+    if (base.length < 2) base = 'player';
+    base = base.slice(0, 14);
+    for (let i = 1; i <= 999; i++){
+      const cand = i === 1 ? base : base + i;
+      if (!this.accounts.has(cand) && !this.guests.has(cand) && cand !== OFFICIAL_NAME) return cand;
+    }
+    return 'player' + randHex(3);
+  }
+
+  // Google 登录：start 跳转、callback 换 token 拿邮箱、exchange 换站内 token
+  async handleOauth(request, url){
+    const path = url.pathname;
+    if (!path.startsWith('/api/oauth')) return null;
+    const origin = this.siteOrigin();
+
+    if (path === '/api/oauth/exchange' && request.method === 'POST'){
+      const body = await request.json().catch(() => null);
+      const code = String((body && body.code) || '');
+      const t = this.oauthTickets.get(code);
+      if (!t || t.exp < Date.now()) return sendJSON(400, { ok:false, msg:'登录已过期，请重试', key:'oauthFail' });
+      this.oauthTickets.delete(code);
+      const token = this.newToken(t.user);
+      this.scheduleSave();
+      return sendJSON(200, { ok:true, token, user:t.user, muteLeft:0, guest:false });
+    }
+
+    const m = path.match(/^\/api\/oauth\/([a-z]+)\/(start|callback)$/);
+    if (!m || request.method !== 'GET') return null;
+    const p = m[1], kind = m[2];
+    const conf = this.oauthConf(p);
+    if (!this.oauthReady(p)){
+      return new Response('<meta charset="utf-8"><p style="font:16px sans-serif;padding:24px">这个登录方式还没配置，先去 Cloudflare 里加 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET。</p>',
+        { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    const redirectUri = origin + '/api/oauth/' + p + '/callback';
+
+    if (kind === 'start'){
+      let ret = String(url.searchParams.get('return') || '');
+      try {
+        const ru = new URL(ret);
+        if (!/^https?:$/.test(ru.protocol) || ru.hostname !== new URL(origin).hostname) ret = '';
+      } catch { ret = ''; }
+      if (!ret) ret = origin + '/mobile.html';
+      const state = randHex(16);
+      this.oauthStates.set(state, { p, ret, exp: Date.now() + 5 * 60 * 1000 });
+      const params = new URLSearchParams({
+        client_id: conf.id,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: conf.scope,
+        state,
+        prompt: 'select_account'
+      });
+      return Response.redirect(conf.authUrl + '?' + params.toString(), 302);
+    }
+
+    // 回调：验 state → 换 access_token → 拿已验证邮箱 → 发一次性票据
+    const state = String(url.searchParams.get('state') || '');
+    const ent = this.oauthStates.get(state);
+    this.oauthStates.delete(state);
+    if (!ent || ent.exp < Date.now() || ent.p !== p) return Response.redirect(origin + '/mobile.html?oauth=state', 302);
+    const ret = ent.ret;
+    const back = reason => Response.redirect(ret + (ret.includes('?') ? '&' : '?') + 'oauth=' + reason, 302);
+    if (url.searchParams.get('error')) return back('denied');
+    const code = String(url.searchParams.get('code') || '');
+    if (!code) return back('nocode');
+
+    const form = new URLSearchParams({
+      client_id: conf.id, client_secret: conf.secret,
+      code, grant_type: 'authorization_code', redirect_uri: redirectUri
+    });
+    const tr = await fetch(conf.tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+      body: form
+    }).then(r => r.json()).catch(() => null);
+    const at = tr && tr.access_token;
+    if (!at) return back('token');
+
+    const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + at, Accept: 'application/json' }
+    }).then(r => r.json()).catch(() => null);
+    if (!info || !info.email || info.email_verified === false) return back('email');
+    const email = normalizeEmail(info.email);
+
+    let user = this.accountByEmail(email);
+    if (!user){
+      user = this.usernameFromEmail(email, info.name || '');
+      const { hash, salt } = await hashPass(randHex(12));
+      this.accounts.set(user, {
+        hash, salt, email, coins: 0, lastCheckin: '', streak: 0,
+        owned: [], skin: 'classic', strikes: 0, muteUntil: 0
+      });
+      this.scheduleSave();
+    }
+    const ticket = randHex(18);
+    this.oauthTickets.set(ticket, { user, exp: Date.now() + 60 * 1000 });
+    return Response.redirect(ret + (ret.includes('?') ? '&' : '?') + 'oauthCode=' + ticket, 302);
   }
 
   isGuest(u){ return this.guests.has(u); }
@@ -588,6 +723,9 @@ export class Hub {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    const oauthResp = await this.handleOauth(request, url);
+    if (oauthResp) return oauthResp;
+
     if (request.method === 'POST' && urlPath === '/api/register'){
       const body = await readBody(request);
       if (!body) return sendJSON(400, {ok:false,msg:'请求格式错误'});
@@ -655,7 +793,8 @@ export class Hub {
         ok:true,
         siteKey:'', captchaRequired:false,
         officialCodeReady:false,
-        oauthBase:'', oauth:{ microsoft:false, google:false, github:false },
+        oauthBase: this.siteOrigin(),
+        oauth:{ microsoft:false, google:this.oauthReady('google'), github:false },
         sms:false
       });
     }

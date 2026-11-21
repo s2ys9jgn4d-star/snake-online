@@ -12,6 +12,10 @@ class_name = "Hub"
 tag = "v1"
 new_sqlite_classes = ["Hub"]
 
+[vars]
+# 对外地址：OAuth 回调必须和 Google 控制台里登记的一致
+SITE_ORIGIN = "https://snakes-online.pages.dev"
+
 [assets]
 directory = "dist"
 binding = "ASSETS"
