@@ -53,6 +53,11 @@
     return l ? 'en' : 'zh-CN';
   }
   function T(k, vars){
+    // 优先用主站 i18n（lang-late.js 里补了 grp_ 前缀的 8 种语言），没有就回落到本模块自带的三语
+    if (typeof window.t === 'function'){
+      var s2 = window.t('grp_' + k, vars);
+      if (s2 && s2 !== 'grp_' + k) return s2;
+    }
     var d = DICT[langKey()] || DICT['zh-CN'];
     var s = d[k] !== undefined ? d[k] : DICT['zh-CN'][k];
     if (vars) for (var key in vars) s = s.split('{' + key + '}').join(vars[key]);
@@ -77,12 +82,19 @@
     try {
       var r = await fetch(path, opt);
       return await r.json();
-    } catch (e){ return { ok:false, msg:'网络错误' }; }
+    } catch (e){ return { ok:false, msg:(typeof window.t === 'function' ? window.t('networkError') : '网络错误') }; }
   }
+  var RAW_MSG = { '未登录':'loginNeeded', '群不存在':'grp_notFound', '你不是群成员':'loginNeeded' };
   function errText(r, fallback){
-    if (r && r.key && typeof window.t === 'function'){
-      var s = window.t(r.key);
-      if (s && s !== r.key) return s;
+    if (typeof window.t === 'function'){
+      if (r && r.key){
+        var s = window.t(r.key);
+        if (s && s !== r.key) return s;
+      }
+      if (r && r.msg && RAW_MSG[r.msg]){
+        var s2 = window.t(RAW_MSG[r.msg]);
+        if (s2 && s2.indexOf('loginNeeded') !== 0) return s2;
+      }
     }
     return (r && r.msg) || fallback || '';
   }

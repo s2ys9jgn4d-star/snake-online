@@ -370,15 +370,21 @@ try {
     var el = document.getElementById('adultCountdown');
     if (!el) return;
     var left = TARGET - Date.now();
-    if (left <= 0){ el.textContent = '🎉 已成年'; el.title = '2036-03-26'; return; }
-    el.textContent = '⏳ 距离成年还有 ' + Math.floor(left / 86400000) + ' 天';
-    el.title = '目标日期：2036-03-26';
+    var tr = function(k, v){ return typeof window.t === 'function' ? window.t(k, v) : null; };
+    if (left <= 0){ el.textContent = '🎉 ' + (tr('adult_done') || '已成年'); el.title = '2036-03-26'; return; }
+    el.textContent = '⏳ ' + (tr('adult_left', { n: Math.floor(left / 86400000) }) || ('距离成年还有 ' + Math.floor(left / 86400000) + ' 天'));
+    el.title = '2036-03-26';
   }
   tick();
   setInterval(tick, 600000);
+  // 内联脚本比 i18n.js 先跑，那时还没有 t()，等 DOM 就绪后补画一次
+  document.addEventListener('DOMContentLoaded', tick);
+  window.addEventListener('load', tick);
+  window.addEventListener('snakelangchange', tick);
 })();
 </script>
 <script src="i18n.js?v=20261120a"></script>
+<script src="lang-late.js?v=20261121a"></script>
 <script src="richtext.js?v=20261121a"></script>
 <script src="game.js?v=20261120a"></script>
 <script src="groups.js?v=20261120a"></script>

@@ -55,6 +55,14 @@
     return [base, base, base, base];
   };
 
+  // 文案统一走 i18n；老版本 / 没装 i18n 时回落到 key，英文由 i18n 兜底
+  const T = (k, v) => (typeof window.t === 'function' ? window.t(k, v) : k);
+  const skinText = (sk, suffix) => {
+    const k = 'skin_' + sk.id + (suffix || '');
+    const v = T(k);
+    return (v && v !== k) ? v : (suffix ? (sk.desc || '') : (sk.name || ''));
+  };
+
   let data = null; let dataAt = 0;
 
   async function load(force){
@@ -84,22 +92,22 @@
 
   async function checkin(){
     const r = await window.SNAKE.api('/api/shop/checkin', { method:'POST', body:'{}' });
-    if (!r || !r.ok){ toast((r && r.msg) || '签到失败'); return; }
-    toast('签到成功，+ ' + r.reward + ' 金币（连续 ' + r.streak + ' 天）');
+    if (!r || !r.ok){ toast((r && r.msg) || T('shop_checkinFail')); return; }
+    toast(T('shop_checkinOk', { n: r.reward, s: r.streak }));
     await load(true);
   }
 
   async function buy(id){
     const r = await window.SNAKE.api('/api/shop/buy', { method:'POST', body: JSON.stringify({ id }) });
-    if (!r || !r.ok){ toast((r && r.msg) || '购买失败'); return; }
-    toast('买到了，已经自动穿上');
+    if (!r || !r.ok){ toast((r && r.msg) || T('shop_buyFail')); return; }
+    toast(T('shop_buyOk'));
     await load(true);
   }
 
   async function equip(id){
     const r = await window.SNAKE.api('/api/shop/equip', { method:'POST', body: JSON.stringify({ id }) });
-    if (!r || !r.ok){ toast((r && r.msg) || '切换失败'); return; }
-    toast('已换上，下一局生效');
+    if (!r || !r.ok){ toast((r && r.msg) || T('shop_equipFail')); return; }
+    toast(T('shop_equipOk'));
     await load(true);
   }
 
@@ -112,20 +120,20 @@
     const wallet = document.createElement('div');
     wallet.className = 'shop-wallet';
     wallet.innerHTML = '<span class="shop-coins">🪙 ' + (data.coins || 0) + '</span>'
-      + '<span class="shop-streak">' + (guest ? '游客不能攒金币' : '连续签到 ' + (data.streak || 0) + ' 天') + '</span>';
+      + '<span class="shop-streak">' + (guest ? T('shop_guestNoCoins') : T('shop_streak', { n: data.streak || 0 })) + '</span>';
     const btn = document.createElement('button');
     btn.className = 'shop-checkin';
-    if (guest){ btn.textContent = '游客不能签到'; btn.disabled = true; }
-    else if (data.checkedToday){ btn.textContent = '今天已签到'; btn.disabled = true; }
-    else { btn.textContent = '签到领金币'; btn.onclick = checkin; }
+    if (guest){ btn.textContent = T('shop_guestNoCheckin'); btn.disabled = true; }
+    else if (data.checkedToday){ btn.textContent = T('shop_checked'); btn.disabled = true; }
+    else { btn.textContent = T('shop_checkin'); btn.onclick = checkin; }
     wallet.appendChild(btn);
     box.appendChild(wallet);
 
     const tip = document.createElement('p');
     tip.className = 'shop-tip';
     tip.textContent = guest
-      ? '游客只能试穿经典原色，注册账号后签到和买皮肤都会记在账号上。'
-      : '每天签到 +10 金币，连签 3 天 +15、7 天 +20；买完自动换上，换皮肤后重新进房间生效。';
+      ? T('shop_tipGuest')
+      : T('shop_tip');
     box.appendChild(tip);
 
     const grid = document.createElement('div');
@@ -138,10 +146,10 @@
 
       const tit = document.createElement('div');
       tit.className = 'shop-tit';
-      tit.innerHTML = '<span class="shop-name">' + sk.name + '</span>'
+      tit.innerHTML = '<span class="shop-name">' + skinText(sk) + '</span>'
         + (sk.price > 0
             ? '<span class="shop-price">🪙 ' + sk.price + '</span>'
-            : '<span class="shop-price free">免费</span>');
+            : '<span class="shop-price free">' + T('shop_free') + '</span>');
       item.appendChild(tit);
 
       const dots = document.createElement('div');
@@ -156,19 +164,19 @@
 
       const desc = document.createElement('div');
       desc.className = 'shop-desc';
-      desc.textContent = sk.desc || '';
+      desc.textContent = skinText(sk, 'D');
       item.appendChild(desc);
 
       const b = document.createElement('button');
       if (equipped){
-        b.className = 'shop-btn owned'; b.textContent = '正在使用'; b.disabled = true;
+        b.className = 'shop-btn owned'; b.textContent = T('shop_using'); b.disabled = true;
       } else if (owned){
-        b.className = 'shop-btn ghost'; b.textContent = '换上'; b.onclick = () => equip(sk.id);
+        b.className = 'shop-btn ghost'; b.textContent = T('shop_equip'); b.onclick = () => equip(sk.id);
       } else if (guest){
-        b.className = 'shop-btn'; b.textContent = '注册后可买'; b.disabled = true;
+        b.className = 'shop-btn'; b.textContent = T('shop_needSignup'); b.disabled = true;
       } else {
-        b.className = 'shop-btn'; b.textContent = '购买';
-        if ((data.coins || 0) < sk.price){ b.disabled = true; b.textContent = '金币不够'; }
+        b.className = 'shop-btn'; b.textContent = T('shop_buy');
+        if ((data.coins || 0) < sk.price){ b.disabled = true; b.textContent = T('shop_noCoins'); }
         else b.onclick = () => buy(sk.id);
       }
       item.appendChild(b);
@@ -178,8 +186,8 @@
 
     const foot = document.createElement('div');
     foot.className = 'shop-foot';
-    foot.innerHTML = '<span>喜欢这个游戏？<a href="https://afdian.com/" target="_blank" rel="noopener">爱发电赞助</a> 一杯奶茶的钱也够服务器跑很久</span>'
-      + '<span>皮肤只花游戏金币，不花真钱</span>';
+    foot.innerHTML = '<span>' + T('shop_footA') + '<a href="https://afdian.com/" target="_blank" rel="noopener">' + T('shop_footB') + '</a> ' + T('shop_footC') + '</span>'
+      + '<span>' + T('shop_footTip') + '</span>';
     box.appendChild(foot);
   }
 
@@ -187,7 +195,7 @@
     injectCss();
     const mask = document.createElement('div');
     mask.id = 'shopMask';
-    mask.innerHTML = '<div id="shopCard"><div class="shop-head"><h2>🎨 皮肤商店</h2><button class="shop-close" aria-label="关闭">×</button></div><div id="shopBody"></div></div>';
+    mask.innerHTML = '<div id="shopCard"><div class="shop-head"><h2>🎨 ' + T('shop_title') + '</h2><button class="shop-close" aria-label="' + T('close') + '">×</button></div><div id="shopBody"></div></div>';
     document.body.appendChild(mask);
     mask.addEventListener('click', e => { if (e.target === mask) mask.classList.remove('open'); });
     mask.querySelector('.shop-close').onclick = () => mask.classList.remove('open');
@@ -195,10 +203,10 @@
     const btn = document.createElement('button');
     btn.id = 'shopBtn';
     btn.className = 'ghost-btn';
-    btn.textContent = '🎨 皮肤商店';
+    btn.textContent = '🎨 ' + T('shop_title');
     btn.onclick = async () => {
       // Cookie 身份也算登录：接口范层面会用 Cookie 校验，前端不拦
-      if (!window.SNAKE || !window.SNAKE.user()){ toast('先登录再来逛商店'); return; }
+      if (!window.SNAKE || !window.SNAKE.user()){ toast(T('shop_loginFirst')); return; }
       mask.classList.add('open');
       await load();
     };
