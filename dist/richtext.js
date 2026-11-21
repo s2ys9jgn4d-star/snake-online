@@ -27,9 +27,9 @@
 
   // —— 文案（游戏主 i18n 用定长数组，这里只补聊天增强相关的几条，独立维护）——
   var DICT = {
-    'zh-CN': { recall:'撤回', recalled:'已撤回了一条消息', md:'Markdown', tex:'LaTeX', rich:'聊天增强', richHint:'开启后可用 **粗体**、`代码`、$x^2$ 这类写法' },
-    'zh-TW': { recall:'收回', recalled:'已收回了一則訊息', md:'Markdown', tex:'LaTeX', rich:'聊天增強', richHint:'開啟後可用 **粗體**、`程式碼`、$x^2$ 這類寫法' },
-    'en':    { recall:'Recall', recalled:'A message was recalled', md:'Markdown', tex:'LaTeX', rich:'Rich chat', richHint:'Enable **bold**, `code` and $x^2$ style messages' }
+    'zh-CN': { recall:'撤回', recalled:'已撤回了一条消息', md:'Markdown', tex:'LaTeX', rich:'聊天增强', richHint:'开启后聊天支持加粗、代码块和数学公式；不开就是纯文本', richPreview:'示例：**粗体** `代码` $x^2$' },
+    'zh-TW': { recall:'收回', recalled:'已收回了一則訊息', md:'Markdown', tex:'LaTeX', rich:'聊天增強', richHint:'開啟後聊天支援粗體、程式碼和數學公式；不開就是純文字', richPreview:'範例：**粗體** `程式碼` $x^2$' },
+    'en':    { recall:'Recall', recalled:'A message was recalled', md:'Markdown', tex:'LaTeX', rich:'Rich chat', richHint:'Enable bold, code and math formulas in chat; off keeps plain text', richPreview:'Example: **bold** `code` $x^2$' }
   };
   function langKey(){
     var l = String((typeof window.getLang === 'function' ? window.getLang() : '') || '');

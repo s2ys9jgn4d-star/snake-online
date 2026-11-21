@@ -1221,6 +1221,16 @@ function syncRichBtns(){
   document.querySelectorAll('#setRich .rich-btn').forEach(b => {
     b.classList.toggle('active', !!st[b.dataset.rich]);
   });
+  paintRichPreview();
+}
+function paintRichPreview(){
+  if (!window.RichText) return;
+  const prev = $('richPreview');
+  if (!prev) return;
+  const on = RichText.on();
+  prev.style.display = on ? '' : 'none';
+  if (on) RichText.mount(prev, RichText.T('richPreview'));
+  else prev.textContent = '';
 }
 document.querySelectorAll('#setRich .rich-btn').forEach(b => {
   b.addEventListener('click', () => {

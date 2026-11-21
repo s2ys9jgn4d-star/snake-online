@@ -1112,6 +1112,18 @@ function syncRichBtns(){
   document.querySelectorAll('#setRich .rich-btn').forEach(b => {
     b.classList.toggle('active', !!st[b.dataset.rich]);
   });
+  paintRichPreview();
+}
+// 提示文案只写描述，示例单独一行真渲染（否则 $x^2$ 以源码出现，像没生效）
+function paintRichPreview(){
+  if (!window.RichText) return;
+  const hint = $('richHint'), prev = $('richPreview');
+  if (hint) hint.textContent = RichText.T('richHint');
+  if (!prev) return;
+  const on = RichText.on();
+  prev.style.display = on ? '' : 'none';
+  if (on) RichText.mount(prev, RichText.T('richPreview'));
+  else prev.textContent = '';
 }
 document.querySelectorAll('#setRich .rich-btn').forEach(b => {
   b.addEventListener('click', () => {

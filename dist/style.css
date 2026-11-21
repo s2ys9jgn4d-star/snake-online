@@ -473,6 +473,8 @@ body.is-guest #deleteAcctBtn { display:none; }
 .theme-btn:hover { color:var(--text); border-color:var(--accent); }
 .theme-btn.active { color:#fff; background:var(--accent); border-color:var(--accent); }
 .set-tip { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
+.rt-preview { color:var(--muted); opacity:.9; line-height:2.2; }
+.rt-preview .katex { font-size:1em; }
 .set-tip.err { color:var(--danger); }
 .set-tip.ok { color:var(--accent2); }
 
