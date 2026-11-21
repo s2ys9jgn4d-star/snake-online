@@ -14,7 +14,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1A000000000000000000A4 /* 贪吃蛇.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "贪吃蛇.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A000000000000000000A4 /* SnakeOnline.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnakeOnline.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A000000000000000000C1 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		1A000000000000000000C2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		1A000000000000000000C3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -46,7 +46,7 @@
 		1A000000000000000000A3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1A000000000000000000A4 /* 贪吃蛇.app */,
+				1A000000000000000000A4 /* SnakeOnline.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			);
 			name = SnakeOnline;
 			productName = SnakeOnline;
-			productReference = 1A000000000000000000A4 /* 贪吃蛇.app */;
+			productReference = 1A000000000000000000A4 /* SnakeOnline.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -107,10 +107,10 @@
 			};
 			buildConfigurationList = 1A000000000000000000F1 /* Build configuration list for PBXProject "SnakeOnline" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = "zh_CN";
+			developmentRegion = zh_CN;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				"zh_CN",
+				zh_CN,
 				Base,
 			);
 			mainGroup = 1A000000000000000000A2;
@@ -202,6 +202,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 77FB6FTM3B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SnakeOnline/Info.plist;
@@ -224,6 +225,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 77FB6FTM3B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SnakeOnline/Info.plist;

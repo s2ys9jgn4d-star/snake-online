@@ -16,7 +16,7 @@ mkdir -p "$ROOT/cf-pages/site"
 rsync -a --delete --exclude '_worker.js' --exclude '.assetsignore' "$ROOT/dist/" "$ROOT/cf-pages/site/"
 
 echo "== 4/4 部署 Pages"
-cd "$ROOT/cf-pages" && npx wrangler pages deploy site --project-name=snake-online --branch=main --commit-dirty=true
+cd "$ROOT/cf-pages" && npx wrangler pages deploy site --project-name=snakes-online --branch=main --commit-dirty=true
 
 echo
-echo "完成：https://snake-online-21s.pages.dev"
+echo "完成：https://snakes-online.pages.dev"
