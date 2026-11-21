@@ -202,34 +202,6 @@
     .card .meta { min-height: 0; }
   }
 
-  /* ---------- 皮肤预览 ---------- */
-  .skins { margin-bottom: 34px; }
-  .skin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-  .skin-card {
-    position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 9px;
-    background: linear-gradient(180deg, var(--card-2), var(--card));
-    border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 12px;
-    transition: transform .18s, border-color .18s, box-shadow .18s;
-  }
-  .skin-card:hover { transform: translateY(-3px); border-color: rgba(91,140,255,.6); box-shadow: 0 14px 30px rgba(0,0,0,.36); }
-  .skin-preview { height: 30px; display: flex; align-items: center; gap: 5px; }
-  .skin-dot {
-    width: 17px; height: 17px; border-radius: 5px; flex: 0 0 auto;
-    background: var(--c); animation: skinBob 2.4s ease-in-out infinite;
-  }
-  .skin-dot:nth-child(2){ animation-delay:.12s } .skin-dot:nth-child(3){ animation-delay:.24s }
-  .skin-dot:nth-child(4){ animation-delay:.36s } .skin-dot:nth-child(5){ animation-delay:.48s }
-  @keyframes skinBob { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-4px) } }
-  @media (prefers-reduced-motion: reduce) { .skin-dot { animation: none } }
-  .skin-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .skin-name { font-weight: 700; font-size: 14px; }
-  .skin-price { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .skin-price.free { color: #34d399; }
-  .skin-more { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-  .skin-more > span { color: var(--muted); font-size: 13px; }
-  .skin-cta { color: #9db4f0; text-decoration: none; font-size: 13px; font-weight: 600; border-bottom: 1px dashed rgba(157,180,240,.5); }
-  .skin-cta:hover { color: #fff; }
-  @media (max-width: 520px) { .skin-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="favicon.png">
@@ -262,15 +234,6 @@
     <a class="smart-btn" id="smartBtn" href="#" style="display:none"><span data-i18n="dlDownload">下载</span></a>
   </div>
 
-  <!-- ============ 皮肤预览 ============ -->
-  <section class="skins">
-    <h2><span data-i18n="skinSecTitle">🎨 皮肤预览</span></h2>
-    <div class="skin-grid" id="skinGrid"></div>
-    <div class="skin-more">
-      <span data-i18n="skinSecSub">每天签到攒金币，买完自动换上</span>
-      <a class="skin-cta" href="play.html#shop"><span data-i18n="skinSecCta">去商店换皮肤</span> →</a>
-    </div>
-  </section>
 
   <section>
     <h2><span data-i18n="dlSecDesktop">📦 桌面客户端</span></h2>
@@ -358,60 +321,6 @@
       setLang(this.value);
       applyI18n(document);
     });
-  /* ---------- 皮肤预览 ---------- */
-  var SKIN_LIST = [
-    { id:'classic', price:0,   colors:['#22c55e'] },
-    { id:'neon',    price:25,  colors:['#a855f7'] },
-    { id:'ice',     price:25,  colors:['#38bdf8'] },
-    { id:'lime',    price:40,  colors:['#a3e635'] },
-    { id:'gold',    price:80,  colors:['#facc15'], glow:true },
-    { id:'rose',    price:80,  colors:['#fb7185'], glow:true },
-    { id:'rainbow', price:150, colors:['#f472b6','#facc15','#22d3ee','#a3e635','#a855f7'] },
-    { id:'shadow',  price:200, colors:['#f8fafc'], glow:true }
-  ];
-  function tr(key, vars){
-    if (typeof window.t === 'function'){
-      var v = window.t(key, vars);
-      if (v && v !== key) return v;
-    }
-    return '';
-  }
-  function renderSkins(){
-    var box = document.getElementById('skinGrid');
-    if (!box) return;
-    box.innerHTML = '';
-    for (var i = 0; i < SKIN_LIST.length; i++){
-      var sk = SKIN_LIST[i];
-      var card = document.createElement('div');
-      card.className = 'skin-card';
-
-      var prev = document.createElement('div');
-      prev.className = 'skin-preview';
-      for (var d = 0; d < 5; d++){
-        var dot = document.createElement('span');
-        dot.className = 'skin-dot';
-        var c = sk.colors.length > 1 ? sk.colors[d % sk.colors.length] : sk.colors[0];
-        dot.style.setProperty('--c', c);
-        if (sk.glow) dot.style.boxShadow = '0 0 10px ' + c;
-        prev.appendChild(dot);
-      }
-      card.appendChild(prev);
-
-      var head = document.createElement('div');
-      head.className = 'skin-head';
-      var name = document.createElement('span');
-      name.className = 'skin-name';
-      name.textContent = tr('skin_' + sk.id) || sk.id;
-      var price = document.createElement('span');
-      price.className = 'skin-price' + (sk.price ? '' : ' free');
-      price.textContent = sk.price ? '🪙 ' + sk.price : (tr('shop_free') || '免费');
-      head.appendChild(name); head.appendChild(price);
-      card.appendChild(head);
-      box.appendChild(card);
-    }
-  }
-  renderSkins();
-  window.addEventListener('snakelangchange', renderSkins);
 
   }
 

@@ -189,6 +189,9 @@
     foot.innerHTML = '<span>' + T('shop_footA') + '<a href="https://afdian.com/" target="_blank" rel="noopener">' + T('shop_footB') + '</a> ' + T('shop_footC') + '</span>'
       + '<span>' + T('shop_footTip') + '</span>';
     box.appendChild(foot);
+
+    // 大厅那边的「当前皮肤」预览跟着变
+    try { window.dispatchEvent(new CustomEvent('skinchanged', { detail: { skin: data.skin || 'classic' } })); } catch (e) {}
   }
 
   function build(){
@@ -212,6 +215,15 @@
     };
     const anchor = document.getElementById('settingsBtn');
     if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(btn, anchor);
+
+    // 给大厅「当前皮肤」用：读缓存 / 直接开面板
+    window.SNAKE_SHOP = {
+      current: function(){ return (data && data.ok) ? data : null; },
+      open: function(){
+        if (!window.SNAKE || !window.SNAKE.user()){ toast(T('shop_loginFirst')); return; }
+        mask.classList.add('open'); load();
+      }
+    };
   }
 
   // 深链接：#shop 直接打开商店（也方便截图和演示）

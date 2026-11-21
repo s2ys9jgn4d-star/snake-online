@@ -491,3 +491,7 @@ html[data-theme="light"] .sms-login-btn { border-color: #d7e3f6; background: #ff
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b94b8'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 8px center;
 }
+
+/* 手机大厅：当前皮肤小徽章 */
+.my-skin-chip { display: inline-flex; align-items: center; gap: 3px; }
+.my-skin-chip i { width: 9px; height: 9px; border-radius: 3px; display: block; }

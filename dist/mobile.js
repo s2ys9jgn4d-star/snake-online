@@ -17,7 +17,43 @@ function showPanel(name){
   panels.auth.classList.toggle('hidden', name !== 'auth');
   panels.lobby.classList.toggle('hidden', name !== 'lobby');
   panels.game.classList.toggle('hidden', name !== 'game');
+  if (name === 'lobby') refreshMySkinChip();
 }
+
+// ============================================================
+//  当前皮肤（大厅头部小徽章）
+// ============================================================
+const SKIN_COLORS = {
+  classic:{ c:['#22c55e'] }, neon:{ c:['#a855f7'] }, ice:{ c:['#38bdf8'] }, lime:{ c:['#a3e635'] },
+  gold:{ c:['#facc15'], glow:1 }, rose:{ c:['#fb7185'], glow:1 },
+  rainbow:{ c:['#f472b6','#facc15','#22d3ee','#a3e635','#a855f7'] }, shadow:{ c:['#f8fafc'], glow:1 }
+};
+let mySkinId = 'classic';
+function renderMySkinChip(id){
+  mySkinId = id || 'classic';
+  const chip = $('mySkinChip');
+  if (!chip) return;
+  const sk = SKIN_COLORS[mySkinId] || SKIN_COLORS.classic;
+  chip.innerHTML = '';
+  for (let i = 0; i < 4; i++){
+    const d = document.createElement('i');
+    const c = sk.c.length > 1 ? sk.c[i % sk.c.length] : sk.c[0];
+    d.style.background = c;
+    if (sk.glow) d.style.boxShadow = '0 0 6px ' + c;
+    chip.appendChild(d);
+  }
+  const n = (typeof t === 'function') ? t('skin_' + mySkinId) : mySkinId;
+  chip.title = (n && n.indexOf('skin_') !== 0) ? n : mySkinId;
+}
+async function refreshMySkinChip(){
+  if (!authToken && !localStorage.getItem('snakeUser')){ renderMySkinChip('classic'); return; }
+  try {
+    const d = await api('/api/shop');
+    renderMySkinChip((d && d.ok && d.skin) || 'classic');
+  } catch (e){ renderMySkinChip('classic'); }
+}
+window.addEventListener('skinchanged', e => renderMySkinChip((e.detail && e.detail.skin) || 'classic'));
+window.addEventListener('snakelangchange', () => renderMySkinChip(mySkinId));
 
 // ============================================================
 //  HTTP API

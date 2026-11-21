@@ -17,7 +17,52 @@ function showPanel(name){
   panels.auth.classList.toggle('hidden', name !== 'auth');
   panels.lobby.classList.toggle('hidden', name !== 'lobby');
   panels.game.classList.toggle('hidden', name !== 'game');
+  if (name === 'lobby') refreshMySkin();
 }
+
+// ============================================================
+//  当前皮肤预览（大厅右栏）
+// ============================================================
+const SKIN_COLORS = {
+  classic:{ c:['#22c55e'] },
+  neon:{    c:['#a855f7'] },
+  ice: {    c:['#38bdf8'] },
+  lime:{    c:['#a3e635'] },
+  gold:{    c:['#facc15'], glow:1 },
+  rose:{    c:['#fb7185'], glow:1 },
+  rainbow:{ c:['#f472b6','#facc15','#22d3ee','#a3e635','#a855f7'] },
+  shadow:{  c:['#f8fafc'], glow:1 }
+};
+let mySkinId = 'classic';
+function renderMySkin(id){
+  mySkinId = id || 'classic';
+  const box = $('mySkinDots'); const nameEl = $('mySkinName');
+  if (!box) return;
+  const sk = SKIN_COLORS[mySkinId] || SKIN_COLORS.classic;
+  box.innerHTML = '';
+  for (let i = 0; i < 6; i++){
+    const d = document.createElement('i');
+    const c = sk.c.length > 1 ? sk.c[i % sk.c.length] : sk.c[0];
+    d.style.background = c;
+    if (sk.glow) d.style.boxShadow = '0 0 8px ' + c;
+    box.appendChild(d);
+  }
+  if (nameEl){
+    const n = (typeof t === 'function') ? t('skin_' + mySkinId) : mySkinId;
+    nameEl.textContent = (n && n.indexOf('skin_') !== 0) ? n : mySkinId;
+  }
+}
+async function refreshMySkin(){
+  let id = null;
+  const cached = window.SNAKE_SHOP && window.SNAKE_SHOP.current();
+  if (cached && cached.skin) id = cached.skin;
+  if (!id){
+    try { const d = await api('/api/shop'); if (d && d.ok) id = d.skin; } catch (e){}
+  }
+  renderMySkin(id || 'classic');
+}
+window.addEventListener('skinchanged', e => renderMySkin((e.detail && e.detail.skin) || 'classic'));
+window.addEventListener('snakelangchange', () => renderMySkin(mySkinId));
 
 // ============================================================
 //  HTTP API（注册/登录/排行榜）
@@ -1091,6 +1136,13 @@ window.addEventListener('snakelangchange', () => {
     if (currentPanel === 'lobby'){ refreshRooms(); refreshFriends(); refreshPlayers(); refreshScores(); }
     else if (currentPanel === 'game'){ refreshFriends && refreshFriends(); }
   } catch (e){}
+});
+
+const mySkinChange = $('mySkinChange');
+if (mySkinChange) mySkinChange.addEventListener('click', ev => {
+  ev.preventDefault();
+  if (window.SNAKE_SHOP) window.SNAKE_SHOP.open();
+  else { const b = $('shopBtn'); if (b) b.click(); }
 });
 
 $('setNameBtn').addEventListener('click', async () => {
