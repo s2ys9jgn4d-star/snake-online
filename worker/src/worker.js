@@ -28,11 +28,6 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // 这个 Worker 版没有邮件服务，故意回非 JSON，让前端判断成「未知」而不是「要验证码」
-    if (url.pathname === '/api/mail-status'){
-      return new Response('mail disabled', { status: 404, headers: { 'Content-Type': 'text/plain' } });
-    }
-
     const isWebSocket = upgrade === 'websocket';
     const isApi = url.pathname.startsWith('/api/');
 

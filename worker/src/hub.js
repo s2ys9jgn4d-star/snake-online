@@ -480,6 +480,8 @@ export class Hub {
     this.tokens = new Map();           // token -> username
     this.saveTimer = null;
     this.guests = new Set();
+    this.mailCodes = new Map();      // email -> {code, u, exp, kind}
+    this.mailCooldowns = new Map();  // key -> 上次发送时间
     this.oauthStates = new Map();    // state -> {p, ret, exp}
     this.oauthTickets = new Map();   // 一次性票据 -> {user, exp}
 
@@ -520,6 +522,36 @@ export class Hub {
       this.saveTimer = null;
       this.persist().catch(() => {});
     }, 300);
+  }
+
+  // ——— 发信（Brevo HTTP API；Workers 不能连 SMTP） ———
+  mailReady(){
+    return !!(this.env && this.env.BREVO_API_KEY);
+  }
+  async sendMail(to, subject, html){
+    const env = this.env || {};
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: env.MAIL_FROM_NAME || '联机贪吃蛇', email: env.MAIL_FROM || '' },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html
+      })
+    }).catch(() => null);
+    return !!(resp && resp.ok);
+  }
+  async issueCode(email, kind, username){
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const existed = this.mailCodes.get(email);
+    if (existed && existed.exp > Date.now() && existed.code) { /* 覆盖即可 */ }
+    this.mailCodes.set(email, { code, kind, u: username || '', exp: Date.now() + 10 * 60 * 1000 });
+    return code;
   }
 
   // ——— 第三方登录（目前只接 Google） ———
@@ -734,8 +766,22 @@ export class Hub {
       if (!u || u.length>16 || /[^\w\u4e00-\u9fa5]/.test(u)) return sendJSON(400,{ok:false,msg:'用户名 1-16 字，只允许字母/数字/中文'});
       if (p.length<4 || p.length>32) return sendJSON(400,{ok:false,msg:'密码 4-32 位'});
       if (this.accounts.has(u)) return sendJSON(409,{ok:false,msg:'用户名已存在'});
+      const email = normalizeEmail(body.email || '');
+      if (this.mailReady()){
+        if (!EMAIL_RE.test(email)) return sendJSON(400,{ok:false,msg:'请填写正确的邮箱'});
+        const ent = this.mailCodes.get(email);
+        const given = String(body.code || '').trim();
+        if (!ent || ent.exp < Date.now() || ent.kind !== 'register' || ent.code !== given)
+          return sendJSON(400,{ok:false,msg:'邮箱验证码不对或已过期', key:'codeWrong'});
+        this.mailCodes.delete(email);
+      }
+      if (email && this.accountByEmail(email)) return sendJSON(409,{ok:false,msg:'这个邮箱已经注册过账号了'});
       const { hash, salt } = await hashPass(p);
-      this.accounts.set(u, { hash, salt });
+      this.accounts.set(u, {
+        hash, salt, email,
+        coins: 0, lastCheckin: '', streak: 0, owned: [], skin: 'classic',
+        strikes: 0, muteUntil: 0, oauth: ''
+      });
       await this.persist();
       return sendJSON(200, {ok:true});
     }
@@ -771,6 +817,101 @@ export class Hub {
       for (const [t, user] of [...this.tokens.entries()]) if (user===u) this.tokens.delete(t);
       await this.persist();
       return sendJSON(200, {ok:true});
+    }
+
+    // ——— 邮件验证码 ———
+    if (request.method === 'GET' && urlPath === '/api/mail-status'){
+      if (!this.mailReady()){
+        // 故意回非 JSON：前端会判成「未知」，从而隐藏验证码框，允许免验证码注册
+        return new Response('mail disabled', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      }
+      return sendJSON(200, { ok:true, configured:true, provider:'brevo', from: (this.env && this.env.MAIL_FROM) || '' });
+    }
+
+    // 注册场景：给尚未注册的邮箱发码
+    if (request.method === 'POST' && urlPath === '/api/send-code'){
+      const body = await readBody(request);
+      if (!body) return sendJSON(400, { ok:false, msg:'请求格式错误' });
+      const email = normalizeEmail(body.email || '');
+      const u = String(body.u || '').trim();
+      if (!EMAIL_RE.test(email)) return sendJSON(400, { ok:false, msg:'邮箱格式不对' });
+      if (!this.mailReady()) return sendJSON(503, { ok:false, msg:'邮件服务还没配置，先免验证码注册吧', key:'mailOff' });
+      if (this.accountByEmail(email)) return sendJSON(409, { ok:false, msg:'这个邮箱已经注册过账号了' });
+      const last = this.mailCooldowns.get('reg:' + email) || 0;
+      if (Date.now() - last < 60 * 1000)
+        return sendJSON(429, { ok:false, msg:'发太频繁了，' + Math.ceil((60 * 1000 - (Date.now() - last)) / 1000) + ' 秒后再试' });
+      const code = await this.issueCode(email, 'register', u);
+      const sent = await this.sendMail(email, '联机贪吃蛇 · 注册验证码',
+        '<p>你的验证码是 <b style="font-size:22px;letter-spacing:2px">' + code + '</b>，10 分钟内有效。</p><p>不是你本人操作就忽略这封邮件。</p>');
+      if (!sent) return sendJSON(502, { ok:false, msg:'邮件发送失败，检查 Brevo 的 key 和发件人验证', key:'mailFail' });
+      this.mailCooldowns.set('reg:' + email, Date.now());
+      return sendJSON(200, { ok:true, msg:'验证码已发到 ' + email });
+    }
+
+    // 重置密码：第 1 步发码（按当前登录账号绑定的邮箱）
+    if (request.method === 'POST' && urlPath === '/api/reset_code'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'请先登录' });
+      if (this.isGuest(u)) return sendJSON(403, { ok:false, msg:'游客没有绑定邮箱，不能重置密码' });
+      const a = this.accounts.get(u);
+      const email = a && a.email;
+      if (!email) return sendJSON(400, { ok:false, msg:'这个账号没有绑定邮箱，无法重置密码' });
+      if (!this.mailReady()) return sendJSON(503, { ok:false, msg:'邮箱服务还没配置', key:'mailOff' });
+      const key = 'reset:' + u;
+      const last = this.mailCooldowns.get(key) || 0;
+      if (Date.now() - last < 60 * 1000)
+        return sendJSON(429, { ok:false, msg:'发太频繁了，' + Math.ceil((60 * 1000 - (Date.now() - last)) / 1000) + ' 秒后再试' });
+      const code = await this.issueCode(email, 'reset', u);
+      const sent = await this.sendMail(email, '联机贪吃蛇 · 重置密码验证码',
+        '<p>你的重置验证码是 <b style="font-size:22px;letter-spacing:2px">' + code + '</b>，10 分钟内有效。</p>');
+      if (!sent) return sendJSON(502, { ok:false, msg:'邮件发送失败，检查 Brevo 的 key 和发件人验证', key:'mailFail' });
+      this.mailCooldowns.set(key, Date.now());
+      return sendJSON(200, { ok:true, msg:'验证码已发到你的邮箱' });
+    }
+
+    // 重置密码：第 2 步验码改密码
+    if (request.method === 'POST' && urlPath === '/api/reset_pass'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'请先登录' });
+      const body = await readBody(request);
+      if (!body) return sendJSON(400, { ok:false, msg:'请求格式错误' });
+      const a = this.accounts.get(u);
+      if (!a) return sendJSON(400, { ok:false, msg:'账号不存在' });
+      const ent = a.email ? this.mailCodes.get(a.email) : null;
+      const given = String(body.code || '').trim();
+      if (!ent || ent.exp < Date.now() || ent.kind !== 'reset' || ent.code !== given)
+        return sendJSON(400, { ok:false, msg:'验证码不对或已过期', key:'codeWrong' });
+      const p = String(body.pass || '');
+      if (p.length < 4 || p.length > 32) return sendJSON(400, { ok:false, msg:'密码 4-32 位' });
+      const { hash, salt } = await hashPass(p);
+      a.hash = hash; a.salt = salt;
+      this.mailCodes.delete(a.email);
+      await this.persist();
+      return sendJSON(200, { ok:true, msg:'密码已更新' });
+    }
+
+    // 改名：同时改账号键、token 归属、排行榜条目
+    if (request.method === 'POST' && urlPath === '/api/rename'){
+      const me = authFromReq(this, request);
+      if (!me) return sendJSON(401, { ok:false, msg:'请先登录' });
+      if (this.isGuest(me)) return sendJSON(403, { ok:false, msg:'游客不能改名，注册账号后才可以' });
+      if (me === OFFICIAL_NAME) return sendJSON(403, { ok:false, msg:'官方账号不能改名' });
+      const body = await readBody(request);
+      if (!body) return sendJSON(400, { ok:false, msg:'请求格式错误' });
+      const nu = String(body.name || '').trim();
+      if (!nu || nu.length > 16 || /[^\w\u4e00-\u9fa5]/.test(nu))
+        return sendJSON(400, { ok:false, msg:'用户名 1-16 字，只允许字母/数字/中文' });
+      if (nu === me) return sendJSON(400, { ok:false, msg:'和现在的名字一样' });
+      if (this.accounts.has(nu)) return sendJSON(409, { ok:false, msg:'用户名已存在' });
+      if (this.guests.has(nu)) return sendJSON(409, { ok:false, msg:'这个名字正被游客使用，换一个吧' });
+      const a = this.accounts.get(me);
+      this.accounts.delete(me);
+      this.accounts.set(nu, a);
+      for (const [t, v] of this.tokens) if (v === me) this.tokens.set(t, nu);
+      for (const it of this.leaderboard) if (it.u === me) it.u = nu;
+      for (const sock of this.loggedInSockets) if (sock.user === me) sock.user = nu;
+      await this.persist();
+      return sendJSON(200, { ok:true, user:nu });
     }
 
     // 游客登录：一发就用，不写账号，成绩不进排行榜
