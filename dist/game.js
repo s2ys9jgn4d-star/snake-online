@@ -1080,6 +1080,19 @@ document.querySelectorAll('#setRich .rich-btn').forEach(b => {
 });
 syncRichBtns();
 
+// 换语言后：聊天增强的标签、界面上动态生成的列表都要跟着换
+window.addEventListener('snakelangchange', () => {
+  if (window.RichText){
+    const rl = $('richLabel'); if (rl) rl.textContent = RichText.T('rich');
+    const rh = $('richHint'); if (rh) rh.textContent = RichText.T('richHint');
+  }
+  syncRichBtns();
+  try {
+    if (currentPanel === 'lobby'){ refreshRooms(); refreshFriends(); refreshPlayers(); refreshScores(); }
+    else if (currentPanel === 'game'){ refreshFriends && refreshFriends(); }
+  } catch (e){}
+});
+
 $('setNameBtn').addEventListener('click', async () => {
   const nu = $('setNameInput').value.trim();
   const tip = $('setNameTip');

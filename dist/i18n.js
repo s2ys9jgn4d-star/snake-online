@@ -1502,8 +1502,9 @@
   }
 
   function syncSelect(){
-    var sel = document.getElementById('langSel');
-    if (sel && sel.value !== CURRENT) sel.value = CURRENT;
+    // 一个页面可能有多个语言下拉（登录页一个、设置里一个），全部同步
+    var list = document.querySelectorAll('select.lang-sel');
+    for (var i = 0; i < list.length; i++) if (list[i].value !== CURRENT) list[i].value = CURRENT;
   }
 
   function setLang(code){
@@ -1574,12 +1575,29 @@
       window.dispatchEvent(new CustomEvent('snakelangchange', { detail:{ lang: CURRENT } }));
     } catch (e) {}
   }
-  var selEl = document.getElementById('langSel');
-  if (selEl) selEl.addEventListener('change', onSelChange);
-  else document.addEventListener('DOMContentLoaded', function(){
-    var s = document.getElementById('langSel');
-    if (s) s.addEventListener('change', onSelChange);
-  });
+  var selList = document.querySelectorAll('select.lang-sel');
+  for (var si = 0; si < selList.length; si++) selList[si].addEventListener('change', onSelChange);
+
+  // 页面只要放一个 <select id="langSel">，语言列表由这里填，省得每页各写一遍
+  function fillLangSel(){
+    var list = document.querySelectorAll('select.lang-sel');
+    for (var si = 0; si < list.length; si++){
+      var s = list[si];
+      if (s.options.length){ s.value = CURRENT; continue; }   // 页面自己写死选项的就只同步当前值
+      for (var li = 0; li < LANG_LIST.length; li++){
+        var o = document.createElement('option');
+        o.value = LANG_LIST[li].code;
+        o.textContent = LANG_LIST[li].name;
+        s.appendChild(o);
+      }
+      s.value = CURRENT;
+      s.addEventListener('change', onSelChange);
+    }
+  }
+  fillLangSel();
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ fillLangSel(); syncSelect(); });
+  }
 
   // 补丁：后来新增的 key。只覆盖字典，不改动上面按位置对应的定长数组。
   var EXTRA = {
@@ -1598,6 +1616,17 @@
   };
   for (var ek in EXTRA){
     if (TRANSLATIONS[ek]) TRANSLATIONS[ek].dlExt = EXTRA[ek];
+  }
+
+  // 补丁 1.5：设置面板里的「界面语言」，没写的语种回落英文
+  var EXTRA_LANG = {
+    'en':'Language','zh-CN':'界面语言','zh-TW':'介面語言','ja':'表示言語','ko':'표시 언어',
+    'ru':'Язык интерфейса','uk':'Мова інтерфейсу','de':'Sprache','fr':'Langue','es':'Idioma',
+    'pt-PT':'Idioma','pt-BR':'Idioma','it':'Lingua','nl':'Taal','pl':'Język','cs':'Jazyk','fi':'Kieli','sv':'Språk','da':'Sprog','tr':'Dil','ar':'اللغة','fa':'زبان',
+    'id':'Bahasa','vi':'Ngôn ngữ','th':'ภาษา','el':'Γλώσσα','hu':'Nyelv','ro':'Limbă'
+  };
+  for (var lk in EXTRA_LANG){
+    if (TRANSLATIONS[lk]) TRANSLATIONS[lk].langLabel = EXTRA_LANG[lk];
   }
 
   // 补丁 2：反馈区文案（原来写死在 feedback-line 里，切语言时不变）

@@ -1198,6 +1198,14 @@ document.querySelectorAll('#setRich .rich-btn').forEach(b => {
 });
 syncRichBtns();
 
+// 换语言后同步动态内容（手机端只有房间聊天和侧栏，重画一下就好）
+window.addEventListener('snakelangchange', () => {
+  syncRichBtns();
+  try {
+    refreshRooms(); refreshFriends(); refreshPlayers(); refreshScores();
+  } catch (e){}
+});
+
 // —— 离开房间 ——
 if ($('leaveBtn')) $('leaveBtn').addEventListener('click', () => {
   sendWS({ t:'leave_room' });

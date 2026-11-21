@@ -601,3 +601,16 @@ html[data-theme="light"] .msg .rt pre.rt-code { background: rgba(15,25,50,.06); 
 .dm-recall:hover { opacity: .95; }
 .msg.recalled { opacity: .6; font-style: italic; }
 .set-row .rich-btn.active { outline: 2px solid var(--accent); }
+
+/* 设置面板里的语言下拉 */
+.lang-sel {
+  min-height: 34px; padding: 6px 30px 6px 10px;
+  border: 1px solid var(--line, #2a3550); border-radius: 8px;
+  background: var(--card, #141a26); color: var(--text, #e8ecf6);
+  font-size: 13px; cursor: pointer; outline: none; min-width: 190px; max-width: 220px;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b94b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+}
+.lang-sel:hover, .lang-sel:focus { border-color: var(--accent, #2f6df6); }
+.lang-sel option { background: var(--card, #141a26); color: var(--text, #e8ecf6); }
