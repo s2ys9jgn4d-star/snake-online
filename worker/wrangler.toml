@@ -11,3 +11,11 @@ class_name = "Hub"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Hub"]
+
+# 静态页面直接用 ../dist 里现成的那套，和 Node 版同一份文件
+[assets]
+directory = "../dist"
+binding = "ASSETS"
+run_worker_first = true
+# 保持和 Node 版一样的 URL 写法：/play.html 直接给文件，不跳成 /play
+html_handling = "none"

@@ -1,7 +1,8 @@
 'use strict';
 /*
- * Worker 入口：只负责路由，全部游戏状态在单个 Durable Object 里。
- * 静态页面由 Cloudflare Pages 托管，这里不提供静态文件。
+ * Worker 入口：只负责路由。
+ * - WebSocket 与 /api/* 全部转给单个 Durable Object（游戏世界 + 账号 + 排行榜）
+ * - 其余请求交给静态资源绑定（dist 目录）
  */
 export { Hub } from './hub.js';
 
@@ -9,16 +10,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-};
-
-// 路径 -> 方法（与原版 API 一致）
-const API_ROUTES = {
-  '/api/register': 'POST',
-  '/api/login': 'POST',
-  '/api/logout': 'POST',
-  '/api/delete-account': 'POST',
-  '/api/me': 'GET',
-  '/api/scores': 'GET'
 };
 
 function jsonResponse(code, obj){
@@ -37,15 +28,19 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    // 这个 Worker 版没有邮件服务，故意回非 JSON，让前端判断成「未知」而不是「要验证码」
+    if (url.pathname === '/api/mail-status'){
+      return new Response('mail disabled', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    }
+
     const isWebSocket = upgrade === 'websocket';
-    const apiMethod = API_ROUTES[url.pathname];
-    const isApi = apiMethod && request.method === apiMethod;
+    const isApi = url.pathname.startsWith('/api/');
 
     if (isWebSocket || isApi){
       const stub = env.HUB.get(env.HUB.idFromName('global'));
       return stub.fetch(request);
     }
 
-    return jsonResponse(404, { error: 'not found' });
+    return env.ASSETS.fetch(request);
   }
 };

@@ -16,6 +16,40 @@ const COLORS = [
   '#ef4444','#3b82f6','#22c55e','#eab308','#a855f7','#f97316',
   '#06b6d4','#ec4899','#84cc16','#6366f1','#14b8a6','#f43f5e'
 ];
+const SKINS = [
+  { id:'classic', name:'经典原色', price:0,   color:null,      desc:'系统分配的颜色，免费' },
+  { id:'neon',    name:'霓虹紫',   price:25,  color:'#a855f7', desc:'紫得发光' },
+  { id:'ice',     name:'冰蓝',     price:25,  color:'#38bdf8', desc:'冷静的水蓝' },
+  { id:'lime',    name:'柠檬绿',   price:40,  color:'#a3e635', desc:'比草地更亮一等' },
+  { id:'gold',    name:'黄金',     price:80,  color:'#facc15', glow:1, desc:'自带金边光晕' },
+  { id:'rose',    name:'玫瑰',     price:80,  color:'#fb7185', glow:1, desc:'带光晕的粉' },
+  { id:'rainbow', name:'彩虹',     price:150, color:'#f472b6', rainbow:1, desc:'每一节换一个颜色' },
+  { id:'shadow',  name:'墨影',     price:200, color:'#f8fafc', glow:1, desc:'黑底上的白色残影' }
+];
+const SKIN_MAP = new Map(SKINS.map(s => [s.id, s]));
+const OFFICIAL_NAME = 'SnakeOnline官方';
+// 官方账号自动拥有全部皮肤
+function ownedSkinsOf(u, a){
+  const base = new Set((a && Array.isArray(a.owned)) ? a.owned.slice() : []);
+  base.add('classic');
+  if (u === OFFICIAL_NAME) SKINS.forEach(s => base.add(s.id));
+  return [...base];
+}
+// 签到按北京时间算天
+function dayKey(d){
+  const t = d || new Date();
+  return new Date(t.getTime() + 8*3600*1000).toISOString().slice(0, 10);
+}
+function prevDayKey(key){
+  const t = new Date(key + 'T00:00:00Z');
+  t.setUTCDate(t.getUTCDate() - 1);
+  return t.toISOString().slice(0, 10);
+}
+function checkinReward(streak){
+  if (streak >= 7) return 20;
+  if (streak >= 3) return 15;
+  return 10;
+}
 const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
 const OPPOSITE = { up:'down', down:'up', left:'right', right:'left' };
 
@@ -269,7 +303,7 @@ class Room {
       tick: this.tick,
       tickMs: this.tickMs,
       players: [...this.players.values()].map(p => ({
-        id: p.id, name: p.name, color: p.color, score: p.score,
+        id: p.id, name: p.name, color: p.color, skin: p.skin, score: p.score,
         alive: p.alive, dir: p.dir, seq: p.lastSeq||0,
         deathReason: p.deathReason,
         body: p.alive ? p.body.map(s=>[s.x,s.y]) : []
@@ -290,7 +324,9 @@ class Room {
     }
     const id = this.nextPlayerId++;
     const p = {
-      id, ws, name: username, color: COLORS[(id-1)%COLORS.length],
+      id, ws, name: username,
+      color: this.hub.colorOf(username) || COLORS[(id-1)%COLORS.length],
+      skin: this.hub.skinOf(username).id,
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null
     };
     this.resetPlayer(p);
@@ -341,6 +377,7 @@ function handleWsMessage(hub, ws, text){
       return;
     }
     if (msg.t === 'create_room'){
+      if (hub.isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，挑一个房间加入吧', key:'guestNoCreate'}));
       const name = String(msg.name||'').trim().slice(0, 20);
       if (!name) return ws.sendText(JSON.stringify({t:'sys',msg:'房间名不能为空'}));
       if (hub.rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限'}));
@@ -365,6 +402,7 @@ function handleWsMessage(hub, ws, text){
       return;
     }
     if (msg.t === 'chat'){
+      if (hub.isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能在大厅发言，进房间后就能聊', key:'guestNoLobbyChat'}));
       const text = String(msg.text||'').trim().slice(0, 200);
       if (!text) return;
       // 大厅聊天：发给所有已登录但不在房间的用户
@@ -434,6 +472,7 @@ export class Hub {
     this.leaderboard = [];             // [{u, s}]
     this.tokens = new Map();           // token -> username
     this.saveTimer = null;
+    this.guests = new Set();
 
     state.blockConcurrencyWhile(async () => {
       let users = await state.storage.get('users');
@@ -445,18 +484,25 @@ export class Hub {
         if (!scores) scores = seed.scores;
         await state.storage.put({ users, scores });
       }
-      this.accounts = new Map((users || []).map(a => [a.u, { hash: a.h, salt: a.s }]));
+      this.accounts = new Map((users || []).map(a => [a.u, {
+        hash: a.h, salt: a.s, email: a.e || '',
+        coins: a.c || 0, lastCheckin: a.l || '', streak: a.st || 0,
+        owned: Array.isArray(a.o) ? a.o.slice() : [], skin: a.k || 'classic',
+        strikes: a.n || 0, muteUntil: a.m || 0
+      }]));
       this.leaderboard = scores || [];
       this.tokens = new Map(tokens || []);
+      this.guests = new Set(await state.storage.get('guests') || []);
     });
   }
 
   // —— 持久化（合并成一次 put）——
   persist(){
     return this.state.storage.put({
-      users: [...this.accounts.entries()].map(([u,a]) => ({ u, h: a.hash, s: a.salt })),
+      users: [...this.accounts.entries()].map(([u,a]) => ({ u, h: a.hash, s: a.salt, n: a.strikes||0, m: a.muteUntil||0, e: a.email||'', c: a.coins||0, l: a.lastCheckin||'', st: a.streak||0, o: a.owned||[], k: a.skin||'classic' })),
       scores: this.leaderboard,
-      tokens: [...this.tokens.entries()]
+      tokens: [...this.tokens.entries()],
+      guests: [...this.guests]
     });
   }
   scheduleSave(){
@@ -467,13 +513,19 @@ export class Hub {
     }, 300);
   }
 
+  isGuest(u){ return this.guests.has(u); }
+  skinOf(u){
+    const a = this.accounts.get(u);
+    return SKIN_MAP.get(a && a.skin) || SKINS[0];
+  }
+  colorOf(u){ return this.skinOf(u).color; }
   newToken(user){
     const t = [...randomBytes(24)].map(b => b.toString(16).padStart(2,'0')).join('');
     this.tokens.set(t, user);
     return t;
   }
   updateScore(user, score){
-    if (!user || !score) return;
+    if (!user || !score || this.isGuest(user)) return;
     let found = false;
     for (const entry of this.leaderboard){
       if (entry.u === user){ if (score > entry.s) entry.s = score; found = true; break; }
@@ -583,11 +635,144 @@ export class Hub {
       return sendJSON(200, {ok:true});
     }
 
+    // 游客登录：一发就用，不写账号，成绩不进排行榜
+    if (request.method === 'POST' && urlPath === '/api/guest'){
+      let u = '';
+      for (let i = 0; i < 50; i++){
+        const n = '游客' + (Math.floor(Math.random()*9000)+1000);
+        if (!this.accounts.has(n) && !this.guests.has(n)){ u = n; break; }
+      }
+      if (!u) u = '游客' + Date.now().toString().slice(-6);
+      this.guests.add(u);
+      const token = this.newToken(u);
+      this.scheduleSave();
+      return sendJSON(200, { ok:true, token, user:u, guest:true, muteLeft:0 });
+    }
+
+    // 前端探测：邮件服务、hCaptcha、OAuth 在本 Worker 版里全部关闭
+    if (request.method === 'GET' && urlPath === '/api/config'){
+      return sendJSON(200, {
+        ok:true,
+        siteKey:'', captchaRequired:false,
+        officialCodeReady:false,
+        oauthBase:'', oauth:{ microsoft:false, google:false, github:false },
+        sms:false
+      });
+    }
+
+    if (request.method === 'GET' && urlPath === '/api/platform'){
+      const ua = String(request.headers.get('User-Agent') || '');
+      let platform = '';
+      if (/Android/i.test(ua)) platform = 'android';
+      else if (/iPhone|iPad|iPod/i.test(ua)) platform = 'ios';
+      else if (/Windows NT|Win64|WOW64|WindowsPhone/i.test(ua)) platform = 'win';
+      else if (/Macintosh|Mac OS X/i.test(ua)) platform = 'mac';
+      else if (/CrOS/i.test(ua)) platform = 'linux';
+      else if (/Linux|X11/i.test(ua)) platform = 'linux';
+      return sendJSON(200, { ok:true, platform, ua: ua.slice(0,240) });
+    }
+
+    // 浏览器里没有 httpOnly Cookie 可换，这里只回未登录
+    if (request.method === 'POST' && urlPath === '/api/token'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'未登录' });
+      const token = this.newToken(u);
+      this.scheduleSave();
+      return sendJSON(200, { ok:true, token, user:u, muteLeft:0, guest:this.isGuest(u) });
+    }
+
+    // 在线人数 / 玩家列表
+    if (request.method === 'GET' && urlPath === '/api/players'){
+      const me = authFromReq(this, request);
+      if (!me) return sendJSON(401, { ok:false, msg:'未登录' });
+      const online = new Set([...this.loggedInSockets].map(s => s.user).filter(Boolean));
+      const best = new Map(this.leaderboard.map(x => [x.u, x.s]));
+      const items = [...this.accounts.keys()].filter(u => u !== me).map(u => ({
+        u, best: best.get(u) || 0, online: online.has(u), relation: '', off: u === OFFICIAL_NAME
+      })).sort((a,b) => (b.online - a.online) || a.u.localeCompare(b.u, 'zh'));
+      return sendJSON(200, { ok:true, items, count: online.size });
+    }
+
+    // 好友 / 群组：本版还没搬，先回空列表，前端不会报错
+    if (request.method === 'GET' && urlPath === '/api/friends'){
+      return sendJSON(200, { ok:true, friends:[], requests:[] });
+    }
+    if (urlPath.startsWith('/api/friend/') || urlPath.startsWith('/api/group/')){
+      return sendJSON(200, { ok:false, msg:'好友和群组功能还没搬到 Cloudflare 版', friends:[], requests:[], groups:[], items:[], msgs:[] });
+    }
+
+    // ——— 皮肤商店（和 Node 版同一套规则） ———
+    if (request.method === 'GET' && urlPath === '/api/shop'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'未登录' });
+      if (this.isGuest(u)) return sendJSON(200, { ok:true, guest:true, coins:0, skin:'classic', owned:[], checkedToday:false, streak:0, skins:SKINS });
+      const a = this.accounts.get(u);
+      const today = dayKey();
+      return sendJSON(200, {
+        ok:true, guest:false,
+        coins: a.coins || 0,
+        skin: a.skin || 'classic',
+        owned: ownedSkinsOf(u, a),
+        streak: a.lastCheckin ? (a.streak || 0) : 0,
+        checkedToday: a.lastCheckin === today,
+        skins: SKINS
+      });
+    }
+
+    if (request.method === 'POST' && urlPath === '/api/shop/checkin'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'未登录' });
+      if (this.isGuest(u)) return sendJSON(403, { ok:false, msg:'游客不能领金币，注册个账号再来', key:'guestNoCoin' });
+      const a = this.accounts.get(u);
+      const today = dayKey();
+      if (a.lastCheckin === today) return sendJSON(400, { ok:false, msg:'今天已经签到过了，明天再来', key:'checkedToday', coins:a.coins || 0 });
+      const streak = a.lastCheckin === prevDayKey(today) ? (a.streak || 0) + 1 : 1;
+      const reward = checkinReward(streak);
+      a.streak = streak; a.lastCheckin = today; a.coins = (a.coins || 0) + reward;
+      this.scheduleSave();
+      return sendJSON(200, { ok:true, reward, coins:a.coins, streak, checkedToday:true });
+    }
+
+    if (request.method === 'POST' && urlPath === '/api/shop/buy'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'未登录' });
+      if (this.isGuest(u)) return sendJSON(403, { ok:false, msg:'游客不能买皮肤，注册个账号再来', key:'guestNoSkin' });
+      const body = await request.json().catch(() => null);
+      if (!body) return sendJSON(400, { ok:false, msg:'请求格式错误' });
+      const sk = SKIN_MAP.get(body.id);
+      if (!sk) return sendJSON(404, { ok:false, msg:'没有这个皮肤' });
+      const a = this.accounts.get(u);
+      a.owned = a.owned || [];
+      if (u === OFFICIAL_NAME) return sendJSON(400, { ok:false, msg:'官方账号皮肤全部解锁，直接换就行', key:'officialAllSkins' });
+      if (a.owned.includes(sk.id) || sk.id === 'classic') return sendJSON(400, { ok:false, msg:'这个皮肤你已经有了', key:'alreadyOwned' });
+      if ((a.coins || 0) < sk.price) return sendJSON(400, { ok:false, msg:'金币不够，还差 ' + (sk.price - (a.coins || 0)) + ' 个', key:'noEnoughCoins' });
+      a.coins = (a.coins || 0) - sk.price;
+      a.owned.push(sk.id);
+      a.skin = sk.id;
+      this.scheduleSave();
+      return sendJSON(200, { ok:true, coins:a.coins, skin:a.skin, owned:a.owned });
+    }
+
+    if (request.method === 'POST' && urlPath === '/api/shop/equip'){
+      const u = authFromReq(this, request);
+      if (!u) return sendJSON(401, { ok:false, msg:'未登录' });
+      const body = await request.json().catch(() => null);
+      if (!body) return sendJSON(400, { ok:false, msg:'请求格式错误' });
+      const sk = SKIN_MAP.get(body.id);
+      if (!sk) return sendJSON(404, { ok:false, msg:'没有这个皮肤' });
+      const a = this.accounts.get(u) || {};
+      if (!ownedSkinsOf(u, a).includes(sk.id)) return sendJSON(403, { ok:false, msg:'还没买这个皮肤', key:'notOwned' });
+      a.skin = sk.id;
+      if (!this.isGuest(u)) { this.accounts.set(u, a); this.scheduleSave(); }
+      return sendJSON(200, { ok:true, skin:sk.id });
+    }
+
     if (request.method === 'GET' && urlPath === '/api/me'){
       const u = authFromReq(this, request);
       if (!u) return sendJSON(401, {ok:false,msg:'未登录'});
       const score = this.leaderboard.find(x=>x.u===u);
-      return sendJSON(200, {ok:true, user:u, best: score ? score.s : 0});
+      return sendJSON(200, { ok:true, user:u, best: score ? score.s : 0,
+        muteLeft:0, guest:this.isGuest(u), official: u === OFFICIAL_NAME });
     }
 
     if (request.method === 'GET' && urlPath === '/api/scores'){

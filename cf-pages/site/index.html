@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-i18n="dlTitle">联机贪吃蛇 - 多人在线对战 · 下载中心</title>
+<meta name="description" content="联机贪吃蛇：支持多人实时对战、房间系统、排行榜、聊天的跨平台贪吃蛇游戏。提供 Windows、macOS、Linux、Android、iOS 客户端下载，网页版打开即玩。">
+<meta name="keywords" content="贪吃蛇,联机贪吃蛇,多人贪吃蛇,贪吃蛇游戏,贪吃蛇下载,在线贪吃蛇,snake game,多人在线游戏">
+<meta name="author" content="联机贪吃蛇">
+<meta name="robots" content="index, follow">
+<meta name="msvalidate.01" content="97E74B1E6F885B29B2F2F6224D8279C1">
+<link rel="canonical" href="https://snake-online.up.railway.app/">
+<!-- Open Graph -->
+<meta property="og:title" content="联机贪吃蛇 - 多人在线对战 · 下载中心">
+<meta property="og:description" content="支持多人实时对战、房间系统、排行榜、聊天的跨平台贪吃蛇游戏。网页版打开即玩，支持 Windows、macOS、Linux、Android、iOS。">
+<meta property="og:url" content="https://snake-online.up.railway.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="联机贪吃蛇">
+<meta property="og:locale" content="zh_CN">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="联机贪吃蛇 - 多人在线对战">
+<meta name="twitter:description" content="支持多人实时对战、房间系统、排行榜、聊天的跨平台贪吃蛇游戏。">
+<!-- 结构化数据 -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "联机贪吃蛇",
+  "url": "https://snake-online.up.railway.app/",
+  "description": "支持多人实时对战、房间系统、排行榜、聊天的跨平台贪吃蛇游戏",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://snake-online.up.railway.app/{search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+<style>
+  :root {
+    --bg: #0b0e18;
+    --card: #151a2b;
+    --card-2: #1a2036;
+    --line: #29304c;
+    --text: #e6ebf5;
+    --muted: #8f9ab8;
+    --accent: #5b8cff;
+    --accent-2: #8b5cf6;
+    --accent-3: #22d3ee;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(900px 420px at 15% -8%, rgba(91,140,255,.22), transparent 65%),
+      radial-gradient(760px 380px at 88% 4%, rgba(139,92,246,.18), transparent 62%),
+      radial-gradient(620px 320px at 50% 105%, rgba(34,211,238,.10), transparent 68%);
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 44px 20px 32px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 960px; margin: 0 auto; position: relative; }
+
+  /* ---------- 顶部 ---------- */
+  header { text-align: center; margin-bottom: 28px; }
+  h1 {
+    font-size: 44px; letter-spacing: -.5px; margin-bottom: 12px; font-weight: 800;
+    display: inline-block; line-height: 1.15;
+  }
+  h1 .grad {
+    background: linear-gradient(100deg, #ffffff 8%, #a8c1ff 52%, #c7b3ff 96%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  h1 .emoji { font-size: 44px; }
+  .subtitle { color: var(--muted); font-size: 16px; }
+  .quick-play { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+  .quick-play a {
+    padding: 13px 26px; border-radius: 12px; text-decoration: none;
+    font-weight: 600; font-size: 15px; transition: transform .16s, box-shadow .16s, filter .16s;
+  }
+  .quick-play a:hover { transform: translateY(-2px); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #7aa2ff); color: #fff;
+    box-shadow: 0 8px 22px rgba(91,140,255,.30);
+  }
+  .btn-primary:hover { box-shadow: 0 12px 28px rgba(91,140,255,.45); }
+  .btn-secondary { background: rgba(26,32,54,.85); color: #a9c0ff; border: 1px solid #33406b; }
+  .btn-secondary:hover { border-color: var(--accent); }
+
+  /* ---------- 智能推荐 ---------- */
+  .smart {
+    margin: 26px 0 34px; padding: 20px 22px; border-radius: 18px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    background: linear-gradient(135deg, rgba(91,140,255,.14), rgba(139,92,246,.10));
+    border: 1px solid rgba(91,140,255,.38);
+    box-shadow: 0 14px 38px rgba(0,0,0,.34);
+    position: relative; overflow: hidden;
+  }
+  .smart::after {
+    content: ''; position: absolute; inset: 0; border-radius: 18px; pointer-events: none;
+    background: radial-gradient(400px 120px at 12% 0%, rgba(91,140,255,.22), transparent 70%);
+  }
+  .smart-icon { font-size: 42px; line-height: 1; flex: 0 0 auto; }
+  .smart-text { flex: 1 1 260px; min-width: 210px; }
+  .smart-label {
+    font-size: 12px; letter-spacing: .10em; text-transform: uppercase;
+    color: #9db4f0; margin-bottom: 5px;
+  }
+  .smart-name { font-size: 25px; font-weight: 800; margin-bottom: 5px; }
+  .smart-tip { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .smart-btn {
+    flex: 0 0 auto; padding: 16px 32px; border-radius: 14px; text-decoration: none;
+    font-size: 17px; font-weight: 700; color: #fff; white-space: nowrap;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 10px 26px rgba(91,140,255,.38);
+    transition: transform .16s, box-shadow .16s;
+  }
+  .smart-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(91,140,255,.5); }
+
+  /* ---------- 分区与卡片 ---------- */
+  section { margin-bottom: 34px; }
+  h2 {
+    font-size: 20px; margin-bottom: 16px; padding-bottom: 10px; font-weight: 700;
+    border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 14px; }
+  .card {
+    position: relative; overflow: hidden;
+    background: linear-gradient(180deg, var(--card-2), var(--card));
+    border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 20px 20px; transition: border-color .18s, transform .18s, box-shadow .18s;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    opacity: 0; transition: opacity .18s;
+  }
+  .card:hover { border-color: #3c4a75; transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,.3); }
+  .card:hover::before { opacity: .65; }
+  .card.fit {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(91,140,255,.35), 0 12px 30px rgba(91,140,255,.16);
+  }
+  .card.fit::before { opacity: 1; }
+  .card .fit-badge {
+    display: none; position: absolute; top: 14px; inset-inline-end: 14px;
+    font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    color: #cfe0ff; background: rgba(91,140,255,.20);
+    border: 1px solid rgba(91,140,255,.55); border-radius: 999px;
+    padding: 3px 9px; white-space: nowrap;
+  }
+  .card.fit .fit-badge { display: inline-block; }
+  .card .name { font-size: 17px; font-weight: 700; margin-bottom: 7px; padding-inline-end: 8px; }
+  .card.fit .name { padding-inline-end: 112px; }
+  .card .meta { font-size: 13px; color: var(--muted); margin-bottom: 15px; line-height: 1.65; min-height: 42px; }
+  .card a {
+    display: inline-block; padding: 9px 18px; border-radius: 9px; text-decoration: none;
+    font-size: 14px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, var(--accent), #6f97ff);
+    transition: filter .16s, transform .16s;
+  }
+  .card a:hover { filter: brightness(1.1); }
+  .card a.ghost {
+    background: transparent; border: 1px solid #3d4c7a; color: #a9c0ff; margin-left: 8px;
+  }
+  .card a.is-busy { opacity: .5; }
+
+  /* ---------- 提示 ---------- */
+  .note {
+    background: rgba(26,32,54,.75); border-left: 3px solid #fbbf24; border-radius: 10px;
+    padding: 15px 18px; font-size: 14px; color: #cbd5e1; line-height: 1.75;
+  }
+  .note b { color: #fbbf24; }
+  footer { text-align: center; color: #5c6685; font-size: 13px; margin-top: 40px; line-height: 1.8; }
+
+  /* ---------- 语言选择 ---------- */
+  .lang-bar { position: absolute; top: -24px; inset-inline-end: 0; z-index: 10; display: flex; align-items: center; gap: 6px; }
+  .lang-globe { font-size: 15px; line-height: 1; }
+  .lang-sel {
+    min-height: 32px; max-width: 200px; padding: 6px 26px 6px 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+    color: var(--text); font-size: 13px; cursor: pointer; outline: none;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b94b8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 9px center;
+  }
+  .lang-sel:hover, .lang-sel:focus { border-color: var(--accent); }
+  .lang-sel option { background: var(--card); color: var(--text); }
+
+  @media (max-width: 640px) {
+    body { padding: 36px 16px 26px; }
+    h1 { font-size: 31px; }
+    .quick-play a { padding: 12px 20px; font-size: 14px; }
+    .lang-bar { position: static; text-align: right; margin-bottom: 14px; }
+    .smart { padding: 18px; gap: 14px; }
+    .smart-icon { font-size: 34px; }
+    .smart-name { font-size: 21px; }
+    .smart-btn { width: 100%; text-align: center; padding: 15px 22px; font-size: 16px; }
+    .card .meta { min-height: 0; }
+  }
+
+</style>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="favicon.png">
+</head>
+<body>
+<div class="container">
+
+  <div class="lang-bar">
+    <span class="lang-globe" aria-hidden="true">🌐</span>
+    <select id="langSel" class="lang-sel" aria-label="Language"></select>
+  </div>
+
+  <header>
+    <h1><span class="emoji">🐍</span> <span class="grad" data-i18n="dlHead">联机贪吃蛇</span></h1>
+    <p class="subtitle" data-i18n="dlSub">多人联机 · 房间对战 · 排行榜 · 跨平台客户端</p>
+    <div class="quick-play">
+      <a href="play.html" class="btn-primary" data-i18n="dlPlayWeb">🖥️ 网页版立即玩</a>
+      <a href="mobile.html" class="btn-secondary" data-i18n="dlPlayMobile">📱 手机版立即玩</a>
+    </div>
+  </header>
+
+  <!-- ============ 自动识别设备 ============ -->
+  <div class="smart" id="smartBox">
+    <div class="smart-icon" id="smartIcon">💻</div>
+    <div class="smart-text">
+      <div class="smart-label" data-i18n="dlSmart">检测到你的设备</div>
+      <div class="smart-name" id="smartName">—</div>
+      <div class="smart-tip" id="smartTip" data-i18n="dlSmartTip">点一下，直接下载对应安装包</div>
+    </div>
+    <a class="smart-btn" id="smartBtn" href="#" style="display:none"><span data-i18n="dlDownload">下载</span></a>
+  </div>
+
+
+  <section>
+    <h2><span data-i18n="dlSecDesktop">📦 桌面客户端</span></h2>
+    <div class="grid">
+      <div class="card" data-platform="mac">
+        <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
+        <div class="name">🍎 <bdi>macOS</bdi></div>
+        <div class="meta" data-i18n="dlMacMeta">贪吃蛇.app · DMG 安装包 · 原生 WKWebView 窗口</div>
+        <a href="https://snake-online.up.railway.app/贪吃蛇.dmg?v=20261118d"><span data-i18n="dlDownload">下载</span> DMG</a>
+      </div>
+      <div class="card" data-platform="win">
+        <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
+        <div class="name">🖥️ <bdi>Windows</bdi></div>
+        <div class="meta" data-i18n="dlWinMeta">Snake.exe · Win64 ZIP · 需安装 WebView2 Runtime</div>
+        <a href="https://snake-online.up.railway.app/贪吃蛇-win64.zip?v=20261118d"><span data-i18n="dlDownload">下载</span> ZIP</a>
+      </div>
+      <div class="card" data-platform="linux">
+        <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
+        <div class="name">🐧 <bdi>Linux</bdi></div>
+        <div class="meta" data-i18n="dlLinuxMeta">snake-game · DEB 包 · Debian / Ubuntu / 深度</div>
+        <a href="https://snake-online.up.railway.app/贪吃蛇.deb?v=20261118d"><span data-i18n="dlDownload">下载</span> DEB</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span data-i18n="dlSecMobile">📱 手机客户端</span></h2>
+    <div class="grid">
+      <div class="card" data-platform="android">
+        <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
+        <div class="name">🤖 <bdi>Android</bdi></div>
+        <div class="meta" data-i18n="dlAndroidMeta">com.snake.game · APK · Android 5.0+</div>
+        <a href="https://snake-online.up.railway.app/贪吃蛇.apk?v=20261118d"><span data-i18n="dlDownload">下载</span> APK</a>
+      </div>
+      <div class="card" data-platform="ios">
+        <span class="fit-badge" data-i18n="dlFit">✓ 适合你的设备</span>
+        <div class="name" data-i18n="dlIosName">🍎 iOS（未签名）</div>
+        <div class="meta" data-i18n="dlIosMeta">IPA · 需自行签名 · 用 Sideloadly / AltStore 安装</div>
+        <a href="https://snake-online.up.railway.app/贪吃蛇-unsigned.ipa?v=20261118d"><span data-i18n="dlDownload">下载</span> IPA</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span data-i18n="dlSecScratch">🧩 Scratch / TurboWarp</span></h2>
+    <div class="grid">
+      <div class="card">
+        <div class="name" data-i18n="dlSb3Name">🎮 Scratch 3 工程文件</div>
+        <div class="meta" data-i18n="dlSb3Meta">.sb3 · 导入 TurboWarp 点绿旗即玩 · 全屏打开最新网页版，永不落伍</div>
+        <a href="https://snake-online.up.railway.app/联机贪吃蛇.sb3?v=20261116a"><span data-i18n="dlDownload">下载</span> SB3</a>
+        <a href="snake-ext.js" class="ghost" target="_blank" data-i18n="dlExt">查看扩展</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="note">
+      <b data-i18n="dlTipsTitle">💡 使用提示</b><br>
+      <span data-i18n="dlTip1">网页版无需下载，打开即玩，支持账号注册 / 登录 / 房间系统 / 聊天 / 排行榜</span><br>
+      <span data-i18n="dlTip2">全屏版客户端 = 内置 TurboWarp + 联机扩展，启动后按积木提示输入用户名和密码</span><br>
+      <span data-i18n="dlTip3">网页版客户端 = 内置完整网页，打开就是登录界面</span><br>
+      <span data-i18n="dlTip4">Windows 10 首次运行需安装 WebView2 Runtime（Windows 11 已自带）</span><br>
+      <span data-i18n="dlTip5">iOS IPA 未签名，需要通过 Sideloadly / AltStore / Xcode 自签安装</span>
+    </div>
+  </section>
+
+  <footer><span data-i18n="dlFooter">🐍 联机贪吃蛇 · 多人实时对战 · 支持 50ms 超快模式</span><br><span style="opacity:.65;font-size:12px">© 2026 Nie Qizhong, Inc.</span></footer>
+
+</div>
+<script src="i18n.js?v=20261115j"></script>
+<script src="lang-late.js?v=20261121a"></script>
+<script>
+(function () {
+  /* ---------- 语言下拉 ---------- */
+  var sel = document.getElementById('langSel');
+  if (sel && window.LANG_LIST) {
+    for (var i = 0; i < LANG_LIST.length; i++) {
+      var o = document.createElement('option');
+      o.value = LANG_LIST[i].code;
+      o.textContent = LANG_LIST[i].name;
+      sel.appendChild(o);
+    }
+    sel.value = window.getLang ? getLang() : 'en';
+    sel.addEventListener('change', function () {
+      setLang(this.value);
+      applyI18n(document);
+    });
+
+  }
+
+  /* ---------- 识别当前设备：以服务端按请求头 UA 判断的结果为准 ---------- */
+  function detectLocal(){
+    var ua = navigator.userAgent || '';
+    var pf = navigator.platform || '';
+    var touch = navigator.maxTouchPoints || 0;
+    if (/Android/i.test(ua)) return 'android';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+    // iPadOS 13+ 的默认 UA 伪装成 Mac，靠触摸点数区分
+    if (/Mac/i.test(pf) && touch > 1) return 'ios';
+    if (/Windows/i.test(ua) || /^Win/i.test(pf)) return 'win';
+    if (/Mac/i.test(ua) || /Mac/i.test(pf)) return 'mac';
+    if (/Linux|X11/i.test(ua) || /Linux/i.test(pf)) return 'linux';
+    return '';
+  }
+
+  // 调试用：?plat=win|mac|linux|android|ios 直接指定平台，在任意设备上都能预览各平台样式
+  var qplat = (new URLSearchParams(location.search).get('plat') || '').toLowerCase();
+
+  // 安装包统一走线上地址，避免静态托管站点缺文件
+  var BASE = 'https://snake-online.up.railway.app/';
+  var MAP = {
+    mac:     { name: 'macOS',   icon: '🍎', href: BASE + '贪吃蛇.dmg?v=20261118d',         ext: 'DMG' },
+    win:     { name: 'Windows', icon: '🖥️', href: BASE + '贪吃蛇-win64.zip?v=20261118d',   ext: 'ZIP' },
+    linux:   { name: 'Linux',   icon: '🐧', href: BASE + '贪吃蛇.deb?v=20261118d',         ext: 'DEB' },
+    android: { name: 'Android', icon: '🤖', href: BASE + '贪吃蛇.apk?v=20261118d',         ext: 'APK' },
+    ios:     { name: 'iOS',     icon: '📱', href: BASE + '贪吃蛇-unsigned.ipa?v=20261118d', ext: 'IPA' }
+  };
+  function applyPlat(plat){
+    var info = MAP[plat];
+
+    // 给对应卡片打上「适合你的设备」标记
+    var cards = document.querySelectorAll('.card[data-platform]');
+    for (var c = 0; c < cards.length; c++) {
+      cards[c].classList.toggle('fit', cards[c].getAttribute('data-platform') === plat);
+    }
+
+    var box = document.getElementById('smartBox');
+    if (!box) return;
+    if (info) {
+      document.getElementById('smartIcon').textContent = info.icon;
+      document.getElementById('smartName').innerHTML = '<bdi>' + info.name + '</bdi>';
+      var btn = document.getElementById('smartBtn');
+      btn.href = info.href;
+      btn.innerHTML = '<span data-i18n="dlDownload">下载</span> ' + info.ext;
+      btn.style.display = '';
+      if (window.applyI18n) applyI18n(btn);
+    } else {
+      document.getElementById('smartIcon').textContent = '🌐';
+      document.getElementById('smartName').textContent = '—';
+      document.getElementById('smartBtn').style.display = 'none';
+      var tip = document.getElementById('smartTip');
+      tip.setAttribute('data-i18n', 'dlSmartUnknown');
+      if (window.applyI18n) applyI18n(box);
+    }
+  }
+
+  var isQ = (qplat === 'mac' || qplat === 'win' || qplat === 'linux' || qplat === 'android' || qplat === 'ios');
+  if (isQ) { applyPlat(qplat); }
+  else {
+    // 先按浏览器自己的判断画一遍，免得等接口时是空白
+    var local = detectLocal();
+    if (local) applyPlat(local);
+    // 再问服务端：它按请求头 UA 判断，KukeChat 就是这么认设备的
+    fetch('/api/platform', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok || !j.platform) return;
+      // iPadOS 的 UA 会伪装成 Mac，客户端能靠触摸点数认出 iOS，这种别被服务端改回去
+      var keepIos = (local === 'ios' && j.platform === 'mac');
+      if (j.platform !== local && !keepIos) applyPlat(j.platform);
+    }).catch(function () {});
+  }
+
+  /* ---------- 防连点：同一个下载 2.5 秒内只触发一次 ---------- */
+  var BUSY_MS = 2500;
+  document.addEventListener('click', function (ev) {
+    var el = ev.target;
+    while (el && el.tagName !== 'A') el = el.parentNode;
+    if (!el || !/\.(dmg|zip|apk|ipa|deb|sb3)$/i.test(el.getAttribute('href') || '')) return;
+    if (el.dataset.busy) { ev.preventDefault(); return; }
+    el.dataset.busy = '1';
+    el.classList.add('is-busy');
+    setTimeout(function () {
+      el.dataset.busy = '';
+      el.classList.remove('is-busy');
+    }, BUSY_MS);
+  }, true);
+})();
+</script>
+</body>
+</html>
