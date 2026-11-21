@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 110;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -25,11 +25,9 @@
 /* Begin PBXFrameworksBuildPhase section */
 		1A000000000000000000E2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				1A000000000000000000D4 /* WebKit.framework in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -83,8 +81,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			name = SnakeOnline;
 			productName = SnakeOnline;
 			productReference = 1A000000000000000000A4 /* SnakeOnline.app */;
@@ -106,7 +102,6 @@
 				};
 			};
 			buildConfigurationList = 1A000000000000000000F1 /* Build configuration list for PBXProject "SnakeOnline" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = zh_CN;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -114,6 +109,7 @@
 				Base,
 			);
 			mainGroup = 1A000000000000000000A2;
+			preferredProjectObjectVersion = 110;
 			productRefGroup = 1A000000000000000000A3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -126,28 +122,24 @@
 /* Begin PBXResourcesBuildPhase section */
 		1A000000000000000000E3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				1A000000000000000000D3 /* Assets.xcassets in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1A000000000000000000E1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				1A000000000000000000D2 /* SceneDelegate.swift in Sources */,
 				1A000000000000000000D1 /* AppDelegate.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		1A000000000000000000CA /* Debug */ = {
+		1A000000000000000000CA /* Debug configuration for PBXProject "SnakeOnline" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -175,7 +167,7 @@
 			};
 			name = Debug;
 		};
-		1A000000000000000000CB /* Release */ = {
+		1A000000000000000000CB /* Release configuration for PBXProject "SnakeOnline" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -196,7 +188,7 @@
 			};
 			name = Release;
 		};
-		1A000000000000000000CC /* Debug */ = {
+		1A000000000000000000CC /* Debug configuration for PBXNativeTarget "SnakeOnline" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -219,7 +211,7 @@
 			};
 			name = Debug;
 		};
-		1A000000000000000000CD /* Release */ = {
+		1A000000000000000000CD /* Release configuration for PBXNativeTarget "SnakeOnline" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -248,19 +240,17 @@
 		1A000000000000000000F1 /* Build configuration list for PBXProject "SnakeOnline" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1A000000000000000000CA /* Debug */,
-				1A000000000000000000CB /* Release */,
+				1A000000000000000000CA /* Debug configuration for PBXProject "SnakeOnline" */,
+				1A000000000000000000CB /* Release configuration for PBXProject "SnakeOnline" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		1A000000000000000000F2 /* Build configuration list for PBXNativeTarget "SnakeOnline" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1A000000000000000000CC /* Debug */,
-				1A000000000000000000CD /* Release */,
+				1A000000000000000000CC /* Debug configuration for PBXNativeTarget "SnakeOnline" */,
+				1A000000000000000000CD /* Release configuration for PBXNativeTarget "SnakeOnline" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
