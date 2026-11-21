@@ -237,6 +237,15 @@ try {
         </div>
       </div>
 
+      <div class="set-group">
+        <label id="richLabel">聊天增强</label>
+        <div class="set-row" id="setRich">
+          <button type="button" class="speed-btn rich-btn" data-rich="md">Markdown</button>
+          <button type="button" class="speed-btn rich-btn" data-rich="tex">LaTeX</button>
+        </div>
+        <p id="richHint" class="set-tip">开启后聊天里可以用 **粗体**、`代码`、$x^2$ 这类写法；不开就是纯文本</p>
+      </div>
+
       <div class="set-group" id="setNameGroup">
         <label data-i18n="accountName">账号名字</label>
         <div class="set-row">
@@ -363,6 +372,7 @@ try {
 })();
 </script>
 <script src="i18n.js?v=20261120a"></script>
+<script src="richtext.js?v=20261121a"></script>
 <script src="game.js?v=20261120a"></script>
 <script src="groups.js?v=20261120a"></script>
 <script src="shop.js?v=20261120a"></script>

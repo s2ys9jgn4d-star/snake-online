@@ -584,3 +584,20 @@ html[data-theme="light"] .oauth-btn:hover { background: #f2f5fb; }
 }
 html[data-theme="light"] .sms-row { border-top-color: #e3ebf7; }
 html[data-theme="light"] .sms-login-btn { border-color: #d7e3f6; background: #fff; color: #22304a; }
+
+/* 聊天增强：Markdown / LaTeX 渲染 + 撤回 */
+.chat-box .msg .txt { white-space: normal; }
+.msg .rt a { color: var(--accent); text-decoration: underline; }
+.msg .rt .rt-inline { padding: 1px 4px; border-radius: 4px; background: rgba(255,255,255,.08); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; }
+html[data-theme="light"] .msg .rt .rt-inline { background: rgba(15,25,50,.08); }
+.msg .rt .rt-strike { text-decoration: line-through; opacity: .8; }
+.msg .rt .rt-quote { display: inline-block; padding-left: 6px; border-left: 2px solid currentColor; opacity: .85; }
+.msg .rt .rt-h { font-size: 1.02em; }
+.msg .rt pre.rt-code { margin: 4px 0; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.28); overflow-x: auto; font-size: 12px; white-space: pre; }
+html[data-theme="light"] .msg .rt pre.rt-code { background: rgba(15,25,50,.06); }
+.msg .rt .katex { font-size: 1.02em; }
+.msg .rt .katex-display { margin: 4px 0; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+.dm-recall { margin-left: 8px; border: 0; background: transparent; color: inherit; opacity: .55; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0; }
+.dm-recall:hover { opacity: .95; }
+.msg.recalled { opacity: .6; font-style: italic; }
+.set-row .rich-btn.active { outline: 2px solid var(--accent); }

@@ -511,6 +511,7 @@ function handleWs(msg){
       if (dmWith === msg.from && !$('dmBox').classList.contains('hidden')) appendDm(msg);
       else showToast(t('friendMsg', { name: msg.from, text: msg.text }));
       break;
+    case 'friend_recall': markDmRecall(msg.mid); break;
     case 'presence': onPresence(msg.user, msg.online); break;
     case 'state': onState(msg); break;
     case 'pong': onPong(msg); break;
@@ -698,11 +699,52 @@ function openDm(user){
 function appendDm(m){
   const box = $('dmMsgs');
   if (box.querySelector('.empty-tip')) box.innerHTML = '';
-  const div = document.createElement('div');
-  div.className = 'msg dm' + (m.from === authUser ? ' mine' : '');
-  div.innerHTML = `<span class="from">${escHtml(m.from === authUser ? t('me') : m.from)}:</span>${escHtml(m.text)}`;
-  box.appendChild(div);
+  box.appendChild(dmNode(m));
   box.scrollTop = box.scrollHeight;
+}
+function richT(k, fallback){ return window.RichText ? RichText.T(k) : fallback; }
+function dmNode(m){
+  const mine = m.from === authUser;
+  const div = document.createElement('div');
+  div.className = 'msg dm' + (mine ? ' mine' : '');
+  if (m.id) div.setAttribute('data-mid', m.id);
+  if (m.recalled){
+    div.classList.add('recalled');
+    div.textContent = (mine ? '' : m.from + ' ') + richT('recalled', '撤回了一条消息');
+    return div;
+  }
+  const from = document.createElement('span');
+  from.className = 'from';
+  from.textContent = (mine ? t('me') : m.from) + ':';
+  div.appendChild(from);
+  const body = document.createElement('span');
+  body.className = 'txt';
+  div.appendChild(body);
+  if (window.RichText) RichText.mount(body, m.text);
+  else body.textContent = m.text;
+  if (mine && m.id){
+    const rc = document.createElement('button');
+    rc.type = 'button';
+    rc.className = 'dm-recall';
+    rc.textContent = richT('recall', '撤回');
+    rc.onclick = () => recallDm(m, div);
+    div.appendChild(rc);
+  }
+  return div;
+}
+async function recallDm(m, node){
+  if (!dmWith || !m || !m.id) return;
+  const r = await api('/api/friend/recall', { method:'POST', body: JSON.stringify({ to: dmWith, mid: m.id }) });
+  if (!r.ok) return showToast(r.msg || t('opFailed'));
+  m.recalled = true; m.text = '';
+  if (node && node.parentNode) node.parentNode.replaceChild(dmNode(m), node);
+}
+function markDmRecall(mid){
+  const box = $('dmMsgs'); if (!box || !mid) return;
+  const node = box.querySelector('[data-mid="' + mid + '"]');
+  if (!node) return;
+  node.classList.add('recalled');
+  node.textContent = richT('recalled', '撤回了一条消息');
 }
 async function sendDm(){
   const input = $('dmInput');
@@ -711,7 +753,7 @@ async function sendDm(){
   input.value = '';
   const r = await api('/api/friend/chat', { method:'POST', body: JSON.stringify({ to: dmWith, text }) });
   if (!r.ok){ showToast(r.msg || t('sendFailed')); input.value = text; return; }
-  appendDm({ from: authUser, text });
+  appendDm(r.item || { from: authUser, text });
 }
 $('dmSend').addEventListener('click', sendDm);
 $('dmInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendDm(); });
@@ -1097,7 +1139,15 @@ function appendRoomChat(msg){
   const cls = isSys ? 'sys' : (msg.from === authUser ? 'me' : '');
   const name = isSys ? t('sysLabel') : msg.from;
   const body = msg.key ? t(msg.key, msg.args) : msg.text;
-  div.innerHTML = '<span class="from ' + cls + '">' + escHtml(name) + ':</span>' + escHtml(body);
+  const nameEl = document.createElement('span');
+  nameEl.className = 'from ' + cls;
+  nameEl.textContent = name + ':';
+  div.appendChild(nameEl);
+  const bodyEl = document.createElement('span');
+  bodyEl.className = 'txt';
+  div.appendChild(bodyEl);
+  if (isSys || !window.RichText) bodyEl.textContent = body;
+  else RichText.mount(bodyEl, body);
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
@@ -1128,6 +1178,25 @@ function syncSpeedButtons(ms){
   document.querySelectorAll('#speedRow .speed-btn, #speedRow2 .speed-btn').forEach(x =>
     x.classList.toggle('active', Number(x.dataset.ms) === ms));
 }
+
+// —— 聊天增强开关（Markdown / LaTeX），和桌面端共用同一份本地设置 ——
+function syncRichBtns(){
+  const st = window.RichText ? RichText.get() : { md:false, tex:false };
+  document.querySelectorAll('#setRich .rich-btn').forEach(b => {
+    b.classList.toggle('active', !!st[b.dataset.rich]);
+  });
+}
+document.querySelectorAll('#setRich .rich-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    if (!window.RichText) return;
+    const k = b.dataset.rich;
+    const cur = RichText.get();
+    RichText.set(k, !cur[k]);
+    syncRichBtns();
+    if (k === 'tex' && RichText.get().tex) showToast(t('loading'));
+  });
+});
+syncRichBtns();
 
 // —— 离开房间 ——
 if ($('leaveBtn')) $('leaveBtn').addEventListener('click', () => {

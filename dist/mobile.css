@@ -473,3 +473,12 @@ html[data-theme="light"] .oauth-btn { border-color: #d7e3f6; background: #fff; c
 }
 html[data-theme="light"] .sms-row { border-top-color: #e3ebf7; }
 html[data-theme="light"] .sms-login-btn { border-color: #d7e3f6; background: #fff; color: #22304a; }
+
+/* 聊天增强（手机端） */
+.msg .txt { white-space: normal; }
+.msg .rt a { color: #8fc0ff; text-decoration: underline; }
+.msg .rt .rt-inline { padding: 1px 4px; border-radius: 4px; background: rgba(255,255,255,.1); font-size: .92em; }
+.msg .rt pre.rt-code { margin: 4px 0; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.3); overflow-x: auto; font-size: 12px; white-space: pre; }
+.msg .rt .katex-display { margin: 4px 0; overflow-x: auto; overflow-y: hidden; }
+.dm-recall { margin-left: 8px; border: 0; background: transparent; color: inherit; opacity: .55; font-size: 11px; text-decoration: underline; }
+.msg.recalled { opacity: .6; font-style: italic; }

@@ -13,7 +13,8 @@
       apply:'申请加入', created:'群创建好了', reqSent:'申请已发送，等群主同意',
       kicked:'你被移出群聊', dissolved:'群已解散', reqArrived:'{name} 申请加入「{group}」',
       emptyChat:'还没有人说话，打个招呼吧', notFound:'没搜到群', confirmDissolve:'确定解散「{name}」？解散后记录都会消失',
-      confirmLeave:'确定退出「{name}」？', maxTip:'每人最多创建 5 个群，请先删除几个群', youAreOwner:'你是群主'
+      confirmLeave:'确定退出「{name}」？', maxTip:'每人最多创建 5 个群，请先删除几个群', youAreOwner:'你是群主',
+      recall:'撤回', recalled:'撤回了一条消息', recallFail:'撤回失败'
     },
     'zh-TW': {
       group:'群組', create:'建立群組', createPh:'輸入群組名稱（1-16 字）',
@@ -25,7 +26,8 @@
       apply:'申請加入', created:'群組建立好了', reqSent:'申請已送出，等群主同意',
       kicked:'你被移出群組', dissolved:'群組已解散', reqArrived:'{name} 申請加入「{group}」',
       emptyChat:'還沒有人說話，打個招呼吧', notFound:'沒搜到群組', confirmDissolve:'確定解散「{name}」？解散後記錄都會消失',
-      confirmLeave:'確定退出「{name}」？', maxTip:'每人最多建立 5 個群組，請先刪除幾個群組', youAreOwner:'你是群主'
+      confirmLeave:'確定退出「{name}」？', maxTip:'每人最多建立 5 個群組，請先刪除幾個群組', youAreOwner:'你是群主',
+      recall:'收回', recalled:'收回了一則訊息', recallFail:'收回失敗'
     },
     'en': {
       group:'Groups', create:'Create', createPh:'Group name (1-16 chars)',
@@ -38,7 +40,8 @@
       kicked:'You were removed from the group', dissolved:'The group was deleted',
       reqArrived:'{name} wants to join "{group}"', emptyChat:'No messages yet, say hi!',
       notFound:'No group found', confirmDissolve:'Delete "{name}"? All messages will be lost',
-      confirmLeave:'Leave "{name}"?', maxTip:'You can own at most 5 groups, please delete some first', youAreOwner:'You are the owner'
+      confirmLeave:'Leave "{name}"?', maxTip:'You can own at most 5 groups, please delete some first', youAreOwner:'You are the owner',
+      recall:'Recall', recalled:'recalled a message', recallFail:'Recall failed'
     }
   };
 
@@ -111,6 +114,20 @@
     + '.grp-msg.mine{align-self:flex-end;background:#2f6df6;color:#fff;}'
     + '.grp-msg .who{font-size:11px;opacity:.65;margin-bottom:2px;}'
     + '.grp-msg.mine .who{opacity:.85;}'
+    + '.grp-recall{margin-left:8px;border:0;background:transparent;color:inherit;opacity:.5;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;}'
+    + '.grp-recall:hover{opacity:.9;}'
+    + '.grp-msg.recalled{opacity:.6;font-style:italic;background:transparent;border:1px dashed #3a4a6b;}'
+    + 'html[data-theme="light"] .grp-msg.recalled{background:transparent;border-color:#c9d7ee;}'
+    + '.grp-msg .rt .katex-display{overflow-x:auto;overflow-y:hidden;margin:4px 0;}'
+    + '.grp-msg .rt pre.rt-code{margin:4px 0;padding:6px 8px;border-radius:6px;background:rgba(0,0,0,.28);overflow-x:auto;font-size:12px;}'
+    + 'html[data-theme="light"] .grp-msg .rt pre.rt-code{background:rgba(15,25,50,.06);}'
+    + '.grp-msg .rt a{color:#8fc0ff;}'
+    + 'html[data-theme="light"] .grp-msg .rt a{color:#1d4ed8;}'
+    + '.grp-msg.mine .rt a{color:#dce8ff;}'
+    + '.grp-msg .rt .rt-inline{padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.22);font-size:12px;}'
+    + 'html[data-theme="light"] .grp-msg .rt .rt-inline{background:rgba(15,25,50,.08);}'
+    + '.grp-msg .rt .rt-strike{text-decoration:line-through;opacity:.8;}'
+    + '.grp-msg .rt .rt-quote{display:inline-block;padding-left:6px;border-left:2px solid currentColor;opacity:.85;}'
     + '.grp-empty{opacity:.6;text-align:center;padding:24px 0;}'
     + '.grp-send{display:flex;gap:8px;padding-top:6px;}'
     + '.grp-send input{flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid #2a3550;background:#0f1520;color:inherit;}'
@@ -225,8 +242,60 @@
     var mine = m.from === meName();
     var div = document.createElement('div');
     div.className = 'grp-msg' + (mine ? ' mine' : '');
-    div.innerHTML = (mine ? '' : '<div class="who">' + esc(m.from) + '</div>') + esc(m.text);
+    if (m.id) div.setAttribute('data-mid', m.id);
+    if (m.recalled){
+      div.classList.add('recalled');
+      div.textContent = (mine ? '' : m.from + ' ') + T('recalled');
+      return div;
+    }
+    if (!mine){
+      var who = document.createElement('div');
+      who.className = 'who';
+      who.textContent = m.from;
+      div.appendChild(who);
+    }
+    var body = document.createElement('span');
+    body.className = 'tb';
+    div.appendChild(body);
+    if (window.RichText) window.RichText.mount(body, m.text);
+    else body.textContent = m.text;
+    if (mine && m.id){
+      var rc = document.createElement('button');
+      rc.type = 'button';
+      rc.className = 'grp-recall';
+      rc.textContent = T('recall');
+      rc.onclick = function(){ recallMsg(m, div); };
+      div.appendChild(rc);
+    }
     return div;
+  }
+
+  // 撤回：服务端只允许本人 + 5 分钟内，失败原因直接用服务端文案
+  function recallMsg(m, node){
+    var g = curGroup;
+    if (!g || !m || !m.id) return;
+    api('/api/group/recall', { id: g.id, mid: m.id }).then(function(r){
+      if (!r.ok) return toast(errText(r, T('recallFail')));
+      m.recalled = true;
+      if (node && node.parentNode) node.parentNode.replaceChild(renderMsg(m), node);
+    });
+  }
+
+  // 收到别人撤回：把列表里那条换成占位，并把 DOM 一起换掉
+  function markRecalled(mid, from){
+    if (!curGroup || !curGroup.msgs) return;
+    for (var i = 0; i < curGroup.msgs.length; i++){
+      var m = curGroup.msgs[i];
+      if (m && m.id === mid){
+        m.recalled = true;
+        m.text = '';
+        var box = root && root.querySelector('[data-role="msgs"]');
+        if (!box) return;
+        var node = box.querySelector('[data-mid="' + mid + '"]');
+        if (node) node.parentNode.replaceChild(renderMsg(m), node);
+        else return;
+      }
+    }
   }
 
   async function openGroup(id){
@@ -396,9 +465,13 @@
     if (m.t === 'group_join'){ toast(T('joined') + ' ' + (m.name || '')); return; }
     if (m.t === 'group_kick'){ toast(T('kicked')); if (mask) close(); return; }
     if (m.t === 'group_delete'){ toast(T('dissolved')); if (mask) close(); return; }
+    if (m.t === 'group_recall'){
+      if (mask && curGroup && curGroup.id === m.id) markRecalled(m.mid, m.from);
+      return;
+    }
     if (m.t === 'group_msg'){
       if (mask && curGroup && curGroup.id === m.id){
-        curGroup.msgs.push({ from: m.from, text: m.text, ts: m.ts });
+        curGroup.msgs.push({ id: m.mid, from: m.from, text: m.text, ts: m.ts });
         var body = root.querySelector('[data-role="body"]');
         var box = body && body.querySelector('[data-role="msgs"]');
         if (box){

@@ -296,6 +296,18 @@ function loadSocial(){
 loadSocial();
 function saveSocial(){ atomicWrite(FRIENDS_FILE, social); }
 function pairKey(a, b){ return [a, b].sort().join('|'); }
+
+// —— 消息 id 与撤回 ——
+// 私聊、群聊的每条消息都带一个短 id，撤回时靠它对上号；老数据没有 id，读的时候补上
+const RECALL_TTL = 5 * 60 * 1000;   // 发出去 5 分钟内可以撤回
+let msgSeq = 0;
+function nextMid(){ msgSeq = (msgSeq + 1) % 1e7; return Date.now().toString(36) + '-' + msgSeq.toString(36); }
+function ensureMsgIds(list){
+  let changed = false;
+  for (const m of list || []) if (m && !m.id){ m.id = nextMid(); changed = true; }
+  return changed;
+}
+
 // 好友列表：官方账号与所有人默认互为好友（不用申请）
 function friendListOf(u){
   const list = social.friends[u] || [];
@@ -322,11 +334,11 @@ function maybeOfficialReply(from){
   const arr = social.msgs[k] = social.msgs[k] || [];
   // 欢迎语在打开聊天时就已经放进去了，这里再回一次就是重复的同一条
   if (arr.some(m => m.from === OFFICIAL_NAME && m.text === OFFICIAL_AUTO_REPLY)) return;
-  const item = { from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
+  const item = { id: nextMid(), from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
   arr.push(item);
   if (arr.length > 100) arr.splice(0, arr.length - 100);
   saveSocial();
-  pushToUser(from, { t:'friend_msg', from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: item.ts });
+  pushToUser(from, { t:'friend_msg', id: item.id, from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: item.ts });
 }
 // 账号注销时，把它从别人的好友/申请/聊天里摘干净
 function cleanupSocial(u){
@@ -1779,10 +1791,12 @@ async function handleApi(req, res, urlPath){
     let items = social.msgs[k] || [];
     // 打开和官方的私聊就先把欢迎语放进去，不用等对方先说话
     if (withWho === OFFICIAL_NAME && !items.length){
-      const greeting = { from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
+      const greeting = { id: nextMid(), from: OFFICIAL_NAME, text: OFFICIAL_AUTO_REPLY, ts: Date.now() };
       items = [greeting];
       social.msgs[k] = items;
       saveSocial();
+    } else if (ensureMsgIds(items)){
+      saveSocial();   // 老记录补上 id，撤回才有对象
     }
     return sendJSON(res, 200, {ok:true, items: items.slice(-100)});
   }
@@ -1805,13 +1819,37 @@ async function handleApi(req, res, urlPath){
     }
     const k = pairKey(me, to);
     const arr = social.msgs[k] = social.msgs[k] || [];
-    const item = { from: me, text, ts: Date.now() };
+    const item = { id: nextMid(), from: me, text, ts: Date.now() };
     arr.push(item);
     if (arr.length > 100) arr.splice(0, arr.length - 100);
     saveSocial();
-    pushToUser(to, { t:'friend_msg', from: me, text, ts: item.ts });
+    pushToUser(to, { t:'friend_msg', id:item.id, from: me, text, ts: item.ts });
     if (to === OFFICIAL_NAME) maybeOfficialReply(me);   // 给官方发消息会自动收到一条说明
-    return sendJSON(res, 200, {ok:true, ts:item.ts});
+    return sendJSON(res, 200, {ok:true, item});
+  }
+  // 撤回私聊消息：只有发送者本人、5 分钟内有效
+  if (req.method === 'POST' && urlPath === '/api/friend/recall'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const to = String(body.to||'').trim();
+    const mid = String(body.mid||'').trim();
+    if (!to || !mid) return sendJSON(res, 400, {ok:false,msg:'参数不完整'});
+    const arr = social.msgs[pairKey(me, to)];
+    if (!arr) return sendJSON(res, 404, {ok:false,msg:'找不到这条消息', key:'recallMissing'});
+    const idx = arr.findIndex(m => m && m.id === mid);
+    if (idx < 0) return sendJSON(res, 404, {ok:false,msg:'找不到这条消息', key:'recallMissing'});
+    const item = arr[idx];
+    if (item.recalled) return sendJSON(res, 400, {ok:false,msg:'这条消息已经撤回过了', key:'recallDone'});
+    if (item.from !== me) return sendJSON(res, 403, {ok:false,msg:'只能撤回自己发的消息', key:'recallSelfOnly'});
+    if (Date.now() - item.ts > RECALL_TTL)
+      return sendJSON(res, 400, {ok:false,msg:'超过 5 分钟，撤不回来了', key:'recallTooLate'});
+    item.recalled = true;   // 留个占位，历史里还能看到"已撤回"
+    item.text = '';
+    saveSocial();
+    pushToUser(to, { t:'friend_recall', with: me, mid, ts: Date.now() });
+    return sendJSON(res, 200, {ok:true});
   }
   // —— 通过邮箱验证码重置密码 ——
   // 验证码只发到账号已绑定的邮箱，前端传不了别的地址
@@ -2026,6 +2064,7 @@ async function handleApi(req, res, urlPath){
     const g = groups[String(body.id||'')];
     if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
     if (!(g.members||[]).includes(me)) return sendJSON(res, 403, {ok:false,msg:'你还不是这个群的成员', key:'groupNotMember'});
+    if (ensureMsgIds(g.msgs || [])) saveGroups();   // 老消息补 id，撤回才有对象
     return sendJSON(res, 200, {ok:true, group:{
       id:g.id, name:g.name, owner:g.owner, members:g.members.slice(),
       reqs: g.owner === me ? (g.reqs||[]) : [],
@@ -2103,13 +2142,38 @@ async function handleApi(req, res, urlPath){
     if (!(g.members||[]).includes(me)) return sendJSON(res, 403, {ok:false,msg:'你还不是这个群的成员', key:'groupNotMember'});
     const text = String(body.text||'').trim().slice(0, 200);
     if (!text) return sendJSON(res, 400, {ok:false,msg:'不能发空消息'});
-    const item = { from: me, text, ts: Date.now() };
+    const item = { id: nextMid(), from: me, text, ts: Date.now() };
     g.msgs = g.msgs || [];
     g.msgs.push(item);
     if (g.msgs.length > GROUP_MSG_KEEP) g.msgs.splice(0, g.msgs.length - GROUP_MSG_KEEP);
     saveGroups();
-    pushGroupMembers(g, { t:'group_msg', id:g.id, from:me, text, ts:item.ts }, me);
+    pushGroupMembers(g, { t:'group_msg', id:g.id, mid:item.id, from:me, text, ts:item.ts }, me);
     return sendJSON(res, 200, {ok:true, item});
+  }
+  // 撤回群消息：只有发送者本人、5 分钟内有效
+  if (req.method === 'POST' && urlPath === '/api/group/recall'){
+    const me = authFromReq(req);
+    if (!me) return sendJSON(res, 401, {ok:false,msg:'未登录'});
+    const body = await readBody(req);
+    if (!body) return sendJSON(res, 400, {ok:false,msg:'请求格式错误'});
+    const g = groups[String(body.id||'')];
+    if (!g) return sendJSON(res, 404, {ok:false,msg:'群不存在', key:'groupNotFound'});
+    if (!(g.members||[]).includes(me)) return sendJSON(res, 403, {ok:false,msg:'你还不是这个群的成员', key:'groupNotMember'});
+    const mid = String(body.mid||'').trim();
+    if (!mid) return sendJSON(res, 400, {ok:false,msg:'参数不完整'});
+    g.msgs = g.msgs || [];
+    const idx = g.msgs.findIndex(m => m && m.id === mid);
+    if (idx < 0) return sendJSON(res, 404, {ok:false,msg:'找不到这条消息', key:'recallMissing'});
+    const item = g.msgs[idx];
+    if (item.recalled) return sendJSON(res, 400, {ok:false,msg:'这条消息已经撤回过了', key:'recallDone'});
+    if (item.from !== me) return sendJSON(res, 403, {ok:false,msg:'只能撤回自己发的消息', key:'recallSelfOnly'});
+    if (Date.now() - item.ts > RECALL_TTL)
+      return sendJSON(res, 400, {ok:false,msg:'超过 5 分钟，撤不回来了', key:'recallTooLate'});
+    item.recalled = true;   // 留个占位，历史里还能看到"已撤回"
+    item.text = '';
+    saveGroups();
+    pushGroupMembers(g, { t:'group_recall', id:g.id, mid, from:me, ts:Date.now() }, me);
+    return sendJSON(res, 200, {ok:true});
   }
   sendJSON(res, 404, {ok:false,msg:'未找到'});
 }
@@ -2345,6 +2409,7 @@ const MIME = {
   '.ico':'image/x-icon', '.sb3':'application/octet-stream',
   '.apk':'application/vnd.android.package-archive', '.ipa':'application/octet-stream',
   '.dmg':'application/x-apple-diskimage', '.zip':'application/zip',
+  '.woff2':'font/woff2', '.woff':'font/woff', '.ttf':'font/ttf',
   '.map':'application/json'
 };
 
