@@ -1,18 +1,22 @@
-app = "snake-online"
-primary_region = "nrt"
+# fly.toml app configuration file generated for snake-online on 2026-11-21T02:03:17Z
+#
+# See https://docs.fly.io/reference/configuration for information about how to use this file.
+#
+
+app = 'snake-online'
+primary_region = 'fra'
 
 [build]
+[env]
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
-
-[env]
-  PORT = "8080"
+  size = 'shared-cpu-1x'
+  memory = '256mb'
