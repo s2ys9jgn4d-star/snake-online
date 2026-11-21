@@ -6,6 +6,7 @@
   'use strict';
   var L = {
     'en': {
+      skinSecTitle:'Skin preview', skinSecSub:'Check in daily to earn coins; skins equip automatically', skinSecCta:'Open the shop',
       shop_title:'Skin shop', shop_guestNoCoins:'Guests cannot earn coins', shop_streak:'Daily streak: {n} days',
       shop_guestNoCheckin:'Guests cannot check in', shop_checked:'Checked in today', shop_checkin:'Check in for coins',
       shop_tipGuest:'Guests can only try the classic colour. Sign up and your check-ins and skins stay on your account.',
@@ -42,6 +43,7 @@
       loginNeeded:'Not logged in', adult_done:'You are 18 now', adult_left:'{n} days until you turn 18', chip_groups:'Groups'
     },
     'zh-CN': {
+      skinSecTitle:'皮肤预览', skinSecSub:'每天签到攒金币，买完自动换上', skinSecCta:'去商店换皮肤',
       shop_title:'皮肤商店', shop_guestNoCoins:'游客不能攒金币', shop_streak:'连续签到 {n} 天',
       shop_guestNoCheckin:'游客不能签到', shop_checked:'今天已签到', shop_checkin:'签到领金币',
       shop_tipGuest:'游客只能试穿经典原色，注册账号后签到和买皮肤都会记在账号上。',
@@ -78,6 +80,7 @@
       loginNeeded:'未登录', adult_done:'已成年', adult_left:'距离成年还有 {n} 天', chip_groups:'群组'
     },
     'zh-TW': {
+      skinSecTitle:'造型預覽', skinSecSub:'每天簽到存金幣，買完自動換上', skinSecCta:'去商店換造型',
       shop_title:'造型商店', shop_guestNoCoins:'訪客不能存金幣', shop_streak:'連續簽到 {n} 天',
       shop_guestNoCheckin:'訪客不能簽到', shop_checked:'今天已簽到', shop_checkin:'簽到領金幣',
       shop_tipGuest:'訪客只能試穿經典原色，註冊帳號後簽到和買造型都會記在帳號上。',
@@ -114,6 +117,7 @@
       loginNeeded:'未登入', adult_done:'已成年', adult_left:'距離成年還有 {n} 天', chip_groups:'群組'
     },
     'cs': {
+      skinSecTitle:'Náhled skinů', skinSecSub:'Denním přihlášením získáš mince, skin se nasadí sám', skinSecCta:'Otevřít obchod',
       shop_title:'Obchod se skiny', shop_guestNoCoins:'Hosté nemohou získávat mince', shop_streak:'Série přihlášení: {n} dní',
       shop_guestNoCheckin:'Hosté se nemohou přihlásit', shop_checked:'Dnes už přihlášeno', shop_checkin:'Přihlásit se o mince',
       shop_tipGuest:'Hosté si mohou vyzkoušet jen klasickou barvu. Po registraci se přihlášení i skiny ukládají k účtu.',
@@ -150,6 +154,7 @@
       loginNeeded:'Nejsi přihlášen', adult_done:'Už ti je 18', adult_left:'Do dospělosti zbývá {n} dní', chip_groups:'Skupiny'
     },
     'ja': {
+      skinSecTitle:'スキン見本', skinSecSub:'毎日のチェックインでコインを貯めて、購入後は自動で装着', skinSecCta:'ショップを開く',
       shop_title:'スキンショップ', shop_guestNoCoins:'ゲストはコインを貯められません', shop_streak:'連続ログイン {n} 日',
       shop_guestNoCheckin:'ゲストはチェックインできません', shop_checked:'今日はチェックイン済み',
       shop_checkin:'チェックインでコイン',
@@ -187,6 +192,7 @@
       loginNeeded:'未ログイン', adult_done:'成人になりました', adult_left:'成人まであと {n} 日', chip_groups:'グループ'
     },
     'ko': {
+      skinSecTitle:'스킨 미리보기', skinSecSub:'매일 출석으로 코인을 모으면 구매 후 자동으로 착용됩니다', skinSecCta:'상점 열기',
       shop_title:'스킨 상점', shop_guestNoCoins:'게스트는 코인을 모을 수 없어요', shop_streak:'연속 출석 {n}일',
       shop_guestNoCheckin:'게스트는 출석할 수 없어요', shop_checked:'오늘 출석 완료', shop_checkin:'출석하고 코인 받기',
       shop_tipGuest:'게스트는 클래식 색만 써 볼 수 있어요. 가입하면 출석과 스킨이 계정에 저장됩니다.',
@@ -223,6 +229,7 @@
       loginNeeded:'로그인되지 않음', adult_done:'이제 성인입니다', adult_left:'성인까지 {n}일 남음', chip_groups:'그룹'
     },
     'ru': {
+      skinSecTitle:'Скины', skinSecSub:'Ежедневные отметки дают монеты, скин надевается сам', skinSecCta:'Открыть магазин',
       shop_title:'Магазин скинов', shop_guestNoCoins:'Гости не могут копить монеты', shop_streak:'Серия входов: {n} дн.',
       shop_guestNoCheckin:'Гости не могут отмечаться', shop_checked:'Сегодня уже отмечено', shop_checkin:'Отметиться за монеты',
       shop_tipGuest:'Гости могут примерять только классический цвет. После регистрации отметки и скины сохраняются в аккаунте.',
@@ -259,6 +266,7 @@
       loginNeeded:'Вы не вошли', adult_done:'Тебе уже 18', adult_left:'До совершеннолетия {n} дн.', chip_groups:'Группы'
     },
     'de': {
+      skinSecTitle:'Skin-Vorschau', skinSecSub:'Täglich einchecken bringt Münzen, Skins werden automatisch angelegt', skinSecCta:'Shop öffnen',
       shop_title:'Skin-Shop', shop_guestNoCoins:'Gäste können keine Münzen sammeln', shop_streak:'Serie: {n} Tage',
       shop_guestNoCheckin:'Gäste können nicht einchecken', shop_checked:'Heute schon eingecheckt',
       shop_checkin:'Einchecken für Münzen',
