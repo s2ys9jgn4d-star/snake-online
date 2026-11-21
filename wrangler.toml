@@ -1,0 +1,19 @@
+# 这个文件是给 Cloudflare 面板「从 Git 仓库构建 Worker」用的：
+# 仓库根目录执行 `npx wrangler deploy` 就能把 worker/src/worker.js + dist 一起发上去
+name = "snake-online"
+main = "worker/src/worker.js"
+compatibility_date = "2025-09-01"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]
+
+[assets]
+directory = "dist"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "none"

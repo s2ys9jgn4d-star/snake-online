@@ -9,5 +9,11 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "scrypt-js": "^3.0.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }
