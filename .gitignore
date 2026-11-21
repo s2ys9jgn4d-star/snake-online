@@ -8,3 +8,4 @@ release/
 *.idsig
 ios/**/xcuserdata/
 ios/**/*.xcworkspace/xcuserdata/
+cf-pages/site/

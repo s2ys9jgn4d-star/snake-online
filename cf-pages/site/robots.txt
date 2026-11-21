@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://snake-downloads.devs.surf/sitemap.xml
-Sitemap: https://snake-downloads.localhost.cc/sitemap-localhost.xml
