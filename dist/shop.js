@@ -29,6 +29,7 @@
 .shop-btn[disabled]{background:#2a3358;color:#6b7599;cursor:default}
 .shop-foot{margin-top:14px;padding-top:12px;border-top:1px solid rgba(122,142,224,.18);font-size:12px;color:#8b95bd;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .shop-foot a{color:#8fd3ff;text-decoration:none}
+#shopBtn{position:fixed;right:18px;bottom:18px;z-index:9000;box-shadow:0 8px 24px rgba(0,0,0,.45);border:1px solid rgba(122,142,224,.35);background:#1e2643;color:#e9eeff;border-radius:12px;padding:10px 14px;font-size:13px;cursor:pointer;backdrop-filter:blur(6px)}
 #shopToast{position:fixed;left:50%;bottom:56px;transform:translateX(-50%);z-index:10000;background:rgba(15,22,42,.96);border:1px solid rgba(122,142,224,.3);color:#e9eeff;padding:9px 16px;border-radius:10px;font-size:13px;display:none}
 #shopToast.show{display:block}
 @media (max-width:520px){.shop-grid{grid-template-columns:1fr}}
@@ -213,8 +214,7 @@
       mask.classList.add('open');
       await load();
     };
-    const anchor = document.getElementById('settingsBtn');
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(btn, anchor);
+    document.body.appendChild(btn);
 
     // 给大厅「当前皮肤」用：读缓存 / 直接开面板
     window.SNAKE_SHOP = {
