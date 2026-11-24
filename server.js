@@ -196,12 +196,57 @@ async function cloudRestore(){
   } catch (e) { console.log('云备份恢复出错：' + e.message); }
 }
 
-// 每次保存后 5 秒防抖，加密推送到 save-data 分支
+// 空库自举：本地没有任何账号时，从私有数据仓库拉 users/friends/scores
+// 需要环境变量 SNAKE_SEED_REPO（如 s2ys9jgn4d-star/snake-online-data）+ GH_TOKEN
+const SEED_REPO = process.env.SNAKE_SEED_REPO || '';
+
+async function seedFromRepo(){
+  if (!SEED_REPO || !GH_TOKEN) return;
+  if (accounts.size > 0) return;
+  try {
+    const files = [
+      ['users.json', USERS_FILE, loadUsers],
+      ['scores.json', SCORES_FILE, loadScores],
+      ['friends.json', FRIENDS_FILE, loadSocial]
+    ];
+    let got = 0;
+    for (const [name, dest, reload] of files){
+      const res = await fetch(`https://api.github.com/repos/${SEED_REPO}/contents/${name}`, { headers: ghHeaders() });
+      if (!res.ok){ console.log('自举：' + name + ' 拉取失败 HTTP ' + res.status); continue; }
+      const j = await res.json();
+      fs.writeFileSync(dest, Buffer.from(j.content, 'base64').toString('utf8'));
+      reload();
+      got++;
+    }
+    if (got) console.log('空库自举完成：' + accounts.size + ' 个账号，' + leaderboard.length + ' 条分数（来源 ' + SEED_REPO + '）');
+  } catch (e) { console.log('空库自举出错：' + e.message); }
+}
+
+// 把三份数据原样推回私有仓库（没有 BACKUP_KEY 时的持久化兜底）
+async function pushSeedPlain(){
+  if (!SEED_REPO || !GH_TOKEN) return;
+  const files = [['users.json', USERS_FILE], ['scores.json', SCORES_FILE], ['friends.json', FRIENDS_FILE]];
+  for (const [name, src] of files){
+    try {
+      if (!fs.existsSync(src)) continue;
+      const api = `https://api.github.com/repos/${SEED_REPO}/contents/${name}`;
+      const cur = await fetch(api, { headers: ghHeaders() });
+      let sha = cur.ok ? (await cur.json()).sha : null;
+      const body = { message: 'sync ' + name + ' ' + new Date().toISOString(), content: Buffer.from(fs.readFileSync(src, 'utf8')).toString('base64') };
+      if (sha) body.sha = sha;
+      const put = await fetch(api, { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+      if (!put.ok) console.log('数据同步失败 ' + name + '：HTTP ' + put.status);
+    } catch (e) { console.log('数据同步出错 ' + name + '：' + e.message); }
+  }
+}
+
+// 每次保存后 5 秒防抖：有 BACKUP_KEY 走加密备份，否则推私有仓库
 let backupTimer = null;
 function cloudBackup(){
-  if (!GH_TOKEN || !BACKUP_KEY) return;
+  if (!GH_TOKEN) return;
   clearTimeout(backupTimer);
   backupTimer = setTimeout(async () => {
+    if (!BACKUP_KEY){ await pushSeedPlain(); return; }
     try {
       const plain = JSON.stringify({
         users: fs.existsSync(USERS_FILE) ? fs.readFileSync(USERS_FILE, 'utf8') : '[]',
@@ -2565,8 +2610,8 @@ function lanIPs(){
   return result;
 }
 
-// 先从云备份恢复账号数据，再开始监听
-cloudRestore().finally(() => {
+// 先从云备份恢复账号数据，空库再从私有仓库自举，最后开始监听
+cloudRestore().then(seedFromRepo).finally(() => {
   ensureOfficialScore();   // 官方号展示分数固定为 10000000000
   server.listen(PORT, () => {
     console.log('');
