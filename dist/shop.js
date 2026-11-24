@@ -57,6 +57,19 @@
   };
 
   // 文案统一走 i18n；老版本 / 没装 i18n 时回落到 key，英文由 i18n 兜底
+  // 兼容没有 window.SNAKE 的页面（mobile.html 自带一套登录态）
+  function curUser(){
+    if (window.SNAKE && window.SNAKE.user()) return window.SNAKE.user();
+    try { return localStorage.getItem('snakeUser'); } catch(e) { return null; }
+  }
+  async function callApi(path, opts){
+    if (window.SNAKE && window.SNAKE.api) return window.SNAKE.api(path, opts);
+    const token = (function(){ try { return localStorage.getItem('snakeToken'); } catch(e) { return null; } })();
+    const h = {'Content-Type':'application/json'};
+    if (token) h.Authorization = 'Bearer ' + token;
+    const r = await fetch(path, { headers:h, credentials:'include', ...opts });
+    return r.json();
+  }
   const T = (k, v) => (typeof window.t === 'function' ? window.t(k, v) : k);
   const skinText = (sk, suffix) => {
     const k = 'skin_' + sk.id + (suffix || '');
@@ -67,7 +80,7 @@
   let data = null; let dataAt = 0;
 
   async function load(force){
-    const api = window.SNAKE.api;
+    const api = callApi;
     // 两分钟内的数据直接用缓存，打开商店不必再等接口
     if (!force && data && data.ok && Date.now() - dataAt < 120000){ render(); return; }
     data = await api('/api/shop');
@@ -82,31 +95,31 @@
   // 进大厅后后台预取一次，把首次打开商店的等待挪到用户不注意的时候
   function prefetch(){
     setTimeout(async () => {
-      if (!window.SNAKE || !window.SNAKE.user()) return;
+      if (!curUser()) return;
       if (data && data.ok) return;
       try {
-        const d = await window.SNAKE.api('/api/shop');
+        const d = await callApi('/api/shop');
         if (d && d.ok){ data = d; dataAt = Date.now(); }
       } catch (e) {}
     }, 1200);
   }
 
   async function checkin(){
-    const r = await window.SNAKE.api('/api/shop/checkin', { method:'POST', body:'{}' });
+    const r = await callApi('/api/shop/checkin', { method:'POST', body:'{}' });
     if (!r || !r.ok){ toast((r && r.msg) || T('shop_checkinFail')); return; }
     toast(T('shop_checkinOk', { n: r.reward, s: r.streak }));
     await load(true);
   }
 
   async function buy(id){
-    const r = await window.SNAKE.api('/api/shop/buy', { method:'POST', body: JSON.stringify({ id }) });
+    const r = await callApi('/api/shop/buy', { method:'POST', body: JSON.stringify({ id }) });
     if (!r || !r.ok){ toast((r && r.msg) || T('shop_buyFail')); return; }
     toast(T('shop_buyOk'));
     await load(true);
   }
 
   async function equip(id){
-    const r = await window.SNAKE.api('/api/shop/equip', { method:'POST', body: JSON.stringify({ id }) });
+    const r = await callApi('/api/shop/equip', { method:'POST', body: JSON.stringify({ id }) });
     if (!r || !r.ok){ toast((r && r.msg) || T('shop_equipFail')); return; }
     toast(T('shop_equipOk'));
     await load(true);
@@ -210,7 +223,7 @@
     btn.textContent = '🎨 ' + T('shop_title');
     btn.onclick = async () => {
       // Cookie 身份也算登录：接口范层面会用 Cookie 校验，前端不拦
-      if (!window.SNAKE || !window.SNAKE.user()){ toast(T('shop_loginFirst')); return; }
+      if (!curUser()){ toast(T('shop_loginFirst')); return; }
       mask.classList.add('open');
       await load();
     };
@@ -220,7 +233,7 @@
     window.SNAKE_SHOP = {
       current: function(){ return (data && data.ok) ? data : null; },
       open: function(){
-        if (!window.SNAKE || !window.SNAKE.user()){ toast(T('shop_loginFirst')); return; }
+        if (!curUser()){ toast(T('shop_loginFirst')); return; }
         mask.classList.add('open'); load();
       }
     };
@@ -231,7 +244,7 @@
     if (location.hash !== '#shop') return;
     const mask = document.getElementById('shopMask');
     if (!mask) return;
-    if (!window.SNAKE || !window.SNAKE.user()) return;
+    if (!curUser()) return;
     mask.classList.add('open');
     load();
   }
