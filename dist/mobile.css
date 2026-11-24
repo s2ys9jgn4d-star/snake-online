@@ -486,8 +486,9 @@ html[data-theme="light"] .sms-login-btn { border-color: #d7e3f6; background: #ff
 /* 手机端语言下拉 */
 .lang-sel {
   min-height: 32px; padding: 5px 28px 5px 8px; border-radius: 8px;
-  border: 1px solid #2a3550; background: #141a26; color: #e8ecf6; font-size: 13px; min-width: 52vw;
-  -webkit-appearance: none; appearance: none; max-width: 55vw;
+  border: 1px solid #2a3550; background: #141a26; color: #e8ecf6; font-size: 13px;
+  -webkit-appearance: none; appearance: none;
+  width: auto; min-width: 132px; max-width: 200px; box-sizing: border-box;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b94b8'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 8px center;
 }
