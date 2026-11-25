@@ -208,13 +208,16 @@ function unpack(obj){
 //  slack    走神概率（越小越强）
 //  chase    愿意追多远的苹果（小 = 懒得跑，只捡眼前的）
 //  hesitate 慢半拍概率（照着原方向再走一步）
-//  hunt     会不会主动抢到别人头前面堵路（噩梦专属）
+//  hunt     会不会主动封路（简单/普通过日子，困难/噩梦真的会杀）
+//    range  多近才动杀心（格）
+//    wExit  把你出口数从 4 压到 1 值多少分
+//    wCross 抢到你前方第二格、让身子横在你脸上值多少分
 // ============================================================
 const DIFFS = {
-  easy:      { slack: 0.32, chase: 6,  hesitate: 0.25, hunt: false },
-  normal:    { slack: 0.14, chase: 12, hesitate: 0.10, hunt: false },
-  hard:      { slack: 0.04, chase: 99, hesitate: 0.03, hunt: false },
-  nightmare: { slack: 0,    chase: 99, hesitate: 0,    hunt: true  }
+  easy:      { slack: 0.32, chase: 6,  hesitate: 0.25, hunt: null },
+  normal:    { slack: 0.14, chase: 12, hesitate: 0.10, hunt: null },
+  hard:      { slack: 0.04, chase: 99, hesitate: 0.03, hunt: { range: 6, wExit: 20, wCross: 45, wChase: 7 } },
+  nightmare: { slack: 0,    chase: 99, hesitate: 0,    hunt: { range: 8, wExit: 26, wCross: 60, wChase: 7 } }
 };
 function profileOf(diff){
   const d = DIFFS[String(diff || '')] || DIFFS.normal;
@@ -249,23 +252,40 @@ function decide(room, p, COLS, ROWS, table, profile){
   const key = encode(head, dirIdx, foods, blocked, len, COLS, ROWS);
   const qv = table[key] || null;
 
-  // 噩梦：抢到对手头前面两格，堵它的路
-  let huntTarget = null;
+  // —— 杀心：只在困难/噩梦启用 ——
+  // 思路不是“撞它”（迎头相撞两条都死，不算杀），而是：
+  //   1) 抢到它前方第二格，让自己身体横在它脸上
+  //   2) 把它的可走方向数压到 1，逼它自己撞上来或撞墙
+  let hunt = null;
   if (pf.hunt){
-    let best = Infinity;
+    let target = null, best = Infinity;
     for (const q of room.players.values()){
       if (q === p || !q.alive || !q.body || !q.body.length) continue;
       const d = Math.abs(q.body[0].x - head.x) + Math.abs(q.body[0].y - head.y);
-      if (d < best){ best = d; huntTarget = q; }
+      // 优先追真人，没有真人才追别的机器人
+      const bias = q.isBot ? 2 : 0;
+      if (d + bias < best){ best = d + bias; target = q; }
     }
-    if (huntTarget){
-      const v = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[huntTarget.dir] || { x: 1, y: 0 };
-      huntTarget = {
-        x: Math.max(0, Math.min(COLS - 1, huntTarget.body[0].x + v.x * 2)),
-        y: Math.max(0, Math.min(ROWS - 1, huntTarget.body[0].y + v.y * 2))
-      };
+    if (target && best <= pf.hunt.range){
+      const v = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[target.dir] || { x: 1, y: 0 };
+      const eHead = target.body[0];
+      const next1 = { x: eHead.x + v.x, y: eHead.y + v.y };
+      const next2 = { x: eHead.x + v.x * 2, y: eHead.y + v.y * 2 };
+      hunt = { next1, next2, wExit: pf.hunt.wExit, wCross: pf.hunt.wCross, wChase: pf.hunt.wChase || 0 };
     }
   }
+
+  // 数一个格子还有几个方向能走（用来评估“把人堵死”的效果）
+  const exitsOf = (cell, blk) => {
+    let n = 0;
+    for (let i = 0; i < 4; i++){
+      const nx = cell.x + VEC[i].x, ny = cell.y + VEC[i].y;
+      if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
+      if (blk.has(ny * COLS + nx)) continue;
+      n++;
+    }
+    return n;
+  };
 
   const candidates = [];
   for (let act = 0; act < 3; act++){
@@ -280,7 +300,23 @@ function decide(room, p, COLS, ROWS, table, profile){
     if (area < len + 1) score -= 500;            // 会把自己关死
     else if (area < len + 6) score -= 30;        // 太挤，别往里钻
     if (act === 0) score += 0.5;                 // 平手优先直行，看着不像抽风
-    if (huntTarget) score -= 3 * (Math.abs(nx - huntTarget.x) + Math.abs(ny - huntTarget.y));
+
+    if (hunt){
+      // 抢到它前方第二格：这步之后我的身体就横在它脸上
+      if (nx === hunt.next2.x && ny === hunt.next2.y) score += hunt.wCross;
+      // 正面撞它下一格 = 两条一起死，不干
+      if (nx === hunt.next1.x && ny === hunt.next1.y) score -= 220;
+      // 往它正前方靠：身体会一段段铺在它要走的那条线上
+      score -= hunt.wChase * (Math.abs(nx - hunt.next1.x) + Math.abs(ny - hunt.next1.y));
+      // 把它的出口数压下去（我的头落点、身子落点都算墙）
+      const blk2 = new Set(blocked);
+      blk2.delete(head.y * COLS + head.x);                       // 我这颗头要挪走
+      blk2.delete(p.body[len - 1].y * COLS + p.body[len - 1].x);  // 尾巴也要挪走
+      blk2.add(nk);
+      const exits = exitsOf(hunt.next1, blk2);
+      score += (4 - exits) * hunt.wExit;
+      if (exits <= 1) score += 45;                               // 真堵死了，再奖一笔
+    }
     candidates.push({ dir: NAMES[d], score, area });
   }
   if (!candidates.length) return null;

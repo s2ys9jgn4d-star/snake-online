@@ -971,19 +971,22 @@ class Room {
       if (!this.foods.some(f=>f.x===s.x&&f.y===s.y)) this.foods.push({x:s.x,y:s.y});
     }
   }
-  findSpawn(){
+  findSpawn(minLen){
+    const need = Math.max(START_LEN, minLen || 0) + 2;
     for (let i=0;i<300;i++){
-      const x=5+randInt(COLS-10), y=2+randInt(ROWS-4);
+      const x=6+randInt(COLS-12), y=2+randInt(ROWS-4);
       let ok=true;
-      for (let k=0;k<START_LEN+2;k++) if (this.cellOccupied(x-k,y)) { ok=false; break; }
+      for (let k=0;k<need;k++) if (x-k<0 || this.cellOccupied(x-k,y)) { ok=false; break; }
       if (ok) return {x,y};
     }
     return {x:6, y:randInt(ROWS-4)+2};
   }
   resetPlayer(p){
-    const c = this.findSpawn();
+    const c = this.findSpawn(p.startLen);
     p.body = [];
-    for (let i=0;i<START_LEN;i++) p.body.push({x:c.x-i, y:c.y});
+    // 高难度机器人出场就更长，身子本身就是一道墙（真人永远是 START_LEN）
+    const len = p.startLen || START_LEN;
+    for (let i=0;i<len;i++) p.body.push({x:c.x-i, y:c.y});
     p.dir='right'; p.queue=[]; p.alive=true; p.score=0; p.deathReason='';
   }
 
@@ -1132,7 +1135,9 @@ class Room {
     const p = {
       id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length], skin: 'classic',
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
-      isBot: true, botKind: kind || 'doubao', botDiff: diff || 'normal'
+      isBot: true, botKind: kind || 'doubao', botDiff: diff || 'normal',
+      // 难度越高出场越长：长身子才有“堵人”的本钱
+      startLen: ({ easy: 3, normal: 3, hard: 5, nightmare: 8 })[diff] || START_LEN
     };
     this.resetPlayer(p);
     this.players.set(id, p);
