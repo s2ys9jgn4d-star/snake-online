@@ -15,7 +15,9 @@ const DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const DIRS = ['up', 'down', 'left', 'right'];
 const NB = [[0, -1], [0, 1], [-1, 0], [1, 0]];
 
-function createEngine(COLS, ROWS) {
+function createEngine(COLS, ROWS, opts = {}) {
+  const MARGIN = Math.max(0, Math.min(2, opts.margin || 0));      // 贴墙的安全边距
+  const HYS = Math.max(0, opts.hysteresis || 0);                 // 迟滞：差不多好就别拐弯
   const NCELL = COLS * ROWS;
   const keyOf = (x, y) => y * COLS + x;
   const inside = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
@@ -133,7 +135,8 @@ function createEngine(COLS, ROWS) {
       if (!inside(nx, ny)) continue;
       const k = keyOf(nx, ny);
       if (blocked.has(k)) continue;
-      cands.push({
+      const edge = nx < MARGIN || ny < MARGIN || nx >= COLS - MARGIN || ny >= ROWS - MARGIN;
+      cands.push({ edge,
         d,
         safe: tdist[k] >= 0,
         headRisk: danger.has(k) ? 1 : 0,
@@ -144,7 +147,8 @@ function createEngine(COLS, ROWS) {
     }
     if (!cands.length) return null;
 
-    let pool = cands.filter((c) => c.safe && !c.headRisk);
+    let pool = cands.filter((c) => c.safe && !c.headRisk && !c.edge);
+    if (!pool.length) pool = cands.filter((c) => c.safe && !c.headRisk);
     if (!pool.length) pool = cands.filter((c) => c.safe);
     if (!pool.length) pool = cands;
 
@@ -153,6 +157,11 @@ function createEngine(COLS, ROWS) {
       if (a.area !== b.area) return b.area - a.area;
       return a.headRisk - b.headRisk;
     });
+    // 迟滞：直着走不比最优差太多就不拐，免得高延迟下每拍来回抖
+    if (HYS && pool.length > 1) {
+      const straight = pool.find((c) => c.d === me.dir);
+      if (straight && straight.food <= pool[0].food + (HYS - 1)) return straight.d; // HYS=1 → 只认平手
+    }
     return pool[0].d;
   }
 

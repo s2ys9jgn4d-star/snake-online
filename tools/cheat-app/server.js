@@ -12,10 +12,17 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { createEngine } = require('./engine');
+const { Driver } = require('./driver');
 
 const PORT = Number(process.env.CHEAT_PORT) || 8787;
 const PUBLIC = path.join(__dirname, 'public');
+
+const WHY = {
+  deadWall: '撞墙了',
+  deadSelf: '撞到自己了',
+  deadOther: '撞到别人的身子了',
+  '与对手迎头相撞': '和对手迎头撞上了'
+};
 
 let session = null; // 同时只跑一个
 
@@ -34,7 +41,7 @@ class Session {
     this.myId = null;
     this.players = [];
     this.foods = [];
-    this.engine = null;
+    this.driver = null;
     this.cols = 42;
     this.rows = 30;
 
@@ -50,6 +57,9 @@ class Session {
     this.roomName = '(未进房)';
     this.logs = [];
     this.reconnectAt = 0;
+    this.rtt = 0;
+    this.tickMs = 200;
+    this.lastSpeedAt = 0;
   }
 
   log(text) {
@@ -73,6 +83,10 @@ class Session {
     this.log('登录成功，连接实时通道…');
     this.running = true;
     this.connect();
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.pingTimer = setInterval(() => {
+      if (this.running && this.ws && this.ws.readyState === 1) this.send({ t: 'ping', ts: Date.now() });
+    }, 5000);
     return this.status();
   }
 
@@ -141,12 +155,20 @@ class Session {
         this.cols = m.cols || this.cols;
         this.rows = m.rows || this.rows;
         this.roomName = m.solo ? (m.soloOf || this.user) + ' 的单人房' : (m.roomName || this.roomName);
-        this.engine = createEngine(this.cols, this.rows);
+        this.driver = new Driver(this.cols, this.rows);
+        this.driver.tickMs = m.tickMs || 200;
+        this.driver.rtt = this.rtt;
         this.log(`进了「${this.roomName}」，棋盘 ${this.cols}×${this.rows}`);
         if (this.speed) {
           this.send({ t: 'speed', ms: this.speed });
           this.log('速度设为 ' + this.speed + 'ms/拍');
         }
+        break;
+
+      case 'pong':
+        this.rtt = this.rtt ? Math.round(this.rtt * 0.7 + (Date.now() - m.ts) * 0.3) : (Date.now() - m.ts);
+        if (this.driver) this.driver.rtt = this.rtt;
+        this.maybeSlowDown();
         break;
 
       case 'state':
@@ -178,16 +200,20 @@ class Session {
 
     const me = this.players.find((p) => p.id === this.myId);
     if (!me) return;
-    this.score = me.score || 0;
-    this.len = me.body ? me.body.length : 0;
+    if (this.driver && m.tickMs) this.driver.tickMs = m.tickMs;
     this.alive = !!me.alive;
+    if (me.alive) {                       // 死了的时候快照里 body 是空的，别把身长写成 0
+      this.score = me.score || 0;
+      this.len = me.body ? me.body.length : 0;
+    }
     if (this.score > this.bestScore) this.bestScore = this.score;
 
     if (!me.alive) {
       if (this.wasAlive) {
         this.wasAlive = false;
         this.deaths++;
-        this.log(`撞死了（第 ${this.deaths} 次），0.6 秒后复活`);
+        const why = WHY[me.deathReason] || '撞死了';
+        this.log(`${why}（第 ${this.deaths} 次，身长 ${this.len}、${this.score} 分），0.6 秒后复活`);
         this.respawnAt = Date.now() + 600;
       } else if (this.respawnAt && Date.now() >= this.respawnAt) {
         this.respawnAt = 0;
@@ -197,13 +223,29 @@ class Session {
     }
     this.wasAlive = true;
 
-    const dir = this.engine.decide(me, this.players, this.foods);
-    if (!dir || dir === me.dir || dir === { up: 'down', down: 'up', left: 'right', right: 'left' }[me.dir]) return;
-    this.send({ t: 'dir', dir, seq: ++this.seq });
-    this.decisions++;
+    const dir = this.driver.command(me, this.players, this.foods, m.tick || 0);
+    if (dir) {
+      this.send({ t: 'dir', dir, seq: ++this.seq });
+      this.decisions++;
+    }
+    this.driver.observe(me, m.tick || 0);
+  }
+
+  // 网络慢到一拍半以上、而自己又是房主，就把房间调慢一点，让指令来得及
+  maybeSlowDown() {
+    const now = Date.now();
+    if (!this.rtt || !this.tickMs) return;
+    if (this.rtt <= this.tickMs * 1.2) return;
+    if (now - this.lastSpeedAt < 10000) return;
+    const want = Math.max(300, Math.min(900, Math.round(this.rtt * 1.25)));
+    if (want <= this.tickMs) return;
+    this.lastSpeedAt = now;
+    this.send({ t: 'speed', ms: want });
+    this.log(`网络延迟 ${this.rtt}ms 大于 ${this.tickMs}ms/拍，把房间放慢到 ${want}ms/拍`);
   }
 
   stop() {
+    if (this.pingTimer) clearInterval(this.pingTimer);
     this.running = false;
     try { this.ws && this.ws.close(); } catch {}
     this.log('已停止');
@@ -221,6 +263,9 @@ class Session {
       alive: this.alive,
       deaths: this.deaths,
       decisions: this.decisions,
+      lag: this.driver ? Math.round(this.driver.lag * 10) / 10 : 0,
+      rtt: this.rtt,
+      tickMs: this.tickMs,
       cols: this.cols,
       rows: this.rows,
       logs: this.logs.slice(-40)

@@ -93,7 +93,7 @@
       <div class="stat"><b id="sDeath">0</b><i>死亡次数</i></div>
     </div>
     <div class="bar" style="justify-content:space-between">
-      <span>变向次数 <b id="sDec">0</b></span>
+      <span>变向次数 <b id="sDec">0</b> · 网络延迟 <b id="sLag">—</b> 拍</span>
       <span id="sBoard"></span>
     </div>
     <div id="log" style="margin-top:10px">等待启动…</div>
@@ -128,6 +128,7 @@ async function refresh(){
     $('sDeath').textContent = s.deaths;
     $('sDec').textContent = s.decisions;
     $('sBoard').textContent = s.cols + '×' + s.rows;
+    $('sLag').textContent = s.lag ? s.lag : '—';
     $('roomText').textContent = s.room ? '· ' + s.room : '';
     $('log').textContent = s.logs.join('\n');
     $('log').scrollTop = $('log').scrollHeight;
