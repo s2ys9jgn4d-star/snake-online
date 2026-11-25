@@ -21,6 +21,13 @@ const VEC = [ { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 } ]
 const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
 const NAMES = ['up', 'right', 'down', 'left'];
 
+// 走神概率：0 = 每拍都是最优解（人打不过），0.08 = 大约每 12 拍犯一次傻
+function SLACK(){
+  const v = Number(process.env.PAIPAI_SLACK);
+  if (!Number.isFinite(v)) return 0.08;
+  return Math.min(0.6, Math.max(0, v));
+}
+
 const turn = (dirIdx, act) => (act === 0 ? dirIdx : act === 1 ? (dirIdx - 1 + 4) % 4 : (dirIdx + 1) % 4);
 
 // —— 空地数量：从这个格子出发能连成一片的空格有多少（数到 cap 就提前收工）——
@@ -233,6 +240,16 @@ function decide(room, p, COLS, ROWS, table){
     candidates.push({ dir: NAMES[d], score, area });
   }
   if (!candidates.length) return null;
+
+  // 走神：偶尔不走最优解，随便挑一个“不至于自杀”的方向。
+  // 这是给人留活路的关键——没有它，AI 每一拍都是满分操作，人根本追不上。
+  const slack = SLACK();
+  if (slack > 0 && candidates.length > 1 && Math.random() < slack){
+    const safe = candidates.filter((c) => c.area >= len + 1);
+    const pool = safe.length > 1 ? safe : candidates;
+    return pool[(Math.random() * pool.length) | 0].dir;
+  }
+
   candidates.sort((a, b) => b.score - a.score);
   return candidates[0].dir;
 }
