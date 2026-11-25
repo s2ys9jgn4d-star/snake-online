@@ -16,7 +16,7 @@ echo "① 远端建目录"
 $SSH "mkdir -p $REMOTE/dist $REMOTE/data"
 
 echo "② 上传代码"
-scp -i "$KEY" server.js ai.js package.json mail.js "$USER_@$HOST:$REMOTE/"
+scp -i "$KEY" server.js package.json mail.js "$USER_@$HOST:$REMOTE/"
 scp -r -i "$KEY" bot "$USER_@$HOST:$REMOTE/"
 scp -r -i "$KEY" dist "$USER_@$HOST:$REMOTE/"
 

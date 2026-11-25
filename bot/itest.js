@@ -50,7 +50,7 @@ if (process.env.PREPARE === '1'){
       seen.snaps++;
       const ps = m.players || [];
       for (const p of ps){
-        if (p.name === (process.env.BOTNAME || (process.env.DIFF === 'easy' ? '豆包' : '派派'))){
+        if (p.name === (process.env.BOTNAME || '派派')){
           seen.botName = p.name;
           if (p.score > seen.maxBotScore) seen.maxBotScore = p.score;
           if ((p.body || []).length > (seen.maxLen || 0)) seen.maxLen = p.body.length;
@@ -70,7 +70,7 @@ if (process.env.PREPARE === '1'){
   console.log('快照条数：', seen.snaps, ' 机器人：', seen.botName);
   console.log('机器人最高分：', seen.maxBotScore, ' 最长身长：', seen.maxLen, ' 复活提示：', seen.chat.slice(0, 3));
   if (!seen.botName) { console.log('❌ 没看到机器人'); process.exit(2); }
-  if (seen.botName !== (process.env.BOTNAME || (process.env.DIFF === 'easy' ? '豆包' : '派派'))) { console.log('❌ 机器人不是派派'); process.exit(3); }
+  if (seen.botName !== (process.env.BOTNAME || '派派')) { console.log('❌ 机器人不是派派'); process.exit(3); }
   console.log(seen.maxBotScore >= 1 ? '✅ 派派吃到东西了' : '⚠️ 10 秒内没吃到（可能出生点附近没苹果）');
   process.exit(0);
 })();

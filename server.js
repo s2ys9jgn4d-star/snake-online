@@ -10,11 +10,10 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 const zlib = require('zlib');
-const ai = require('./ai');   // 单人模式的豆包 AI
 const qagent = require('./bot/qagent'); // 派派 AI（Q 学习账本，见 bot/qtable.json）
 const mail = require('./mail'); // 注册验证码邮件
 
-// 派派的账本：第一次用到才读，读不到就退化成安全网 + 豆包策略
+// 派派的账本：第一次用到才读，读不到就只靠安全网走位
 let QTABLE = null;
 function qtable(){
   if (QTABLE) return QTABLE;
@@ -993,7 +992,7 @@ class Room {
   // —— 主循环（和旧版 step 完全一致，只是移到实例方法） ——
   step(){
     this.tick++;
-    // 豆包 AI：单人模式的电脑对手
+    // 派派 AI：单人模式的电脑对手
     for (const p of this.players.values()){
       if (!p.isBot) continue;
       if (!p.alive){
@@ -1003,13 +1002,11 @@ class Room {
         else if (now >= p.botRespawnAt){
           p.botRespawnAt = 0;
           this.resetPlayer(p);
-          this.broadcast(JSON.stringify({t:'chat', from:'系统', text:(p.name || '豆包') + ' 复活了'}));
+          this.broadcast(JSON.stringify({t:'chat', from:'系统', text:(p.name || '派派') + ' 复活了'}));
         }
         continue;
       }
-      const d = p.botKind === 'pai'
-        ? qagent.decide(this, p, COLS, ROWS, qtable(), qagent.profileOf(p.botDiff))
-        : ai.decide(this, p, COLS, ROWS);
+      const d = qagent.decide(this, p, COLS, ROWS, qtable(), qagent.profileOf(p.botDiff));
       if (d) p.dir = d;
     }
     for (const p of this.players.values()){
@@ -1135,7 +1132,7 @@ class Room {
     const p = {
       id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length], skin: 'classic',
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
-      isBot: true, botKind: kind || 'doubao', botDiff: diff || 'normal',
+      isBot: true, botKind: kind || 'pai', botDiff: diff || 'normal',
       // 难度越高出场越长：长身子才有“堵人”的本钱
       startLen: ({ easy: 3, normal: 3, hard: 5, nightmare: 8 })[diff] || START_LEN
     };
@@ -1149,7 +1146,7 @@ class Room {
     this.players.delete(player.id);
     this.broadcast(JSON.stringify({t:'chat', from:'系统', sys:1, key:'sysLeft', args:{name:player.name}, text:player.name+' 离开了房间'}));
     this.broadcastState();
-    // 单人房：真人走了就整间销毁，别留一个空房间给豆包自己玩
+    // 单人房：真人走了就整间销毁，别留一个空房间给机器人自己玩
     if (this.isSolo && ![...this.players.values()].some(p => !p.isBot)){
       this.destroy();
       rooms.delete(this.id);
@@ -2373,7 +2370,7 @@ function handleWsMessage(ws, text){
       broadcastRooms();
       return;
     }
-    // 单人模式：开一间私密房，塞一个豆包进去陪打
+    // 单人模式：开一间私密房，塞一个派派进去陪打
     if (msg.t === 'solo'){
       if (isGuest(ws.user)) return ws.sendText(JSON.stringify({t:'sys',msg:'游客不能开房间，进别人的房间就能玩', key:'guestNoCreate2'}));
       if (rooms.size >= 50) return ws.sendText(JSON.stringify({t:'sys',msg:'房间数已达上限', key:'roomLimit'}));
@@ -2387,13 +2384,11 @@ function handleWsMessage(ws, text){
       rooms.set(id, r);
       ws.sendText(JSON.stringify({t:'room_created', id, name, owner:ws.user}));
       r.addPlayer(ws, ws.user);
-      // 对手难度：简单 = 豆包（规则型、会犯傻）；普通/困难/噩梦 = 派派的三个档
+      // 四档难度全部由派派出场，只改参数，不再有第二个 AI
       const DIFFS = ['easy', 'normal', 'hard', 'nightmare'];
       const rawDiff = String(msg.diff || '').toLowerCase();
-      let diff = DIFFS.includes(rawDiff) ? rawDiff : '';
-      if (!diff) diff = String(msg.bot || '').toLowerCase() === 'pai' ? 'normal' : 'easy';
-      const kind = diff === 'easy' ? 'doubao' : 'pai';
-      r.addBot(kind === 'pai' ? '派派' : '豆包', kind, diff);
+      const diff = DIFFS.includes(rawDiff) ? rawDiff : 'normal';
+      r.addBot('派派', 'pai', diff);
       broadcastRooms();
       return;
     }

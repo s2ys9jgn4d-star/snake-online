@@ -3,7 +3,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json ./
-COPY server.js ai.js mail.js ./
+COPY server.js mail.js ./
 COPY bot ./bot
 COPY dist ./dist
 

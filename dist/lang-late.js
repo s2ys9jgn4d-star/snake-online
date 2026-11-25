@@ -317,7 +317,7 @@
   var Q = {
     'en': {
       solo: '🤖 Solo mode',
-      soloDiffEasy: 'Easy (Doubao)',
+      soloDiffEasy: 'Easy',
       soloDiffNormal: 'Normal',
       soloDiffHard: 'Hard',
       soloDiffNightmare: 'Nightmare',
@@ -325,7 +325,7 @@
     },
     'zh-CN': {
       solo: '🤖 单人模式',
-      soloDiffEasy: '简单（豆包）',
+      soloDiffEasy: '简单',
       soloDiffNormal: '普通',
       soloDiffHard: '困难',
       soloDiffNightmare: '噩梦',
@@ -333,7 +333,7 @@
     },
     'zh-TW': {
       solo: '🤖 單人模式',
-      soloDiffEasy: '簡單（豆包）',
+      soloDiffEasy: '簡單',
       soloDiffNormal: '普通',
       soloDiffHard: '困難',
       soloDiffNightmare: '噩夢',
@@ -341,7 +341,7 @@
     },
     'ja': {
       solo: '🤖 ソロモード',
-      soloDiffEasy: 'かんたん（豆包）',
+      soloDiffEasy: 'かんたん',
       soloDiffNormal: 'ふつう',
       soloDiffHard: 'むずかしい',
       soloDiffNightmare: 'ナイトメア',
@@ -349,7 +349,7 @@
     },
     'ko': {
       solo: '🤖 솔로 모드',
-      soloDiffEasy: '쉬움 (더우바오)',
+      soloDiffEasy: '쉬움',
       soloDiffNormal: '보통',
       soloDiffHard: '어려움',
       soloDiffNightmare: '악몽',
@@ -357,7 +357,7 @@
     },
     'ru': {
       solo: '🤖 Одиночная игра',
-      soloDiffEasy: 'Легко (Доубао)',
+      soloDiffEasy: 'Легко',
       soloDiffNormal: 'Обычно',
       soloDiffHard: 'Сложно',
       soloDiffNightmare: 'Кошмар',
@@ -365,7 +365,7 @@
     },
     'de': {
       solo: '🤖 Solo-Modus',
-      soloDiffEasy: 'Leicht (Doubao)',
+      soloDiffEasy: 'Leicht',
       soloDiffNormal: 'Normal',
       soloDiffHard: 'Schwer',
       soloDiffNightmare: 'Albtraum',

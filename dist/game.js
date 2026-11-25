@@ -895,7 +895,7 @@ function joinRoom(room){
   }
 }
 
-// 单人模式：服务器会开一间私密房，并按下拉框塞进豆包或派派
+// 单人模式：服务器会开一间私密房，并按下拉框的难度塞进派派
 const soloBtnEl = $('soloBtn');
 if (soloBtnEl) soloBtnEl.addEventListener('click', () => {
   const sel = $('soloBot');
