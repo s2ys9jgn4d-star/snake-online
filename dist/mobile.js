@@ -826,9 +826,12 @@ function joinRoom(room){
   }
 }
 
-// 单人模式：服务器会开一间私密房并塞进一个豆包
+// 单人模式：服务器会开一间私密房，并按下拉框塞进豆包或派派
 const soloBtnEl = $('soloBtn');
-if (soloBtnEl) soloBtnEl.addEventListener('click', () => sendWS({ t:'solo' }));
+if (soloBtnEl) soloBtnEl.addEventListener('click', () => {
+  const sel = $('soloBot');
+  sendWS({ t:'solo', bot: sel ? sel.value : 'doubao' });
+});
 
 $('createRoomBtn').addEventListener('click', () => {
   const name = $('newRoomName').value.trim();

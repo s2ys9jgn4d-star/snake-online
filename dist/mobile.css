@@ -138,6 +138,11 @@ body::before {
   transition:border-color .18s, box-shadow .18s;
 }
 .lobby-section input::placeholder { color:#6b7599; }
+.lobby-section select.solo-bot {
+  width:100%; padding:11px 12px; margin-bottom:0; border-radius:10px;
+  border:1px solid var(--line); background:rgba(12,17,34,.75); color:var(--text);
+  font-size:15px; outline:none; -webkit-appearance:none; appearance:none;
+}
 .lobby-section input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,140,255,.18); }
 .primary-btn {
   width:100%; padding:11px; font-size:15px; font-weight:700; color:#fff;

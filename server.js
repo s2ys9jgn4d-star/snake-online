@@ -11,7 +11,21 @@ const crypto = require('crypto');
 const os = require('os');
 const zlib = require('zlib');
 const ai = require('./ai');   // 单人模式的豆包 AI
+const qagent = require('./bot/qagent'); // 派派 AI（Q 学习账本，见 bot/qtable.json）
 const mail = require('./mail'); // 注册验证码邮件
+
+// 派派的账本：第一次用到才读，读不到就退化成安全网 + 豆包策略
+let QTABLE = null;
+function qtable(){
+  if (QTABLE) return QTABLE;
+  try {
+    QTABLE = qagent.unpack(JSON.parse(fs.readFileSync(path.join(__dirname, 'bot', 'qtable.json'), 'utf8')));
+  } catch (e) {
+    console.log('[pai] 读不到 bot/qtable.json，先用空账本：', e.message);
+    QTABLE = Object.create(null);
+  }
+  return QTABLE;
+}
 
 const PORT = Number(process.env.PORT) || 8180;
 const PUBLIC_DIR = path.join(__dirname, 'dist');
@@ -986,11 +1000,13 @@ class Room {
         else if (now >= p.botRespawnAt){
           p.botRespawnAt = 0;
           this.resetPlayer(p);
-          this.broadcast(JSON.stringify({t:'chat', from:'系统', text:'豆包 复活了'}));
+          this.broadcast(JSON.stringify({t:'chat', from:'系统', text:(p.name || '豆包') + ' 复活了'}));
         }
         continue;
       }
-      const d = ai.decide(this, p, COLS, ROWS);
+      const d = p.botKind === 'pai'
+        ? qagent.decide(this, p, COLS, ROWS, qtable())
+        : ai.decide(this, p, COLS, ROWS);
       if (d) p.dir = d;
     }
     for (const p of this.players.values()){
@@ -1110,13 +1126,13 @@ class Room {
     return p;
   }
   // 单人模式的电脑对手：没有真 socket，用一个空壳占位
-  addBot(username){
+  addBot(username, kind){
     const id = this.nextPlayerId++;
     const stub = { sendText(){}, ping(){}, close(){}, lastSeen: Infinity, playerId: id, room: this };
     const p = {
       id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length], skin: 'classic',
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
-      isBot: true
+      isBot: true, botKind: kind || 'doubao'
     };
     this.resetPlayer(p);
     this.players.set(id, p);
@@ -2366,7 +2382,9 @@ function handleWsMessage(ws, text){
       rooms.set(id, r);
       ws.sendText(JSON.stringify({t:'room_created', id, name, owner:ws.user}));
       r.addPlayer(ws, ws.user);
-      r.addBot('豆包');
+      // 对手可选：豆包（规则型新手）/ 派派（Q 学习，会吃苹果）
+      const botKind = String(msg.bot || '').toLowerCase() === 'pai' ? 'pai' : 'doubao';
+      r.addBot(botKind === 'pai' ? '派派' : '豆包', botKind);
       broadcastRooms();
       return;
     }

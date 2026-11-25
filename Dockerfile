@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json ./
 COPY server.js ai.js mail.js ./
+COPY bot ./bot
 COPY dist ./dist
 
 ENV PORT=8080

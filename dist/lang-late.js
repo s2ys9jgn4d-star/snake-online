@@ -313,10 +313,60 @@
     }
   };
 
+  // 单人模式的对手选择（豆包 / 派派）。补几大语种，其余语种自动回落英文。
+  var Q = {
+    'en': {
+      solo: '🤖 Solo mode',
+      soloBotDoubao: 'Doubao (beginner)',
+      soloBotPai: 'Paipai (learns)',
+      soloBotTip: 'Pick your opponent for solo mode'
+    },
+    'zh-CN': {
+      solo: '🤖 单人模式',
+      soloBotDoubao: '豆包（新手）',
+      soloBotPai: '派派（会学习）',
+      soloBotTip: '选择单人模式的对手'
+    },
+    'zh-TW': {
+      solo: '🤖 單人模式',
+      soloBotDoubao: '豆包（新手）',
+      soloBotPai: '派派（會學習）',
+      soloBotTip: '選擇單人模式的對手'
+    },
+    'ja': {
+      solo: '🤖 ソロモード',
+      soloBotDoubao: '豆包（初心者）',
+      soloBotPai: 'パイパイ（学習型）',
+      soloBotTip: 'ソロモードの相手を選ぶ'
+    },
+    'ko': {
+      solo: '🤖 솔로 모드',
+      soloBotDoubao: '더우바오 (초보)',
+      soloBotPai: '파이파이 (학습형)',
+      soloBotTip: '솔로 모드 상대를 선택'
+    },
+    'ru': {
+      solo: '🤖 Одиночная игра',
+      soloBotDoubao: 'Доубао (новичок)',
+      soloBotPai: 'Пайпай (учится)',
+      soloBotTip: 'Выберите соперника'
+    },
+    'de': {
+      solo: '🤖 Solo-Modus',
+      soloBotDoubao: 'Doubao (Anfänger)',
+      soloBotPai: 'Paipai (lernt)',
+      soloBotTip: 'Gegner für den Solo-Modus wählen'
+    }
+  };
+
   var T = window.TRANSLATIONS || (window.TRANSLATIONS = {});
   for (var code in L){
     var dict = T[code] || (T[code] = {});
     for (var k in L[code]) dict[k] = L[code][k];
+  }
+  for (var qc in Q){
+    var qd = T[qc] || (T[qc] = {});
+    for (var qk in Q[qc]) qd[qk] = Q[qc][qk];
   }
   // 静态元素可能已经在 i18n.js 里翻译过，这里再刷一遍让新键生效
   if (typeof window.applyI18n === 'function') window.applyI18n(document);

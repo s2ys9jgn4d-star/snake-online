@@ -895,9 +895,12 @@ function joinRoom(room){
   }
 }
 
-// 单人模式：服务器会开一间私密房并塞进一个豆包
+// 单人模式：服务器会开一间私密房，并按下拉框塞进豆包或派派
 const soloBtnEl = $('soloBtn');
-if (soloBtnEl) soloBtnEl.addEventListener('click', () => sendWS({ t:'solo' }));
+if (soloBtnEl) soloBtnEl.addEventListener('click', () => {
+  const sel = $('soloBot');
+  sendWS({ t:'solo', bot: sel ? sel.value : 'doubao' });
+});
 // 深链接 #solo：自动开一局单人模式并进入（演示 / 截图用）
 if (location.hash === '#solo'){
   setTimeout(() => { try { soloBtnEl && soloBtnEl.click(); } catch(_){} }, 1200);

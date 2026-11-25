@@ -180,7 +180,11 @@ try {
             <button id="createRoomBtn" data-i18n="createJoin">创建并自动加入</button>
           </div>
           <div class="create-room" style="margin-top:10px">
-            <button id="soloBtn" style="width:100%" data-i18n="solo">🤖 单人模式（对战豆包）</button>
+            <select id="soloBot" class="solo-bot" data-i18n-title="soloBotTip">
+              <option value="doubao" data-i18n="soloBotDoubao">豆包（新手）</option>
+              <option value="pai" data-i18n="soloBotPai">派派（会学习）</option>
+            </select>
+            <button id="soloBtn" style="flex:1" data-i18n="solo">🤖 单人模式</button>
           </div>
         </div>
 

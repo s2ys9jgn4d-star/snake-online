@@ -206,6 +206,12 @@ body::after {
 }
 .create-room input::placeholder { color:#6b7599; }
 .create-room input:focus { border-color:var(--accent); box-shadow:var(--glow); }
+.create-room select.solo-bot {
+  flex:0 0 auto; min-width:132px; padding:9px 11px; border-radius:9px; border:1px solid var(--line);
+  background:rgba(12,17,34,.75); color:var(--text); font-size:14px; outline:none; cursor:pointer;
+  transition:border-color .18s, box-shadow .18s;
+}
+.create-room select.solo-bot:focus { border-color:var(--accent); box-shadow:var(--glow); }
 .create-room button {
   padding:9px 18px; border-radius:9px; border:none; cursor:pointer; font-weight:700; font-size:14px;
   background:linear-gradient(135deg,var(--accent),#7c5bff); color:#fff;
@@ -520,6 +526,7 @@ html[data-theme="light"] .lobby-user button { background:#eef2fa; color:#5f6b86;
 html[data-theme="light"] .lobby-user button:hover { color:var(--accent); background:rgba(91,140,255,.12); }
 html[data-theme="light"] .auth-body input,
 html[data-theme="light"] .create-room input,
+html[data-theme="light"] .create-room select.solo-bot,
 html[data-theme="light"] .chat-input input { background:#fff; color:var(--text); }
 html[data-theme="light"] .auth-body input::placeholder,
 html[data-theme="light"] .chat-input input::placeholder { color:#93a0b8; }
