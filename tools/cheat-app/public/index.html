@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开挂面板 · 代打</title>
+<style>
+  :root{--bg:#0b1020;--panel:#131a2f;--line:#26304a;--text:#e8edf8;--muted:#8b96b3;--accent:#5b8cff;--good:#22c55e;--bad:#ef4444;--warn:#eab308}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1b2547,#0b1020 60%);color:var(--text);
+       font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-size:22px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+  h1 span{font-size:12px;color:var(--muted);font-weight:400}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input,select{width:100%;padding:10px 11px;border-radius:9px;border:1px solid var(--line);
+    background:#0f1730;color:var(--text);font-size:14px;outline:none}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.15)}
+  .row{display:flex;gap:10px;margin-top:14px}
+  button{flex:1;padding:12px;border:0;border-radius:10px;font-size:15px;cursor:pointer;transition:.15s}
+  #start{background:linear-gradient(180deg,#5b8cff,#3a6cf0);color:#fff;font-weight:600}
+  #stop{background:#1c2540;color:#c7d0e6;border:1px solid var(--line)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  .stat{background:#0f1730;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:20px;line-height:1.2}
+  .stat i{font-style:normal;font-size:11px;color:var(--muted)}
+  .bar{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#3b4a70}
+  .dot.on{background:var(--good);box-shadow:0 0 8px rgba(34,197,94,.6)}
+  .dot.dead{background:var(--bad)}
+  #log{height:220px;overflow:auto;background:#0a1122;border:1px solid var(--line);border-radius:12px;
+       padding:10px;font:12px/1.55 ui-monospace,Menlo,monospace;color:#a9b6d4;white-space:pre-wrap}
+  .tip{font-size:12px;color:var(--muted);margin-top:10px}
+  .tip b{color:#c7d0e6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🐍 开挂面板 <span>本地运行 · 只有你能点</span></h1>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>服务器地址</label>
+        <input id="base" value="https://snake-online.up.railway.app">
+      </div>
+      <div>
+        <label>账号</label>
+        <input id="user" placeholder="你自己的用户名">
+      </div>
+      <div>
+        <label>密码</label>
+        <input id="pass" type="password" placeholder="只用于本次登录，不落盘">
+      </div>
+      <div>
+        <label>进房方式</label>
+        <select id="mode">
+          <option value="create">自己建房（推荐，不去打扰别人）</option>
+          <option value="join">进指定房间</option>
+          <option value="first">进人最多的空房间</option>
+        </select>
+      </div>
+      <div>
+        <label>房间名 / 房间 ID（进指定房间时填）</label>
+        <input id="room" placeholder="比如 小明 的房间">
+      </div>
+      <div>
+        <label>速度（毫秒/拍，0 = 用房间默认）</label>
+        <input id="speed" type="number" min="0" max="500" value="0">
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="start">开始代打</button>
+      <button id="stop" disabled>停止</button>
+    </div>
+
+    <div class="bar">
+      <span class="dot" id="dot"></span>
+      <span id="stateText">未运行</span>
+      <span id="roomText"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><b id="sScore">0</b><i>当前分</i></div>
+      <div class="stat"><b id="sBest">0</b><i>最高分</i></div>
+      <div class="stat"><b id="sLen">0</b><i>身长</i></div>
+      <div class="stat"><b id="sDeath">0</b><i>死亡次数</i></div>
+    </div>
+    <div class="bar" style="justify-content:space-between">
+      <span>变向次数 <b id="sDec">0</b></span>
+      <span id="sBoard"></span>
+    </div>
+    <div id="log" style="margin-top:10px">等待启动…</div>
+  </div>
+
+  <p class="tip">
+    <b>注意：</b>同一个账号在浏览器里也开着这一局的话，两边会抢同一个名字，进去会互相顶。
+    用代打时把浏览器那局退掉。密码只在内存里用一次，关掉面板就没了。
+  </p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let running = false;
+let timer = null;
+
+function setRunning(on){
+  running = on;
+  $('start').disabled = on;
+  $('stop').disabled = !on;
+}
+
+async function refresh(){
+  try {
+    const r = await fetch('/api/status');
+    const j = await r.json();
+    const s = j.status;
+    if (!s){ renderIdle(); return; }
+    $('sScore').textContent = s.score;
+    $('sBest').textContent = s.best;
+    $('sLen').textContent = s.len;
+    $('sDeath').textContent = s.deaths;
+    $('sDec').textContent = s.decisions;
+    $('sBoard').textContent = s.cols + '×' + s.rows;
+    $('roomText').textContent = s.room ? '· ' + s.room : '';
+    $('log').textContent = s.logs.join('\n');
+    $('log').scrollTop = $('log').scrollHeight;
+    const dot = $('dot');
+    dot.className = 'dot' + (s.running ? (s.alive ? ' on' : ' dead') : '');
+    $('stateText').textContent = s.running ? (s.alive ? '代打中' : '等复活') : '已停止';
+    if (s.running !== running) setRunning(s.running);
+  } catch (e) {}
+}
+
+function renderIdle(){
+  $('stateText').textContent = '未运行';
+  $('dot').className = 'dot';
+}
+
+$('start').onclick = async () => {
+  const body = {
+    base: $('base').value.trim(),
+    user: $('user').value.trim(),
+    pass: $('pass').value,
+    mode: $('mode').value,
+    room: $('room').value.trim(),
+    speed: Number($('speed').value) || 0
+  };
+  if (!body.user || !body.pass) { alert('先把账号密码填上'); return; }
+  setRunning(true);
+  $('stateText').textContent = '启动中…';
+  const r = await fetch('/api/start', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.ok){
+    setRunning(false);
+    $('stateText').textContent = '启动失败';
+    $('log').textContent = String(j.msg || '未知错误');
+    return;
+  }
+  refresh();
+};
+
+$('stop').onclick = async () => {
+  await fetch('/api/stop', { method: 'POST' });
+  setRunning(false);
+  refresh();
+};
+
+refresh();
+timer = setInterval(refresh, 1200);
+</script>
+</body>
+</html>
