@@ -899,7 +899,7 @@ function joinRoom(room){
 const soloBtnEl = $('soloBtn');
 if (soloBtnEl) soloBtnEl.addEventListener('click', () => {
   const sel = $('soloBot');
-  sendWS({ t:'solo', bot: sel ? sel.value : 'doubao' });
+  sendWS({ t:'solo', diff: sel ? sel.value : 'normal' });
 });
 // 深链接 #solo：自动开一局单人模式并进入（演示 / 截图用）
 if (location.hash === '#solo'){

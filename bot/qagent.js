@@ -204,10 +204,29 @@ function unpack(obj){
 }
 
 // ============================================================
+//  四个难度：难度不改速度，只改它“想得有多好”
+//  slack    走神概率（越小越强）
+//  chase    愿意追多远的苹果（小 = 懒得跑，只捡眼前的）
+//  hesitate 慢半拍概率（照着原方向再走一步）
+//  hunt     会不会主动抢到别人头前面堵路（噩梦专属）
+// ============================================================
+const DIFFS = {
+  easy:      { slack: 0.32, chase: 6,  hesitate: 0.25, hunt: false },
+  normal:    { slack: 0.14, chase: 12, hesitate: 0.10, hunt: false },
+  hard:      { slack: 0.04, chase: 99, hesitate: 0.03, hunt: false },
+  nightmare: { slack: 0,    chase: 99, hesitate: 0,    hunt: true  }
+};
+function profileOf(diff){
+  const d = DIFFS[String(diff || '')] || DIFFS.normal;
+  return Object.assign({}, d);
+}
+
+// ============================================================
 //  上场决策：算好自己能走的三个方向，再照账本挑最值的
 // ============================================================
-function decide(room, p, COLS, ROWS, table){
+function decide(room, p, COLS, ROWS, table, profile){
   if (!p || !p.body || !p.body.length) return null;
+  const pf = Object.assign({ slack: SLACK(), chase: 99, hesitate: 0, hunt: false }, profile || {});
   const head = p.body[0];
   const dirIdx = IDX[p.dir] != null ? IDX[p.dir] : 1;
 
@@ -219,10 +238,34 @@ function decide(room, p, COLS, ROWS, table){
     for (const s of q.body) blocked.add(s.y * COLS + s.x);
   }
 
-  const foods = room.foods && room.foods.length ? room.foods : [];
+  // 难度低的 AI 懒得跑远路，只看得见身边那几个苹果
+  let foods = room.foods && room.foods.length ? room.foods : [];
+  if (pf.chase < 90 && foods.length){
+    const near = foods.filter((f) => Math.abs(f.x - head.x) + Math.abs(f.y - head.y) <= pf.chase);
+    if (near.length) foods = near;
+  }
+
   const len = p.body.length;
   const key = encode(head, dirIdx, foods, blocked, len, COLS, ROWS);
   const qv = table[key] || null;
+
+  // 噩梦：抢到对手头前面两格，堵它的路
+  let huntTarget = null;
+  if (pf.hunt){
+    let best = Infinity;
+    for (const q of room.players.values()){
+      if (q === p || !q.alive || !q.body || !q.body.length) continue;
+      const d = Math.abs(q.body[0].x - head.x) + Math.abs(q.body[0].y - head.y);
+      if (d < best){ best = d; huntTarget = q; }
+    }
+    if (huntTarget){
+      const v = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[huntTarget.dir] || { x: 1, y: 0 };
+      huntTarget = {
+        x: Math.max(0, Math.min(COLS - 1, huntTarget.body[0].x + v.x * 2)),
+        y: Math.max(0, Math.min(ROWS - 1, huntTarget.body[0].y + v.y * 2))
+      };
+    }
+  }
 
   const candidates = [];
   for (let act = 0; act < 3; act++){
@@ -237,13 +280,20 @@ function decide(room, p, COLS, ROWS, table){
     if (area < len + 1) score -= 500;            // 会把自己关死
     else if (area < len + 6) score -= 30;        // 太挤，别往里钻
     if (act === 0) score += 0.5;                 // 平手优先直行，看着不像抽风
+    if (huntTarget) score -= 3 * (Math.abs(nx - huntTarget.x) + Math.abs(ny - huntTarget.y));
     candidates.push({ dir: NAMES[d], score, area });
   }
   if (!candidates.length) return null;
 
+  // 慢半拍：这一拍懒得重新想，照着原方向再走一步
+  if (pf.hesitate > 0 && Math.random() < pf.hesitate){
+    const straight = candidates.find((c) => c.dir === p.dir);
+    if (straight) return straight.dir;
+  }
+
   // 走神：偶尔不走最优解，随便挑一个“不至于自杀”的方向。
   // 这是给人留活路的关键——没有它，AI 每一拍都是满分操作，人根本追不上。
-  const slack = SLACK();
+  const slack = pf.slack;
   if (slack > 0 && candidates.length > 1 && Math.random() < slack){
     const safe = candidates.filter((c) => c.area >= len + 1);
     const pool = safe.length > 1 ? safe : candidates;
@@ -254,4 +304,4 @@ function decide(room, p, COLS, ROWS, table){
   return candidates[0].dir;
 }
 
-module.exports = { train, pack, unpack, decide, encode, areaFrom };
+module.exports = { train, pack, unpack, decide, encode, areaFrom, DIFFS, profileOf };

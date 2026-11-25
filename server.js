@@ -1005,7 +1005,7 @@ class Room {
         continue;
       }
       const d = p.botKind === 'pai'
-        ? qagent.decide(this, p, COLS, ROWS, qtable())
+        ? qagent.decide(this, p, COLS, ROWS, qtable(), qagent.profileOf(p.botDiff))
         : ai.decide(this, p, COLS, ROWS);
       if (d) p.dir = d;
     }
@@ -1126,13 +1126,13 @@ class Room {
     return p;
   }
   // 单人模式的电脑对手：没有真 socket，用一个空壳占位
-  addBot(username, kind){
+  addBot(username, kind, diff){
     const id = this.nextPlayerId++;
     const stub = { sendText(){}, ping(){}, close(){}, lastSeen: Infinity, playerId: id, room: this };
     const p = {
       id, ws: stub, name: username, color: COLORS[(id-1)%COLORS.length], skin: 'classic',
       body:[], queue:[], dir:'right', alive:false, score:0, deathReason:'', newHead:null,
-      isBot: true, botKind: kind || 'doubao'
+      isBot: true, botKind: kind || 'doubao', botDiff: diff || 'normal'
     };
     this.resetPlayer(p);
     this.players.set(id, p);
@@ -2382,9 +2382,13 @@ function handleWsMessage(ws, text){
       rooms.set(id, r);
       ws.sendText(JSON.stringify({t:'room_created', id, name, owner:ws.user}));
       r.addPlayer(ws, ws.user);
-      // 对手可选：豆包（规则型新手）/ 派派（Q 学习，会吃苹果）
-      const botKind = String(msg.bot || '').toLowerCase() === 'pai' ? 'pai' : 'doubao';
-      r.addBot(botKind === 'pai' ? '派派' : '豆包', botKind);
+      // 对手难度：简单 = 豆包（规则型、会犯傻）；普通/困难/噩梦 = 派派的三个档
+      const DIFFS = ['easy', 'normal', 'hard', 'nightmare'];
+      const rawDiff = String(msg.diff || '').toLowerCase();
+      let diff = DIFFS.includes(rawDiff) ? rawDiff : '';
+      if (!diff) diff = String(msg.bot || '').toLowerCase() === 'pai' ? 'normal' : 'easy';
+      const kind = diff === 'easy' ? 'doubao' : 'pai';
+      r.addBot(kind === 'pai' ? '派派' : '豆包', kind, diff);
       broadcastRooms();
       return;
     }

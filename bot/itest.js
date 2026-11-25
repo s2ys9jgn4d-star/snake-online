@@ -36,7 +36,7 @@ if (process.env.PREPARE === '1'){
 
   ws.addEventListener('open', () => {
     ws.send(JSON.stringify({ t: 'auth', token: login.token }));
-    setTimeout(() => ws.send(JSON.stringify({ t: 'solo', bot: (process.env.BOT || 'pai') })), 300);
+    setTimeout(() => ws.send(JSON.stringify({ t: 'solo', diff: (process.env.DIFF || 'normal') })), 300);
   });
 
   ws.addEventListener('message', (ev) => {
@@ -50,7 +50,7 @@ if (process.env.PREPARE === '1'){
       seen.snaps++;
       const ps = m.players || [];
       for (const p of ps){
-        if (p.name === (process.env.BOTNAME || '派派')){
+        if (p.name === (process.env.BOTNAME || (process.env.DIFF === 'easy' ? '豆包' : '派派'))){
           seen.botName = p.name;
           if (p.score > seen.maxBotScore) seen.maxBotScore = p.score;
           if (!p.alive) seen.dead++;

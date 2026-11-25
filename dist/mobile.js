@@ -830,7 +830,7 @@ function joinRoom(room){
 const soloBtnEl = $('soloBtn');
 if (soloBtnEl) soloBtnEl.addEventListener('click', () => {
   const sel = $('soloBot');
-  sendWS({ t:'solo', bot: sel ? sel.value : 'doubao' });
+  sendWS({ t:'solo', diff: sel ? sel.value : 'normal' });
 });
 
 $('createRoomBtn').addEventListener('click', () => {
