@@ -833,17 +833,12 @@ function relationOf(me, other){
 }
 function bestOf(u){ const s = leaderboard.find(x => x.u === u); return s ? s.s : 0; }
 
-// 官方账号的展示分数：固定值，不会被真实游戏成绩覆盖（只升不降）
-const OFFICIAL_BEST = 10000000000;
+// 官方账号不上榜：它只用来发公告、当管理员，成绩不参与排行
+const OFFICIAL_BEST = 0;
 function ensureOfficialScore(){
-  const row = leaderboard.find(x => x.u === OFFICIAL_NAME);
-  if (row){
-    if (row.s !== OFFICIAL_BEST){ row.s = OFFICIAL_BEST; }
-  } else {
-    leaderboard.push({ u: OFFICIAL_NAME, s: OFFICIAL_BEST });
-  }
-  leaderboard.sort((a, b) => b.s - a.s);
-  saveScores();
+  const before = leaderboard.length;
+  leaderboard = leaderboard.filter(x => x.u !== OFFICIAL_NAME);
+  if (leaderboard.length !== before) saveScores();
 }
 
 // 在线连接：同一个账号可能电脑和手机同时开着
@@ -2634,7 +2629,7 @@ function lanIPs(){
 
 // 先从云备份恢复账号数据，空库再从私有仓库自举，最后开始监听
 cloudRestore().then(seedFromRepo).finally(() => {
-  ensureOfficialScore();   // 官方号展示分数固定为 10000000000
+  ensureOfficialScore();   // 官方号不参与排行榜
   server.listen(PORT, () => {
     console.log('');
     console.log('  🐍 多人联机贪吃蛇（完整版：账号+房间+排行榜+聊天）');
