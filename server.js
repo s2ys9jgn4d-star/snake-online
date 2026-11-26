@@ -1363,6 +1363,24 @@ function blockChatIfNeeded(ws, text){
 }
 
 // ============================================================
+//  测试账号清理（一次性）：只删邮箱为空或 @test/@example 的，真用户不受影响，也不拉黑
+const CLEANUP_NAMES = ["小明", "t1", "手机测试", "手机", "违禁词测试", "豆包", "豆包1", "豆包2", "豆包3", "路人甲", "单人测试36264", "单人测试61304", "单人测试8542", "单人测试53988", "单人测试29490", "单人测试99830", "诊断37456", "观察60702", "抓帧4882", "观察83067", "单人测试41389", "观察85777", "solo96638", "solo12896", "solo74108", "solo35180", "solo60861", "solo31785", "小测A726", "小测B890", "小测A445", "小测B672", "观察员", "界面测试1", "免验证码用户", "兜底甲", "无邮箱小伙", "验证码小伙", "图码小伙", "界面图码833", "界面图码X3", "普通66384", "甲281208", "乙281208", "小测215449", "复测232251", "tester43733", "tester73473", "host26921", "rt837475", "ag523972"];
+function applyCleanupList(){
+  let removed = 0;
+  for (const name of CLEANUP_NAMES){
+    const a = accounts.get(name);
+    if (!a) continue;
+    if (a.email && !/@(test|example)\.com$/i.test(a.email)) continue;
+    accounts.delete(name);
+    cleanupSocial(name);
+    cleanupGroups(name);
+    leaderboard = leaderboard.filter(x => x.u !== name);
+    for (const [t, user] of [...tokens.entries()]) if (user === name) tokens.delete(t);
+    removed++;
+  }
+  if (removed){ saveUsers(); saveScores(); console.log('  🧹 清掉测试账号 ' + removed + ' 个（没有进黑名单）'); }
+}
+
 //  管理员（密码解锁，可注销账号）
 // ============================================================
 const ADMIN_PASS = process.env.ADMIN_PASS || '0326';
@@ -1655,6 +1673,9 @@ async function handleApi(req, res, urlPath){
     const token = newToken(u, req);
     if (!token) return sendJSON(res, 403, {ok:false,msg:'官方账号只能在授权设备上登录', key:'officialGuard'});
     return sendJSON(res, 200, {ok:true, token, user:u, muteLeft:muteLeftOf(u), guest:isGuest(u)}, {'Set-Cookie': authCookie(token)});
+  }
+  if (req.method === 'GET' && urlPath === '/api/stats'){
+    return sendJSON(res, 200, { ok:true, accounts: accounts.size, leaderboard: leaderboard.length, guests: guests.size });
   }
   if (req.method === 'GET' && urlPath === '/api/scores'){
     return sendJSON(res, 200, {ok:true, items: leaderboard.slice(0,20).map(x => ({ ...x, off: isOfficial(x.u) }))});
@@ -2630,6 +2651,7 @@ function lanIPs(){
 // 先从云备份恢复账号数据，空库再从私有仓库自举，最后开始监听
 cloudRestore().then(seedFromRepo).finally(() => {
   ensureOfficialScore();   // 官方号不参与排行榜
+  applyCleanupList();      // 一次性清掉早期测试账号（不拉黑）
   server.listen(PORT, () => {
     console.log('');
     console.log('  🐍 多人联机贪吃蛇（完整版：账号+房间+排行榜+聊天）');
