@@ -1,6 +1,6 @@
 # 🐍 Snake Online
 
-Real-time multiplayer Snake with a **zero-dependency** Node.js server (the WebSocket protocol is implemented by hand). Clients cover web, mobile, desktop and HarmonyOS.
+Real-time multiplayer Snake with a **zero-dependency** Node.js server (the WebSocket protocol is implemented by hand). Clients cover web, mobile and desktop.
 
 - 🌐 Web: open and play, no installation
 - 👥 Rooms: create or join a room; every room runs its own match
@@ -38,7 +38,6 @@ Grab the package for your platform from [Releases](https://github.com/s2ys9jgn4d
 | Linux | `snake-online-linux.deb` | Debian / Ubuntu / Deepin |
 | Android | `snake-online-android.apk` | Android 5.0+ |
 | iOS | `snake-online-ios-unsigned.ipa` | Unsigned; self-sign with Sideloadly / AltStore |
-| HarmonyOS NEXT | `snake-online-harmony-unsigned.hap` | Unsigned; requires a UDID-signed build for real devices |
 | Scratch | `snake-online-scratch.sb3` | Import into TurboWarp / Scratch |
 
 ---
@@ -112,9 +111,9 @@ The whole server relies on Node's standard library only — no frameworks:
 
 ## Supported platforms
 
-macOS · Windows · Linux · Android · iOS · HarmonyOS NEXT · Web · Scratch
+macOS · Windows · Linux · Android · iOS · Web · Scratch
 
-Packaging relies on each platform's toolchain (Xcode / Android SDK / dpkg / hvigorw); artifacts live in `安装包/` and in Releases.
+Packaging relies on each platform's toolchain (Xcode / Android SDK / dpkg); artifacts live in `安装包/` and in Releases.
 
 ---
 
